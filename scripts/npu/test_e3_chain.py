@@ -13,6 +13,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import e3_chain as e3  # noqa: E402
 import prelim_chain as pc  # noqa: E402
+import profile_fixture  # noqa: E402
+
+profile_fixture.ensure()  # every host fact comes from a deployment profile; the tests supply one
 
 HERE = Path(__file__).resolve().parent
 
@@ -343,7 +346,7 @@ class LauncherTests(unittest.TestCase):
                                   capture_output=True, text=True, timeout=60)
             self.assertEqual(done.returncode, 0, done.stderr)
             out.append([l[len("E_PRINT_ARG "):] for l in done.stdout.splitlines() if l.startswith("E_PRINT_ARG ")])
-        capture = pc.read_json(e3.DEFAULT_CAPTURE)
+        capture = pc.read_json(e3.default_capture())
         if capture:  # the baseline argv equals the captured arm A argv (without the leading name and the model flag)
             cmd = capture["instances"][0]["cmd"]
             self.assertEqual(out[0][-len(cmd[1:]):][:3], cmd[1:][:3]) if len(out[0]) >= len(cmd) - 1 else None

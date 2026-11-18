@@ -10,8 +10,13 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 export DL_LOG=${DL_LOG:-$(dirname "$HERE")/dl_logs/fetch_hf-${1//\//_}.log}
 source "$HERE/_daemonize.sh"
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
 REPO=$1 DEST=$2 REV=$3 TYPE=$4 CONN=${5:-${SPEECHRL_HFD_CONNECTIONS_PER_FILE:-1}}
-DIFFER=/home/xingchao/workspace/omni/exploring-l4-intelligence/scripts/data/hf_complete.py
+DIFFER=$(lp_opt paths.optional_sibling_checkout) || exit 6
+DIFFER=$DIFFER/scripts/data/hf_complete.py
+[ -f "$DIFFER" ] || { echo "HF differ not found: $DIFFER" \
+  "(set paths.optional_sibling_checkout in $(lp_config))" >&2; exit 6; }
 PY=$HOME/venvs/dl/bin/python
 # Official huggingface.co, not hf-mirror (owner 2026-10-27). Measured through the corporate proxy the same
 # evening: 14.5-15.1 MB/s per connection, 108 MB/s over 8 ranged connections.

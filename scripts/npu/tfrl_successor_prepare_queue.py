@@ -4,7 +4,7 @@ Run detached on npu2. No generation, tokenizer, scoring, or admission changes.
 """
 import argparse,hashlib,json,os,subprocess,time
 from pathlib import Path
-from real500_successor_queue import D,IMAGE,write,status
+from real500_successor_queue import data_root, image, write, status
 from tfrl_banked_consumers_queue import require_live_upstream
 POOL='SAEA-SLURP-TFRL-CURRENT-SEED-I1-RECOVERED-POOL-READ-V1'
 BANK='SAEA-SLURP-TFRL-CURRENT-SEED-I1-RECOVERED-BANK-V1'
@@ -21,6 +21,7 @@ def decision_state(document):
 
 
 def run(tree,upstream,out,install=False):
+    D=data_root()
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):raise ValueError('fresh owned preparation queue required')
     study=tree/'studies/speech-aware-evidence-acquisition'
     def git(*args):return subprocess.check_output(['git','-C',str(study),*args],text=True).strip()
@@ -38,7 +39,7 @@ def run(tree,upstream,out,install=False):
         if any(c.isspace() for c in path):raise ValueError('unsupported whitespace in directory')
         flags+=['-e',f'GIT_CONFIG_KEY_{i}=safe.directory','-e',f'GIT_CONFIG_VALUE_{i}={path}']
     env={**os.environ,'TREE':str(tree),'CPUSET':'192-207','PORT_CONTAINER_USER':'0:0',
-         'PORT_IMAGE':IMAGE,'PORT_DOCKER_FLAGS':' '.join(flags)}
+         'PORT_IMAGE':image(),'PORT_DOCKER_FLAGS':' '.join(flags)}
     out.mkdir(parents=True)
     write(out/'intent.json',{'implementation_commit':commit,'interval_seconds':600,'generation_calls':0,
         'tokenizer_calls':0,'scoring_jobs':0,'automatic_replay':False,'install_held_configs':install})

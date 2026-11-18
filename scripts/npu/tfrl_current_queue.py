@@ -12,7 +12,7 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from generation_release_handoff import wait_release
-from real500_successor_queue import D, IMAGE, write, status
+from real500_successor_queue import data_root, image, write, status
 
 
 def run_lanes(jobs, launch_generation, launch_read, record, await_release=None):
@@ -70,6 +70,7 @@ def run_lanes(jobs, launch_generation, launch_read, record, await_release=None):
 
 
 def run(tree, out, iteration=1):
+    D = data_root()
     if type(iteration) is not int or iteration not in (1,2,3):
         raise ValueError("iteration1..3 required")
     prefix = "seed" if iteration == 1 else "bank"
@@ -120,7 +121,7 @@ def run(tree, out, iteration=1):
         name=f'slurp-tfrl-current-{prefix}-i{iteration}-{half}-v1';run_id=specs[half]['run_id']
         mode='read' if read else 'generation'
         env={**os.environ,'TREE':str(tree),'CPUSET':'208-223' if read else '160-191',
-             'PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+             'PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
              'SAEA_DEPLOYMENT_PROFILE':'qwen3-omni-real500-2xtp4-s128-b2048-v1',
              'PORT_DOCKER_FLAGS':('--network none' if read else '--pid host --network host')+
                  f' --name saea-tfrl-current-i{iteration}-{half}-{mode}-v1'+

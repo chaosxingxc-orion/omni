@@ -24,8 +24,9 @@ set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 export DL_LOG=${DL_LOG:-$(dirname "$HERE")/dl_logs/wheelhouse.log}
 source "$HERE/_daemonize.sh"
-
-WH=${WH:-/mnt/cephfs/xingchao/docker/saea-base/wheelhouse}
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default WH paths.wheelhouse || exit 6
 PIP=$HOME/venvs/dl/bin/pip
 INDEX=${PIP_INDEX:-https://mirrors.huaweicloud.com/repository/pypi/simple}
 mkdir -p "$WH"

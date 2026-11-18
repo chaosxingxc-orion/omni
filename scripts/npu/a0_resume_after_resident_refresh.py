@@ -5,12 +5,13 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D,U,IMAGE,formal,call,git,write,status
+from real500_successor_queue import data_root, image, formal, call, git, write, status
 NAME='slurp-a0-remaining353-c2-v1'
 PREVIOUS='slurp-real500-tp8-s256-v1'
 
 
 def _resume(tree, failed, out, registered_stage=False):
+    D=data_root()
     if not out.resolve().is_relative_to(D/'work/codex'): raise ValueError('owned recovery required')
     study=tree/'studies/speech-aware-evidence-acquisition'
     runtime=failed/'runtime';transition=D/'work/codex/frozen-engine-deployment/handoff'
@@ -65,7 +66,7 @@ def _resume(tree, failed, out, registered_stage=False):
             '--data-root',str(D),'--runtime-root',str(D/'work/scratch/runtime-root'),'--lock-path',str(tree/'docs/datasets.lock.json'),
             '--experiment',NAME,'--cell',NAME,'--read-only'],out/'preflight.log',spec['profile'])
         status(out,'running353',source_commit=git(study,'rev-parse','HEAD'))
-        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'SAEA_DEPLOYMENT_PROFILE':spec['profile'],
             'PORT_DOCKER_FLAGS':'--pid host --network host --name saea-a0-remaining353-generation -e SAEA_STAGE_TIMING_PATH='+str(out/'stages.jsonl')}
         call(['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/run_real_engine_candidate.py',
@@ -78,6 +79,7 @@ def _resume(tree, failed, out, registered_stage=False):
 
 
 def resume(tree, failed, out, registered_stage=False):
+    D=data_root()
     try:
         return _resume(tree, failed, out, registered_stage)
     except BaseException as error:
@@ -88,6 +90,7 @@ def resume(tree, failed, out, registered_stage=False):
 
 def validate_admitted_resume(study, failed, out):
     """Accept only the recorded carrier-caption failure before any dispatch."""
+    D=data_root()
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):
         raise ValueError('fresh owned recovery required')
     state=json.loads((failed/'status.json').read_bytes())
@@ -111,6 +114,7 @@ def validate_admitted_resume(study, failed, out):
 
 
 def resume_admitted(tree, failed, out):
+    D=data_root()
     study=tree/'studies/speech-aware-evidence-acquisition'
     spec=validate_admitted_resume(study,failed,out)
     out.mkdir(parents=True)
@@ -125,7 +129,7 @@ def resume_admitted(tree, failed, out):
             '--data-root',str(D),'--runtime-root',str(D/'work/scratch/runtime-root'),'--lock-path',str(tree/'docs/datasets.lock.json'),
             '--experiment',NAME,'--cell',NAME,'--read-only'],out/'preflight.log',spec['profile'])
         status(out,'running353',source_commit=git(study,'rev-parse','HEAD'))
-        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'SAEA_DEPLOYMENT_PROFILE':spec['profile'],
             'PORT_DOCKER_FLAGS':'--pid host --network host --name saea-a0-remaining353-generation -e SAEA_STAGE_TIMING_PATH='+str(out/'stages.jsonl')}
         call(['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/run_real_engine_candidate.py',

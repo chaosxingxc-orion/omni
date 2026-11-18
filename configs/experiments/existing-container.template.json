@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "storage": {
-    "shared_root": "/REPLACE_WITH_OWNED_SHARED_ROOT",
+    "shared_root": "${local.storage.shared_root}",
     "run_root": "${shared_root}/execution"
   },
   "release": {
-    "image_digest": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "image_digest": "${local.image.digest}",
     "artifacts": [
       {
         "path": "${config_dir}/launch.json",

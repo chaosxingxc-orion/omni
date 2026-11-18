@@ -8,10 +8,10 @@
  "client_cpuset": "224-255",
  "ceiling_bound_is_failure": true,
  "r0": {
-  "base_lock": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1/base-lock-v1.json",
+  "base_lock": "${local.storage.shared_root}/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1/base-lock-v1.json",
   "min_free_gib": 50,
   "deploy_wait_seconds": 2400,
-  "smoke_audio": "/mnt/cephfs/xingchao/omni/work/scratch/smoke-181/tone.wav"
+  "smoke_audio": "${local.storage.shared_root}/work/scratch/smoke-181/tone.wav"
  },
  "runs": [
   {

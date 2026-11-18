@@ -16,8 +16,9 @@ import shlex
 import sys
 from pathlib import Path
 
-DEFAULT_STUDY = "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition"
-DEFAULT_OMNI = "/mnt/cephfs/xingchao/omni"
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
+import local_profile  # noqa: E402
+
 PACKAGE = "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1"
 ROSTER = "docs/receipts/rosters/slurp-evo-fold-b-v2.json"
 LOCK_REL = "docs/datasets.lock.json"  # relative to the umbrella root (two levels above studies/)
@@ -39,9 +40,24 @@ class CellInfoError(RuntimeError):
     pass
 
 
-def load(stage: str, study: str = DEFAULT_STUDY, omni: str = DEFAULT_OMNI) -> dict:
+def default_study() -> str:
+    """The study tree named by the deployment profile, or a ProfileError."""
+    return str(Path(local_profile.get("roots.source")) / "studies/speech-aware-evidence-acquisition")
+
+
+def default_omni() -> str:
+    """The data root named by the deployment profile, or a ProfileError."""
+    return str(local_profile.get("storage.shared_root"))
+
+
+def load(stage: str, study: str | None = None, omni: str | None = None) -> dict:
     if stage not in STAGES:
         raise CellInfoError(f"unknown stage {stage!r}; expected smoke or flight")
+    try:
+        study = study or default_study()
+        omni = omni or default_omni()
+    except local_profile.ProfileError as error:
+        raise CellInfoError(str(error)) from error
     study_path = Path(study)
     experiment = STAGES[stage]["experiment"]
     try:
@@ -87,13 +103,18 @@ def load(stage: str, study: str = DEFAULT_STUDY, omni: str = DEFAULT_OMNI) -> di
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stage", choices=sorted(STAGES))
-    parser.add_argument("--study", default=DEFAULT_STUDY)
-    parser.add_argument("--omni-root", default=DEFAULT_OMNI)
+    parser.add_argument("--study", default=None, help="study tree (default: <roots.source>/studies/... )")
+    parser.add_argument("--omni-root", default=None, help="data root (default: storage.shared_root)")
+    parser.add_argument("--local-config", default=None, help="local deployment profile")
     parser.add_argument("--format", choices=("env", "json"), default="env")
     args = parser.parse_args(argv)
     try:
-        info = load(args.stage, args.study, args.omni_root)
-    except CellInfoError as error:
+        profile = local_profile.use(args.local_config)
+        study = args.study or str(Path(local_profile.get("roots.source", profile))
+                                  / "studies/speech-aware-evidence-acquisition")
+        omni = args.omni_root or local_profile.get("storage.shared_root", profile)
+        info = load(args.stage, study, omni)
+    except (CellInfoError, local_profile.ProfileError) as error:
         print(f"cellinfo: {error}", file=sys.stderr)
         return 2
     if args.format == "json":

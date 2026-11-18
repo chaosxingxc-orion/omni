@@ -11,6 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import prelim_chain as pc  # noqa: E402
+import profile_fixture  # noqa: E402
+
+profile_fixture.ensure()  # every host fact comes from a deployment profile; the tests supply one
 
 
 def measure(p10=12.0, lat=300.0, pre=0.0, free=4100, errors=0, timeouts=0, waiting=0.0, requests=100, ok=None):
@@ -275,12 +278,12 @@ class LivenessTests(unittest.TestCase):
             answer = ok.pop(0) if ok else False
             return (200, "{}") if answer else None
 
-        pairs = [(f"saea-arm-a-{i}", f"http://127.0.0.1:820{i}") for i in range(4)]
+        pairs = [(f"saea-arm-a-{i}", pc.url(8200 + i)) for i in range(4)]
         live = pc.Liveness(pairs, get, lambda: up, tries=tries, pause=0, sleep=lambda s: None)
         return live, calls
 
     def healthy(self):
-        return {f"http://127.0.0.1:820{i}/v1/models": [True] * 5 for i in range(4)}
+        return {f"{pc.url(8200 + i)}/v1/models": [True] * 5 for i in range(4)}
 
     def test_all_alive(self):
         live, _ = self.make({f"saea-arm-a-{i}" for i in range(4)}, self.healthy())
@@ -289,18 +292,18 @@ class LivenessTests(unittest.TestCase):
     def test_container_gone_is_dead_without_probing_it(self):
         live, calls = self.make({"saea-arm-a-1", "saea-arm-a-2", "saea-arm-a-3"}, self.healthy())
         self.assertEqual(live.dead_instances(), ["saea-arm-a-0"])
-        self.assertNotIn("http://127.0.0.1:8200/v1/models", calls)
+        self.assertNotIn(f"{pc.url(8200)}/v1/models", calls)
 
     def test_endpoint_not_answering_is_dead_after_all_tries(self):
         models = self.healthy()
-        models["http://127.0.0.1:8203/v1/models"] = []
+        models[f"{pc.url(8203)}/v1/models"] = []
         live, calls = self.make({f"saea-arm-a-{i}" for i in range(4)}, models)
         self.assertEqual(live.dead_instances(), ["saea-arm-a-3"])
-        self.assertEqual(calls.count("http://127.0.0.1:8203/v1/models"), 3)
+        self.assertEqual(calls.count(f"{pc.url(8203)}/v1/models"), 3)
 
     def test_one_slow_answer_is_not_death(self):
         models = self.healthy()
-        models["http://127.0.0.1:8202/v1/models"] = [False, False, True]
+        models[f"{pc.url(8202)}/v1/models"] = [False, False, True]
         live, _ = self.make({f"saea-arm-a-{i}" for i in range(4)}, models)
         self.assertEqual(live.dead_instances(), [])
 
@@ -308,7 +311,7 @@ class LivenessTests(unittest.TestCase):
         live, _ = self.make(None, self.healthy())
         self.assertEqual(live.dead_instances(), [])
         models = self.healthy()
-        models["http://127.0.0.1:8201/v1/models"] = []
+        models[f"{pc.url(8201)}/v1/models"] = []
         live, _ = self.make(None, models)
         self.assertEqual(live.dead_instances(), ["saea-arm-a-1"])
 
@@ -446,17 +449,17 @@ class P2bTests(unittest.TestCase):
         self.assertEqual(self.measured(ops), ["p2b-L40"])
         self.assertEqual(len(self.launched(ops)), 4)  # a fresh arm A: the survivors are stopped and all four relaunched
 
-    def test_registry_is_patched_for_npu2_only(self):
+    def test_registry_is_patched_for_our_jobs_only(self):
         with tempfile.TemporaryDirectory() as d:
             _, _, ops, _ = self.run_chain(d)
         patched = [c for c in ops.calls if c.startswith("jobs")]
         self.assertTrue(any("prelim-chain-p2b" in c and "sweep-armA-prelim-P2b-mintok4096" in c for c in patched), patched)
 
-    def test_job_entries_are_npu2_and_name_the_p2b_files(self):
+    def test_job_entries_carry_the_deployment_host_and_name_the_p2b_files(self):
         with tempfile.TemporaryDirectory() as d:
             chain = pc.Chain(pc.FakeOps(), Path(d) / "c", "T", d, mode="p2b")
             entries = chain.p2b_job_entries() + chain.a_job_entries(pc.FakeOps().inspect_arm_a(), {})
-        self.assertTrue(all(e["host"] == "npu2" for e in entries))
+        self.assertTrue(all(e["host"] == pc.training_host() for e in entries))
         sweep = next(e for e in entries if e["kind"] == "sweep")
         self.assertIn("prelim-P2b-mintok4096", sweep["params"]["run_prefix"])
 
@@ -524,7 +527,7 @@ class RealMeasureLivenessTests(unittest.TestCase):
     def measure(self, d):
         ops = pc.RealOps(d, "T", False)
         return ops.measure_level("p2b-L40", f"{d}/sweep-armA-prelim-P2b-mintok4096-T", 40,
-                                 ["http://127.0.0.1:8201", "http://127.0.0.1:8202"], 4096, "label",
+                                 [pc.url(8201), pc.url(8202)], 4096, "label",
                                  names=["saea-arm-a-1", "saea-arm-a-2"])
 
     def test_container_dying_mid_level_kills_the_client_and_raises_endpoint_died(self):
@@ -684,7 +687,7 @@ class ResidentWorstcaseTests(unittest.TestCase):
                 ops = pc.RealOps(d, "T", False)
                 for sweep in (SWEEP_B6144, None):
                     with self.assertRaises(pc.ChainStop):  # the fake client writes no report
-                        ops.measure_level("wc-L32", f"{d}/p", 32, ["http://127.0.0.1:8201"], 7168, "label",
+                        ops.measure_level("wc-L32", f"{d}/p", 32, [pc.url(8201)], 7168, "label",
                                           names=["saea-arm-a-1"], sweep=sweep)
             with_flags, without = seen
             tail = with_flags[with_flags.index("--min-tokens"):]
@@ -726,8 +729,8 @@ class StopIdleArmATests(unittest.TestCase):
         self.assertTrue(marked["decision"]["all_idle_before_stop"])
 
     def test_any_running_or_waiting_request_or_unreadable_endpoint_refuses_and_stops_nothing(self):
-        for load in ({"http://127.0.0.1:8203": (1.0, 0.0)}, {"http://127.0.0.1:8200": (0.0, 3.0)},
-                     {"http://127.0.0.1:8201": None}):
+        for load in ({pc.url(8203): (1.0, 0.0)}, {pc.url(8200): (0.0, 3.0)},
+                     {pc.url(8201): None}):
             with tempfile.TemporaryDirectory() as d:
                 code, status, ops = self.run_chain(d, load=load)
             self.assertNotEqual(code, 0, load)
@@ -780,22 +783,19 @@ class GuardTests(unittest.TestCase):
     def test_patch_jobs_is_atomic_idempotent_and_keeps_other_entries(self):
         with tempfile.TemporaryDirectory() as d:
             jobs = Path(d) / "jobs.json"
-            jobs.write_text(json.dumps([{"id": "keep", "kind": "npu_cards", "host": "npu2", "params": {}},
-                                        {"id": "vllm-arm-a-0", "kind": "vllm_server", "host": "npu2",
+            jobs.write_text(json.dumps([{"id": "keep", "kind": "npu_cards", "host": pc.training_host(), "params": {}},
+                                        {"id": "vllm-arm-a-0", "kind": "vllm_server", "host": pc.training_host(),
                                          "params": {"container": "saea-arm-a-0", "port": 8200, "log": "old"}}]))
-            saved, pc.JOBS = pc.JOBS, str(jobs)
-            try:
-                ops = pc.RealOps(d, "T", False)
-                b = [{"id": "vllm-arm-b-0", "kind": "vllm_server", "host": "npu2", "params": {"container": "saea-arm-b-0", "port": 8210, "log": None}}]
-                ops.patch_jobs(b)
-                ops.patch_jobs(b)
-                ops.patch_jobs([], set_log={"vllm-arm-a-0": "new"})
-                self.assertEqual([j["id"] for j in json.loads(jobs.read_text())], ["keep", "vllm-arm-a-0", "vllm-arm-b-0"])
-                self.assertEqual(json.loads(jobs.read_text())[1]["params"]["log"], "new")
-                ops.patch_jobs([], remove=["vllm-arm-b-0"])
-                self.assertEqual([j["id"] for j in json.loads(jobs.read_text())], ["keep", "vllm-arm-a-0"])
-            finally:
-                pc.JOBS = saved
+            ops = pc.RealOps(d, "T", False, jobs=str(jobs))
+            b = [{"id": "vllm-arm-b-0", "kind": "vllm_server", "host": pc.training_host(),
+                  "params": {"container": "saea-arm-b-0", "port": 8210, "log": None}}]
+            ops.patch_jobs(b)
+            ops.patch_jobs(b)
+            ops.patch_jobs([], set_log={"vllm-arm-a-0": "new"})
+            self.assertEqual([j["id"] for j in json.loads(jobs.read_text())], ["keep", "vllm-arm-a-0", "vllm-arm-b-0"])
+            self.assertEqual(json.loads(jobs.read_text())[1]["params"]["log"], "new")
+            ops.patch_jobs([], remove=["vllm-arm-b-0"])
+            self.assertEqual([j["id"] for j in json.loads(jobs.read_text())], ["keep", "vllm-arm-a-0"])
 
 
 if __name__ == "__main__":

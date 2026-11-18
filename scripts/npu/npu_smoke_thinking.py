@@ -1,7 +1,10 @@
 """NPU smoke for the port's Thinking server (design doc section 10, item 2). Read-only against one served model.
 
 usage (inside saea-base, PYTHONPATH=<study>/src, server from npu_serve.sh thinking):
-    /opt/saea-venv/bin/python npu_smoke_thinking.py --base-url http://127.0.0.1:8200 --audio <a 16 kHz wav> --out <dir>
+    /opt/saea-venv/bin/python npu_smoke_thinking.py --base-url http://<host>:<port> --audio <a 16 kHz wav> --out <dir>
+
+<host>:<port> is this deployment's services.omni host and the served instance's port, both read from the local
+deployment profile; nothing here assumes a loopback address.
 
 Each check writes its raw request and response to <out>/<check>.json and prints one PASS/FAIL/RECORD line. Nothing is
 retried. The checks:

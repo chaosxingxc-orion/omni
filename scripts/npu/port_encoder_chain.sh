@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Run the three registered port encoder runs one after another (they share cores 128-191), detached on host npu.
-# usage: nohup bash port_encoder_chain.sh > /mnt/cephfs/xingchao/omni/work/logs/port-encoder-chain-<stamp>.log 2>&1 &
+# Run the three registered port encoder runs one after another (they share cores 128-191), detached on the rollout host.
+# usage: nohup bash port_encoder_chain.sh > "$OMNI_ROOT"/work/logs/port-encoder-chain-<stamp>.log 2>&1 &
 # Order: intent-boundary keys (60 passages), Fold B speech queries (1,080), MF-7b keys pass (11,514) + kus3 conversion.
 # Stops at the first failing step. Each step's own log is named by its launcher.
 set -uo pipefail
-S=/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition
-SCRIPTS=/mnt/cephfs/xingchao/omni/work/scripts
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default TREE roots.source || exit 6
+lp_default OMNI_ROOT storage.shared_root || exit 6
+S=$TREE/studies/speech-aware-evidence-acquisition
+SCRIPTS=$OMNI_ROOT/work/scripts
 say() { echo "[$(date +%FT%T)] $*"; }
 
 run_step() {

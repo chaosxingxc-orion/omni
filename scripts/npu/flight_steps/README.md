@@ -1,12 +1,13 @@
-# Operator flight steps for the Fold B NPU port (host 181 only)
+# Operator flight steps for the Fold B NPU port (the deployment's training host only)
 
 Nine separate commands. Each one is run by a person; nothing advances to the next step by itself. The authority steps
-(countersign, receipt mint, readiness flip) are the owner's and are NOT scripted. Run everything on `npu2` (host 181).
-Host `npu` (175) is not ours.
+(countersign, receipt mint, readiness flip) are the owner's and are NOT scripted. Run everything on the host named by
+`hosts.training` in the local deployment profile; no other host is used.
 
 ```
-ssh npu2
-cd /mnt/cephfs/xingchao/omni/work/scripts/flight_steps
+# <training> = hosts.training, <shared> = storage.shared_root, both from the local deployment profile
+ssh <training>
+cd <shared>/work/scripts/flight_steps
 python3 preflight.py --stage smoke        # read-only report; exit 1 lists every blocker
 bash step_<name>.sh                       # dry-run: prints the exact study command(s) and the gate verdict
 bash step_<name>.sh --confirm             # executes (only if every gate passes)
@@ -50,7 +51,7 @@ Exit codes: 0 ok or dry-run, 2 usage, 3 previous marker absent, 4 preflight fail
 
 | what | where |
 |---|---|
-| markers, logs, pin | `/mnt/cephfs/xingchao/omni/work/flight_state/fold-b-npu-port/` (`<step>.done`, `.failed`, `.running`, `.log`, `commit.txt`, `lease.fifo`, `lease.log`, `signoff.marker`) |
+| markers, logs, pin | `$OMNI/work/flight_state/fold-b-npu-port/` (`<step>.done`, `.failed`, `.running`, `.log`, `commit.txt`, `lease.fifo`, `lease.log`, `signoff.marker`) |
 | lease token | `$OMNI/coordination/<smoke cell>.worker-lease.json` (removed on release) |
 | run bytes, attempt records | `$OMNI/runs/<run>/<attempt>/`, `$OMNI/attempts/<run>/` |
 | FIT evidence | `$OMNI/prepared/<FIT run>/<FIT attempt>/` |
@@ -58,7 +59,7 @@ Exit codes: 0 ok or dry-run, 2 usage, 3 previous marker absent, 4 preflight fail
 | read outputs | `$OMNI/analysis/<READ run id>/` |
 | ledger | `docs/exposure-ledger.md` in the study tree, uncommitted after step 9 |
 
-`$OMNI` = `/mnt/cephfs/xingchao/omni`. Study commands run in `saea-base` through `work/scripts/port_py.sh` with
+`$OMNI` = `storage.shared_root` from the local deployment profile. Study commands run in `saea-base` through `work/scripts/port_py.sh` with
 `SPEECHRL_DATA_DIR=$OMNI` on cpuset `160-191` (override with `CPUSET=...`; never `128-159`, which is the cpuset of
 instance `saea-omni-i1`).
 
@@ -105,4 +106,4 @@ before any new lease.
 
 `preflight.py`, `cellinfo.py` (identities from the committed fragments), `fit_evidence.py`, `read_gate.py` (runs in the
 container), `_common.sh`, `_detached.sh`, `_lease_holder.sh`, `step_*.sh`, `test_flight_steps.py` (tests, fake ops, CPU
-only: `ssh npu2 'cd .../flight_steps && taskset -c 176-191 python3 -m pytest -q -p no:cacheprovider test_flight_steps.py'`).
+only: `ssh <hosts.training> 'cd .../flight_steps && taskset -c 176-191 python3 -m pytest -q -p no:cacheprovider test_flight_steps.py'`).

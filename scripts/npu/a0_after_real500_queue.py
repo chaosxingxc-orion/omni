@@ -9,14 +9,14 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D,U,formal,write,status
-
-RESULTS=[D/'work/codex/real500-tp4-s96-verified-result-v1.json',
-    D/'work/codex/real500-result-queue-v1/slurp-real500-tp4-s128-v1.json',
-    D/'work/codex/real500-result-queue-v1/slurp-real500-tp8-s256-v1.json']
+from real500_successor_queue import data_root, publish_root, formal, write, status
 
 
 def run(tree,out):
+    D, U = data_root(), publish_root()
+    results=[D/'work/codex/real500-tp4-s96-verified-result-v1.json',
+        D/'work/codex/real500-result-queue-v1/slurp-real500-tp4-s128-v1.json',
+        D/'work/codex/real500-result-queue-v1/slurp-real500-tp8-s256-v1.json']
     if not out.resolve().is_relative_to(D/'work/codex') or out.exists():
         raise ValueError('fresh owned queue required')
     out.mkdir(parents=True)
@@ -31,7 +31,7 @@ def run(tree,out):
         'interval_seconds':600,'automatic_retry':False,'authority':'existing owner real500 comparison and full A0 continuation'})
     status(out,'waiting_verified_full_comparison')
     try:
-        while not all(p.exists() for p in RESULTS):
+        while not all(p.exists() for p in results):
             terminal=D/'work/codex/real500-successor-queue-v1/slurp-real500-tp8-s256-v1/run.exit'
             if terminal.exists() and terminal.read_text().strip()!='0':raise ValueError('TP8 failed; preserve complete checkpoints')
             export_status=D/'work/codex/real500-result-queue-v1/status.json'
@@ -44,7 +44,7 @@ def run(tree,out):
         status(out,'selecting_complete_results')
         selection=out/'selection.json'
         args=['scripts/analysis/select_real500_profile.py','--data',str(D),'--out',str(selection)]
-        for p in RESULTS:args+=['--result-path',str(p)]
+        for p in results:args+=['--result-path',str(p)]
         formal(tree,args,out/'selection.log')
         decision=json.loads(selection.read_bytes())
         sources={'SAEA-SLURP-REAL500-TP4-S96-V1':D/'work/dev/real500-runtime',

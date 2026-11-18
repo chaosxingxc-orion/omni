@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Show download progress for every asset under SPEECHRL_DATA_DIR.
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
-LOGS=/home/xingchao/workspace/omni/dl_logs
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default SPEECHRL_DATA_DIR storage.shared_root || exit 6
+DR=$SPEECHRL_DATA_DIR
+LOGS=$(dirname "$HERE")/dl_logs
 echo "=== queue"
 tail -n 4 "$LOGS/queue.log" 2>/dev/null
 echo "=== per-asset (last lines)"
@@ -20,4 +24,4 @@ printf '%-42s %8s  %s\n' "datasets/audio2tool" "$(du -sh "$DR/datasets/audio2too
 printf '%-42s %8s\n' "repos/slurp (git)" "$(du -sh "$DR/repos/slurp" 2>/dev/null | cut -f1)"
 echo "=== running"
 pgrep -af 'run_queue|fetch_hf|fetch_slurp|fetch_earnings|clone_saea|mt_download|hf_complete|verify_hf|git-lfs' \
-  | grep -v pgrep | awk '{print $1, $NF}' | sed 's#/home/xingchao/workspace/omni/##' | head
+  | grep -v pgrep | awk '{print $1, $NF}' | sed "s#$(dirname "$HERE")/##" | head

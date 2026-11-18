@@ -7,11 +7,12 @@
 # binary and Q4_K_M GGUF by sha256, and that whole route was dropped on owner directive
 # (2026-10-27, "only BF16 / vLLM models"). Nothing GGUF is built or installed here.
 #
-# Base: the Ascend vLLM image already present on both NPU hosts (ssh aliases npu and npu2). It
-# is NOT pulled at build time -- neither host has a route to the internet (verified: hf.co,
-# hf-mirror, raw.githubusercontent and codeload all time out there), so everything this file
-# adds arrives through the shared /mnt/cephfs build context. v0.30.0rc2 is the first
-# vllm-ascend that registers Qwen3OmniMoeForConditionalGeneration, verified inside this image.
+# Base: the Ascend vLLM image already present on both NPU hosts (the deployment's training and
+# rollout hosts, named by the local deployment profile). It is NOT pulled at build time -- neither
+# host has a route to the internet (verified: hf.co, hf-mirror, raw.githubusercontent and codeload
+# all time out there), so everything this file adds arrives through the shared build context staged
+# under `storage.shared_root`. v0.30.0rc2 is the first vllm-ascend that registers
+# Qwen3OmniMoeForConditionalGeneration, verified inside this image.
 FROM quay.io/ascend/vllm-ascend:v0.30.0rc2
 
 # --- the experiment harness lives in its own venv ---------------------------------------------
@@ -63,12 +64,12 @@ RUN "$SAEA_VENV/bin/pip" install --no-deps -e \
 
 # --- paths the study resolves against ---------------------------------------------------------
 # SPEECHRL_DATA_DIR is the asset-root convention from the umbrella's docs/datasets.lock.json;
-# dataset and model configs resolve beneath it. Mounted from the shared disk at run time.
-# PATH deliberately does NOT put the venv first for the system python: `vllm` and `python3` must
-# keep resolving to the image's own interpreter so serving is unaffected. Use
+# dataset and model configs resolve beneath it. It is NOT set here: the data root is a deployment
+# fact, so every launcher passes -e SPEECHRL_DATA_DIR=<storage.shared_root> from the local
+# deployment profile. PATH deliberately does NOT put the venv first for the system python: `vllm`
+# and `python3` must keep resolving to the image's own interpreter so serving is unaffected. Use
 # /opt/saea-venv/bin/python (or `saea-driver`, installed there) for the harness.
-ENV SPEECHRL_DATA_DIR=/mnt/cephfs/xingchao \
-    SAEA_PYTHON=/opt/saea-venv/bin/python \
+ENV SAEA_PYTHON=/opt/saea-venv/bin/python \
     SAEA_DRIVER=/opt/saea-venv/bin/saea-driver
 WORKDIR /opt/umbrella/studies/speech-aware-evidence-acquisition
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Acceptance test of the locked engineering base, run on an NPU host against the RESIDENT deployment.
 #
-# usage (on the profile's host, e.g. `ssh npu2 bash /mnt/cephfs/xingchao/omni/work/scripts/npu_verify_base.sh ...`):
+# usage (on the profile's host, e.g. `ssh <hosts.training from the local profile> bash <storage.shared_root>/work/scripts/npu_verify_base.sh ...`):
 #   bash npu_verify_base.sh <profile id|path> <base-lock.json> [verifier args...]      # verify; exit 0 only on PASS
 #   bash npu_verify_base.sh <profile id|path> -  --print-observed [--receipt P] [...]   # write a base-lock from a live run
 # Verifier args (after the lock): --only image,kv,...  --rehash-weights  --receipt P  --encoder NAME=SUBDIR  (see
@@ -20,11 +20,15 @@
 #     /usr/local/Ascend and /etc/ascend_install.info mounted read-only under /host, and the facts under /facts.
 # Run as a user in the docker group; the container runs as the caller's uid/gid. Do not pass `-I` to Python.
 set -uo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
 PROFILE_ARG=${1:?usage: npu_verify_base.sh <profile id|path> <base-lock.json|-> [verifier args...]}
 LOCK=${2:?usage: npu_verify_base.sh <profile id|path> <base-lock.json|-> [verifier args...]}
 shift 2
-OMNI_ROOT=${OMNI_ROOT:-/mnt/cephfs/xingchao/omni}
-SAEA_SRC=${SAEA_SRC:-$OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src}
+lp_default OMNI_ROOT storage.shared_root || exit 6
+lp_default SAEA_SRC roots.source || exit 6
+SAEA_SRC=$SAEA_SRC/studies/speech-aware-evidence-acquisition/src
 REPO=$(dirname "$SAEA_SRC")
 CPUSET=${CPUSET:-32-63,96-127}
 DEFAULT_BASE_REF=quay.io/ascend/vllm-ascend:v0.30.0rc2

@@ -30,14 +30,18 @@
 #     no part of the Thinking baseline.
 #
 # Layout and revisions otherwise follow exploring-l4-intelligence/docs/datasets.lock.json with
-# SPEECHRL_DATA_DIR=/mnt/cephfs/xingchao; every hf step is file-selective via HF_COMPLETE_INCLUDE.
+# SPEECHRL_DATA_DIR=<storage.shared_root from the local deployment profile>; every hf step is
+# file-selective via HF_COMPLETE_INCLUDE.
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 LOGS=$(dirname "$HERE")/dl_logs
 export DL_LOG=${DL_LOG:-$LOGS/queue.log}
 source "$HERE/_daemonize.sh"
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
 
-export SPEECHRL_DATA_DIR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
+lp_default SPEECHRL_DATA_DIR storage.shared_root || exit 6
+export SPEECHRL_DATA_DIR
 # Official huggingface.co, not hf-mirror (owner 2026-10-27). Measured through the corporate proxy the same
 # evening: 14.5-15.1 MB/s per connection, 108 MB/s over 8 ranged connections.
 export SPEECHRL_HF_ENDPOINT=${SPEECHRL_HF_ENDPOINT:-https://huggingface.co}

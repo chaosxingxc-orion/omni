@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Move everything this work generated under /mnt/cephfs/xingchao/ into /mnt/cephfs/xingchao/omni/ (owner instruction 2026-10-28).
+# Move everything this work generated under the parent of storage.shared_root into storage.shared_root
+# itself (owner instruction 2026-10-28).  Both ends come from the local deployment profile, so the same
+# script migrates any deployment's shared root.
 # Same CephFS mount, so every move is a rename (instant, no copy). Stays where it is (owner, 2026-10-28): docker/ (including
 # docker/saea-base). Not ours and never touched: experiments/.
 #
 # usage: bash relocate_to_omni.sh [--apply]      (default is a dry run that only prints what it would do)
-# Refuses while any process on this host, npu or npu2 still names an old path, or when a target already exists.
+# Refuses while any process on this host or on the profile's hosts still names an old path, or when a target already exists.
 # Historical records (docs/readiness registrations, coordination runtime configs, receipts, serving_view.json) keep the
 # absolute paths they recorded; only live scripts are rewritten. The tracked model fragment is re-pinned by a commit.
 set -euo pipefail
-OLD=/mnt/cephfs/xingchao
-NEW=$OLD/omni
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+NEW=$(lp_get storage.shared_root) || exit 6
+OLD=$(dirname "$NEW")
+HOSTS=("local" "$(lp_get hosts.rollout)" "$(lp_get hosts.training)")
 APPLY=0; [ "${1:-}" = "--apply" ] && APPLY=1
 DIRS=(attempts coordination datasets knowledge locks manifests models preparation-runs prepared repos src tmp vectors work)
 REPO_REL=work/umbrella/studies/speech-aware-evidence-acquisition
@@ -20,8 +26,8 @@ do_() { if [ $APPLY = 1 ]; then "$@"; else echo "DRY: $*"; fi; }
 # Old-path users: any argv naming $OLD/<one of DIRS> (the omni/ path itself does not match).
 pattern="$OLD/($(IFS='|'; echo "${DIRS[*]}"))(/|\$| )"
 busy=0
-for host in local npu npu2; do
-  if [ $host = local ]; then out=$(ps -eo pid,args --no-headers); else out=$(ssh -o BatchMode=yes -o ConnectTimeout=10 $host ps -eo pid,args --no-headers); fi
+for host in "${HOSTS[@]}"; do
+  if [ $host = local ]; then out=$(ps -eo pid,args --no-headers); else out=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$host" ps -eo pid,args --no-headers); fi
   hits=$(grep -E "$pattern" <<< "$out" | grep -v -e relocate_to_omni -e 'grep -E' || true)
   if [ -n "$hits" ]; then busy=1; say "BUSY on $host:"; cut -c1-160 <<< "$hits" | head -5; fi
 done
@@ -44,7 +50,7 @@ do_ git -c safe.directory='*' -C "$NEW/$REPO_REL" worktree repair "${repaired[@]
 # Live scripts: rewrite $OLD -> $NEW except where $OLD is followed by /omni, /docker (stays put) or /experiments.
 targets=$( { ls "$NEW"/work/scripts/*.sh "$NEW"/work/scripts/*.py 2>/dev/null || ls "$OLD"/work/scripts/*.sh "$OLD"/work/scripts/*.py; \
              find "${NEW}/work/scratch" "${OLD}/work/scratch" -name '*.sh' 2>/dev/null; \
-             ls /home/xingchao/workspace/omni/dl_scripts/*.sh 2>/dev/null; } | sort -u)
+             ls "$HERE"/../../download/*.sh 2>/dev/null; } | sort -u)
 for f in $targets; do
   case $f in */relocate_to_omni.sh) continue ;; esac
   grep -q "$OLD" "$f" || continue

@@ -1,0 +1,40 @@
+{
+  "schema": "omni-local-deployment-v1",
+  "hosts": {
+    "training": "REPLACE_WITH_TRAINING_SSH_ALIAS",
+    "rollout": "REPLACE_WITH_ROLLOUT_SSH_ALIAS"
+  },
+  "storage": {
+    "shared_root": "/REPLACE_WITH_OWNED_SHARED_ROOT",
+    "hot_root": "/REPLACE_WITH_LOCAL_PERSISTENT_ROOT",
+    "archive_root": "/REPLACE_WITH_ARCHIVE_ROOT"
+  },
+  "roots": {
+    "model": "/REPLACE_WITH_MODEL_ROOT",
+    "data": "/REPLACE_WITH_DATA_ROOT",
+    "source": "/REPLACE_WITH_SOURCE_ROOT"
+  },
+  "image": {
+    "reference": "REPLACE_WITH_IMAGE_REFERENCE",
+    "digest": "sha256:REPLACE_WITH_64_HEX_DIGITS"
+  },
+  "services": {
+    "omni": {
+      "host": "REPLACE_WITH_SERVICE_HOST",
+      "port": 8000
+    }
+  },
+  "identity": {
+    "uid": 1000,
+    "gid": 1000,
+    "hostname": "REPLACE_WITH_THIS_MACHINES_HOSTNAME"
+  },
+  "paths": {
+    "optional_sibling_checkout": "/REPLACE_WITH_OPTIONAL_EXTRA_LOCAL_DIR",
+    "wheelhouse": "/REPLACE_WITH_OFFLINE_WHEELHOUSE_DIR",
+    "port_worktree": "/REPLACE_WITH_PORT_WORKTREE_HOLDING_STUDIES_AND_DATASETS_LOCK"
+  },
+  "ports": {
+    "engine_matrix": [8200, 8201, 8202, 8203]
+  }
+}

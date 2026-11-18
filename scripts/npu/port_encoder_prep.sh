@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Launch ONE registered port encoder preparation (CPU float32 pool) detached on this host (npu2).
+# Launch ONE registered port encoder preparation (CPU float32 pool) detached on this host.
 # usage: bash port_encoder_prep.sh <fold-b|fold-a|keys> [CPUSET] [--dry-run]
 #   CPUSET     the cores of the encoder container (docker --cpuset-cpus syntax); default $PORT_ENCODER_CPUSET or 128-191 (the historical Fold B cores).
 #              The pinned encoder inventory fixes the pool slice (first_core 128, 4 x 16 threads = cores 128-191): a cpuset that does not cover it is refused.
 #   --dry-run  print the chain (config writer command, encoder command, log path, pool-core preflight) and exit; writes nothing, starts no container.
-# log: $OMNI_ROOT/work/logs/port-encoder-<run>-<stamp>.log   (OMNI_ROOT defaults to /mnt/cephfs/xingchao/omni)
+# log: $OMNI_ROOT/work/logs/port-encoder-<run>-<stamp>.log   (OMNI_ROOT comes from storage.shared_root in the local deployment profile)
 # The runtime config is written create-only and bound to the clean HEAD. The runtime itself admits the plan
 # (execution authority, exposure row, lock, protocol, inventory pins) before any contact.
 set -euo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
 RUN=""; CPUSET=${PORT_ENCODER_CPUSET:-128-191}; DRY_RUN=0
 for arg in "$@"; do
   case "$arg" in
@@ -17,14 +20,17 @@ for arg in "$@"; do
   esac
 done
 [ -n "$RUN" ] || { echo "usage: bash port_encoder_prep.sh <fold-b|fold-a|keys> [CPUSET] [--dry-run]" >&2; exit 2; }
-TREE=${TREE:-/mnt/cephfs/xingchao/omni/work/dev/umbrella}
+lp_default TREE roots.source || exit 6
+lp_default OMNI_ROOT storage.shared_root || exit 6
 S=$TREE/studies/speech-aware-evidence-acquisition
-D=${OMNI_ROOT:-/mnt/cephfs/xingchao/omni}
+D=$OMNI_ROOT
 NAME=saea-port-encoder-$RUN
 LOG=$D/work/logs/port-encoder-$RUN-$(date +%Y%m%dT%H%M%S).log
-IMAGE=saea-base:20261027
+IMAGE=$(lp_get image.reference) || exit 6
+UID_N=$(lp_get identity.uid) || exit 6
+GID_N=$(lp_get identity.gid) || exit 6
 PYBIN=/opt/saea-venv/bin/python
-COMMON=(--user 1008:1008 -e HOME=/tmp -e USER=saea -e LOGNAME=saea -e TORCHINDUCTOR_CACHE_DIR=/tmp/inductor
+COMMON=(--user "$UID_N:$GID_N" -e HOME=/tmp -e USER=saea -e LOGNAME=saea -e TORCHINDUCTOR_CACHE_DIR=/tmp/inductor
   -e TORCH_DEVICE_BACKEND_AUTOLOAD=0 --cpuset-cpus "$CPUSET" -v "$D:$D" -w "$S"
   -e PYTHONPATH="$S/src" -e PYTHONDONTWRITEBYTECODE=1 -e SPEECHRL_DATA_DIR=$D -e SAEA_DATA_ROOT=$D)
 WRITE_CMD="git config --global --add safe.directory '*' && $PYBIN $D/work/scripts/port_write_runtime_config.py '$S' '$RUN' $D --cpuset '$CPUSET'"

@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D,IMAGE,write,status
+from real500_successor_queue import data_root, image, write, status
 
 RUN='SAEA-SLURP-A0-REMAINING353-C2-V1'
 ATTEMPT='attempt-a0-remaining353-c2-v1'
@@ -31,6 +31,7 @@ def check_terminal(handoff,terminal,manifest,attempt):
 
 
 def run(tree,out,handoff=None):
+    D=data_root()
     if not out.resolve().is_relative_to(D/'work/codex') or out.exists():
         raise ValueError('fresh owned result queue required')
     study=tree/'studies/speech-aware-evidence-acquisition'
@@ -60,7 +61,7 @@ def run(tree,out,handoff=None):
         if any(sha(Path(p))!=digest for p,digest in pins.items()):raise ValueError('scoring source/recipe changed')
         status(out,'verifying_and_scoring_full1080')
         reference=D/'work/dev/real500-runtime/studies/speech-aware-evidence-acquisition'
-        env={**os.environ,'TREE':str(tree),'CPUSET':'160-175','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'160-175','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'PORT_DOCKER_FLAGS':'--network none --name saea-a0-full1080-official-read-v1 '
                 '-e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='+str(reference)}
         command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/score_a0_full1080.py',

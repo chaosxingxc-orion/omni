@@ -11,6 +11,9 @@ Queue file:
       optional: "cards_policy": "all_free"|"no_other", "wait_for_final": "<chain-status.json>", "enabled": false,
                 "env": {"K": "V"}, "depends_on": ["successful-job-id"]}]}
   "{queue_dir}" in cmd, cwd, log and env values is replaced by the queue directory.
+  "${local.<dotted.key>}" in the same places is replaced by that field of the deployment profile
+  (OMNI_LOCAL_CONFIG or configs/local/deployment.json), so a queue names deployment paths once, in the
+  profile, and not in this data file.  A queue without macros never reads the profile.
 
 Behaviour (one job at a time, in dependency-ready file order):
   * depends_on names jobs in this queue that must finish successfully. Cycles and unknown IDs are rejected before
@@ -75,6 +78,8 @@ VLLM_PROC = re.compile(r"vllm", re.I)  # matches vllm, VLLMWorker, VLLM::EngineC
 OURS_RE = re.compile(r"^saea-")  # container-name prefix that is ours (watchdog default ours_regex)
 TERMINAL = ("done", "failed")
 KEEP_BYTES = 8_000_000
+#: --local-config, set by main(); None keeps the documented resolution order of the profile.
+LOCAL_CONFIG = None
 
 
 def now_s():
@@ -130,14 +135,45 @@ def _subst(value, qdir):
     return value
 
 
+def _uses_macros(value):
+    if isinstance(value, str):
+        return "${" in value
+    if isinstance(value, list):
+        return any(_uses_macros(v) for v in value)
+    if isinstance(value, dict):
+        return any(_uses_macros(v) for v in value.values())
+    return False
+
+
+def expand_local(value):
+    """${local.<dotted.key>} against the deployment profile, via the one Python bridge.
+
+    Imported lazily so a queue that uses no macro never needs a profile, and so this runner still
+    works standalone (it is an npu-smi host utility) when only its own file is copied over.
+    """
+    if not _uses_macros(value):
+        return value
+    lib = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib")
+    if lib not in sys.path:
+        sys.path.insert(0, lib)
+    try:
+        import local_profile
+        local_profile.use(LOCAL_CONFIG)
+        return local_profile.expand(value)
+    except QueueError:
+        raise
+    except Exception as error:  # ProfileError, an unimportable bridge, a malformed profile
+        raise QueueError("%s (a queue macro needs the deployment profile)" % error)
+
+
 def load_queue(path, qdir):
-    """Validated queue document with {queue_dir} substituted. Raises QueueError."""
+    """Validated queue document with {queue_dir} and ${local.*} substituted. Raises QueueError."""
     doc = read_json(path)
     if not isinstance(doc, dict) or doc.get("schema") != QUEUE_SCHEMA:
         raise QueueError("queue file %s unreadable or schema is not %s" % (path, QUEUE_SCHEMA))
     jobs, seen = [], set()
     for raw in doc.get("jobs") or []:
-        j = _subst(raw, qdir)
+        j = expand_local(_subst(raw, qdir))
         jid = j.get("id")
         if not isinstance(jid, str) or not re.match(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$", jid):
             raise QueueError("bad job id %r" % (jid,))
@@ -845,11 +881,15 @@ def progress_summary(state, now=None):
 
 
 def main(argv=None):
+    global LOCAL_CONFIG
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", help="run the queue (launch detached with nohup setsid, see the module docstring)")
     r.add_argument("--queue", required=True, help="queue file (saea-card-queue-v1)")
     r.add_argument("--queue-dir", required=True, help="state directory (state.json, runner.lock, queue.log)")
+    r.add_argument("--local-config", default=None,
+                   help="deployment profile for ${local.*} in the queue (default: $OMNI_LOCAL_CONFIG "
+                        "or configs/local/deployment.json)")
     r.add_argument("--resume", action="store_true", help="continue from <queue-dir>/state.json (adopts a running job)")
     r.add_argument("--retry-failed", action="store_true", help="with --resume: failed jobs become pending again")
     r.add_argument("--dry-run", action="store_true", help="print every command, run nothing, write nothing")
@@ -862,6 +902,7 @@ def main(argv=None):
     s.add_argument("--queue-dir", required=True)
     s.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    LOCAL_CONFIG = getattr(a, "local_config", None)
     if a.cmd == "status":
         st = read_json(os.path.join(a.queue_dir, "state.json"))
         if not st:

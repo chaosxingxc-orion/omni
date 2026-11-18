@@ -12,7 +12,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import prelim_chain as pc  # noqa: E402
+import profile_fixture  # noqa: E402
 import record_runs as rr  # noqa: E402
+
+profile_fixture.ensure()  # every host fact comes from a deployment profile; the tests supply one
 
 HERE = Path(__file__).resolve().parent
 EXAMPLE = json.loads((HERE / "record_run_list.example-armA-knee32.json").read_text())
@@ -247,10 +250,12 @@ def test_resume_skips_finished_steps_and_restarts_nothing(tmp_path):
     assert status(c2)["state"] == "done" and first > 0
 
 
-def test_watchdog_entries_are_for_npu2_only(tmp_path):
+def test_watchdog_entries_are_for_the_training_host_only(tmp_path):
     c, _ = chain(tmp_path)
     jobs = c.jobs("chain") + c.jobs("servers") + c.jobs("sweep", c.rl["runs"][0])
-    assert {j["host"] for j in jobs} == {"npu2"} and {j["kind"] for j in jobs} == {"generic_log", "vllm_server", "sweep"}
+    # Every registry entry names the deployment's training host, and never the rollout host (175 is not ours).
+    assert {j["host"] for j in jobs} == {pc.training_host()} and pc.training_host() != pc.rollout_host()
+    assert {j["kind"] for j in jobs} == {"generic_log", "vllm_server", "sweep"}
     assert jobs[0]["params"]["status_file"].endswith("chain-status.json")
 
 

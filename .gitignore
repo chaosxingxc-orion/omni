@@ -1,6 +1,9 @@
 # Datasets, features and model weights are never committed: rebuild them with scripts/download and scripts/prep.
 # Anchored to the repo root so the study's own tracked configs/knowledge and docs/checks are unaffected.
 /datasets/
+# Local deployment profile: hosts, paths, ports, image identity. Only the committed
+# example is versioned; every deployment fills in its own copy.
+/configs/local/deployment.json
 /models/
 /vectors/
 /prepared/

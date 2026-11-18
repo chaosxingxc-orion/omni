@@ -79,23 +79,29 @@ def within(value, root, label, strict=False):
     return str(p)
 
 
-def expand(value, variables):
+def expand(value, variables, used=None):
     if isinstance(value, str):
         def replace(match):
             name = match.group(1)
             if name not in variables:
+                if name.startswith("local."):
+                    raise ConfigError(
+                        f"undeclared variable: {name}; set '{name[len('local.'):]}' "
+                        "in the local deployment profile (--local-config)")
                 raise ConfigError(f"undeclared variable: {name}")
+            if used is not None:
+                used.add(name)
             return variables[name]
         result = VARIABLE.sub(replace, value)
         if "${" in result:
             raise ConfigError("malformed variable expansion")
         return result
     if isinstance(value, list):
-        return [expand(v, variables) for v in value]
+        return [expand(v, variables, used) for v in value]
     if isinstance(value, dict):
         if any("${" in k for k in value):
             raise ConfigError("variables are not allowed in object keys")
-        return {k: expand(v, variables) for k, v in value.items()}
+        return {k: expand(v, variables, used) for k, v in value.items()}
     return value
 
 
@@ -123,7 +129,13 @@ def _unique_pairs(pairs):
     return value
 
 
-def load_config(filename):
+def load_config(filename, local=None):
+    """Parse one experiment configuration, optionally against a deployment profile.
+
+    ``local`` is the path of the local deployment profile (``configs/local/deployment.json``).
+    Its values are exposed only through ``${local.<dotted.key>}`` and are read here, once;
+    every later stage reads the frozen ``CONFIG.json`` snapshot instead.
+    """
     source = Path(filename).resolve()
     try:
         raw = json.loads(source.read_text(encoding="utf-8"), object_pairs_hook=_unique_pairs,
@@ -135,10 +147,17 @@ def load_config(filename):
         raise ConfigError("schema_version must be integer 1")
     storage = object_keys(raw["storage"], {"shared_root", "run_root"}, set(), "storage")
     variables = {"config_dir": str(source.parent)}
+    profile = None
+    if local is not None:
+        from .local import load_local_config
+        profile = load_local_config(local)
+        variables.update({f"local.{name}": value if isinstance(value, str) else str(value)
+                          for name, value in profile["values"].items()})
     variables["shared_root"] = path(expand(storage["shared_root"], variables), "storage.shared_root")
     variables["run_root"] = path(expand(storage["run_root"], variables), "storage.run_root")
     within(variables["run_root"], variables["shared_root"], "storage.run_root", strict=True)
-    cfg = expand(raw, variables)
+    used = set()
+    cfg = expand(raw, variables, used)
     cfg["storage"] = {k: variables[k] for k in ("shared_root", "run_root")}
     release = object_keys(cfg["release"], {"image_digest"}, {"artifacts"}, "release")
     if not isinstance(release["image_digest"], str) or not IMAGE.fullmatch(release["image_digest"]):
@@ -266,8 +285,15 @@ def load_config(filename):
         order.append(tid)
     for tid in by_id:
         visit(tid)
+    snapshot = None
+    if profile is not None:
+        from .local import used_digest
+        referenced = {name: profile["values"][name[len("local."):]]
+                      for name in sorted(used) if name.startswith("local.")}
+        snapshot = {"path": profile["path"], "file_sha256": profile["file_sha256"],
+                    "values": referenced, "local_sha256": used_digest(referenced)}
     return {"config": cfg, "sha256": digest(cfg), "source": str(source),
-            "run_dir": str(experiment_dir), "order": order}
+            "run_dir": str(experiment_dir), "order": order, "local": snapshot}
 
 
 def task_environment(document, task):

@@ -52,13 +52,32 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 import prelim_chain as pc  # noqa: E402  (evaluate, Liveness, RealOps, read_cards, ... : one copy of the plan 3.4 rules)
 
-ROOT, LOGS, TREE, IMAGE = pc.ROOT, pc.LOGS, pc.TREE, pc.IMAGE
+# Every host fact is a call, never a module constant: it is read from the deployment profile when a chain runs, so importing
+# this module (the offline tests do) needs no profile.  The values themselves are defined once, in prelim_chain.
+def root() -> str:
+    return pc.root()
+
+
+def logs_root() -> str:
+    return pc.logs_root()
+
+
+def tree() -> str:
+    return pc.tree()
+
+
+def image() -> str:
+    return pc.image()
+
+
 NPU_DEPLOY = str(SCRIPTS / "npu_deploy.sh")
 NPU_VERIFY = str(SCRIPTS / "npu_verify_base.sh")
 SMOKE = str(SCRIPTS / "npu_smoke_thinking.py")
 PROBE = str(SCRIPTS / "greedy_probe.py")
 RUN_LIST_SCHEMA = "saea-record-run-list-v1"
-WATCHDOG_HOST = "npu2"  # host 175 ("npu") is not ours: no registry entry is ever written for it
+def watchdog_host() -> str:
+    """hosts.training: the machine registry entries are written for.  Host 175 ("npu") is not ours."""
+    return pc.training_host()
 CONTACTS = 3  # contacts per trajectory (the sweep client's default; one request pass = workers x CONTACTS requests)
 LOCK_KEY = "qwen3-omni-30b-a3b-thinking-bf16"
 EXPECTED_CHECKS = 11
@@ -80,7 +99,7 @@ class GateFailed(pc.ChainStop):
 
 # ---------------------------------------------------------------- run list (data) and profile
 def profile_path(profile_id: str) -> Path:
-    return Path(TREE) / "configs" / "deployment" / f"{profile_id}.json"
+    return Path(tree()) / "configs" / "deployment" / f"{profile_id}.json"
 
 
 def load_profile(profile_id: str) -> dict:
@@ -154,7 +173,7 @@ def validate_run_list(doc: dict, profile: dict) -> dict:
         raise pc.ChainStop("r0.base_lock (the base-lock JSON that npu_verify_base.sh checks against) is required")
     r0.setdefault("min_free_gib", 50)
     r0.setdefault("deploy_wait_seconds", 2400)
-    r0.setdefault("smoke_audio", f"{ROOT}/work/scratch/smoke-181/tone.wav")
+    r0.setdefault("smoke_audio", f"{root()}/work/scratch/smoke-181/tone.wav")
     return {"schema": RUN_LIST_SCHEMA, "example": bool(doc.get("example", False)), "label": str(doc.get("label", "")),
             "profile": profile["profile_id"], "admitted_level": admitted, "ceiling_bound_is_failure":
             bool(doc.get("ceiling_bound_is_failure", True)), "seed": str(doc.get("seed", pc.SEED)),
@@ -190,12 +209,12 @@ def receipt_cmd(pids: dict[str, int], image_id: str, out: str, user: str) -> lis
     directory is writable. Zero model contacts; no process is signalled."""
     out_dir = str(Path(out).parent)
     cmd = ["docker", "run", "--rm", "--pid", "host", "--network", "host", "--user", user, "-e", "HOME=/tmp",
-           "--cpuset-cpus", pc.CLIENT_CPUSET, "-v", f"{ROOT}:{ROOT}:ro", "-v", f"{out_dir}:{out_dir}", "-w", TREE,
-           "-e", f"PYTHONPATH={TREE}/src", "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", f"SPEECHRL_DATA_DIR={ROOT}",
-           "--entrypoint", "/opt/saea-venv/bin/python", IMAGE, "scripts/write_vllm_runtime_receipt.py"]
+           "--cpuset-cpus", pc.CLIENT_CPUSET, "-v", f"{root()}:{root()}:ro", "-v", f"{out_dir}:{out_dir}", "-w", tree(),
+           "-e", f"PYTHONPATH={tree()}/src", "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", f"SPEECHRL_DATA_DIR={root()}",
+           "--entrypoint", "/opt/saea-venv/bin/python", image(), "scripts/write_vllm_runtime_receipt.py"]
     for name, pid in pids.items():
         cmd += ["--instance", f"{name}={pid}"]
-    return cmd + ["--model-lock-key", LOCK_KEY, "--materialization-root", ROOT, "--image-ref", IMAGE,
+    return cmd + ["--model-lock-key", LOCK_KEY, "--materialization-root", root(), "--image-ref", image(),
                   "--image-id", image_id, "--output", out]
 
 
@@ -205,8 +224,8 @@ def verify_cmd(profile_id: str, base_lock: str, receipt: str) -> list[str]:
 
 def smoke_cmd(url: str, audio: str, out: str) -> list[str]:
     return ["docker", "run", "--rm", "--network", "host", "--user", docker_user(), "-e", "HOME=/tmp",
-            "--cpuset-cpus", pc.CLIENT_CPUSET, "-v", f"{ROOT}:{ROOT}", "-w", TREE, "-e", f"PYTHONPATH={TREE}/src",
-            "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
+            "--cpuset-cpus", pc.CLIENT_CPUSET, "-v", f"{root()}:{root()}", "-w", tree(), "-e", f"PYTHONPATH={tree()}/src",
+            "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", image(),
             SMOKE, "--base-url", url, "--audio", audio, "--out", out]
 
 
@@ -221,8 +240,8 @@ def compare_cmd(a: str, b: str, out: str) -> list[str]:
 def sweep_cmd(name: str, urls: list[str], level: int, requests: int, min_tokens: int | None, seed: str, label: str,
               out: str, cpuset: str, sweep: dict | None = None) -> list[str]:
     cmd = ["docker", "run", "--rm", "--name", name, "--network", "host", "--user", docker_user(), "-e", "HOME=/tmp",
-           "--cpuset-cpus", cpuset, "-v", f"{ROOT}:{ROOT}", "-w", TREE, "-e", f"PYTHONPATH={TREE}/src",
-           "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
+           "--cpuset-cpus", cpuset, "-v", f"{root()}:{root()}", "-w", tree(), "-e", f"PYTHONPATH={tree()}/src",
+           "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", image(),
            "scripts/serving/synthetic_sweep.py"]
     for url in urls:
         cmd += ["--base-url", url]
@@ -283,8 +302,8 @@ class RecordOps(pc.RealOps):
         return shutil.disk_usage(path).free / 2**30
 
     def git_head(self) -> str:
-        code, out = self.sh(["git", "-C", TREE, "rev-parse", "HEAD"], 30)
-        dirty = self.sh(["git", "-C", TREE, "status", "--porcelain"], 60)[1].strip()
+        code, out = self.sh(["git", "-C", tree(), "rev-parse", "HEAD"], 30)
+        dirty = self.sh(["git", "-C", tree(), "status", "--porcelain"], 60)[1].strip()
         return out.strip() + ("+dirty" if dirty else "")
 
     def deploy_up(self, profile_id: str, wait_seconds: int) -> tuple[int, str]:
@@ -296,13 +315,13 @@ class RecordOps(pc.RealOps):
     def health(self, instances: list[dict]) -> dict[str, bool]:
         out = {}
         for inst in instances:
-            base = f"http://127.0.0.1:{inst['port']}"
+            base = pc.url(inst["port"])
             h, m = pc.http_get(base + "/health"), pc.http_get(base + "/v1/models")
             out[inst["name"]] = bool(h and h[0] == 200 and m and m[0] == 200 and pc.MODEL in m[1])
         return out
 
     def dead_instances(self, instances: list[dict]) -> list[str]:
-        live = pc.Liveness([(i["name"], f"http://127.0.0.1:{i['port']}") for i in instances], pc.http_get,
+        live = pc.Liveness([(i["name"], pc.url(i["port"])) for i in instances], pc.http_get,
                            self.docker_names, pause=pc.LIVENESS_PAUSE_SECONDS)
         return live.dead_instances()
 
@@ -320,7 +339,7 @@ class RecordOps(pc.RealOps):
             if code != 0 or not text.strip().isdigit() or int(text) <= 0:
                 return 1, f"no running pid for {name}: {text.strip()[:200]}"
             pids[name] = int(text)
-        code, image_id = self.sh(["docker", "image", "inspect", "--format", "{{.Id}}", IMAGE], 60)
+        code, image_id = self.sh(["docker", "image", "inspect", "--format", "{{.Id}}", image()], 60)
         if code != 0 or not image_id.strip().startswith("sha256:"):
             return 1, f"image id unreadable: {image_id.strip()[:200]}"
         user = self.sh(["docker", "inspect", "-f", "{{.Config.User}}", names[0]], 30)[1].strip() or "0:0"
@@ -439,7 +458,7 @@ class RecordChain:
         self.steps_dir = chain_dir / "steps"
         self.steps_dir.mkdir(parents=True, exist_ok=True)
         self.instances = [{"name": i["name"], "port": i["port"], "cards": i["cards"],
-                           "url": f"http://127.0.0.1:{i['port']}"} for i in profile["instances"]]
+                           "url": pc.url(i["port"])} for i in profile["instances"]]
         self.urls = [i["url"] for i in self.instances]
         self.names = [i["name"] for i in self.instances]
         self.ceiling = profile["max_num_seqs"]
@@ -492,9 +511,9 @@ class RecordChain:
         self.status["steps"][step] = {"state": "failed", "finished": pc.utc_now(), "reason": reason}
         raise pc.ChainStop(f"{step}: {reason}")
 
-    # --- watchdog registry (npu2 only)
+    # --- watchdog registry (the deployment training host only)
     def jobs(self, kind: str, run: dict | None = None) -> list[dict]:
-        host = WATCHDOG_HOST
+        host = watchdog_host()
         if kind == "chain":
             return [{"id": f"record-runs-{self.ts}", "kind": "generic_log", "host": host, "stall_s": 3600,
                      "note": "RECORDED runs (R0 + run list); BAD means the chain stopped (dead endpoint, failed gate or "
@@ -532,7 +551,7 @@ class RecordChain:
         return {"threshold_mib": threshold, "hbm_used_mib": {str(c): used[c] for c in needed}}
 
     def r0_disk(self) -> dict:
-        free = self.ops.disk_free_gib(ROOT)
+        free = self.ops.disk_free_gib(root())
         need = self.rl["r0"]["min_free_gib"]
         if free < need:
             self.stop("disk", f"CephFS free {free:.1f} GiB < {need} GiB")
@@ -813,7 +832,7 @@ class FakeRecordOps(pc.FakeOps):
         self.commands.append(argv)
         self.note("RUN " + shlex.join(argv))
 
-    def hostname(self) -> str: return "A800I-03"
+    def hostname(self) -> str: return pc.expected_hostname() or "dry-run-host"
     def git_head(self) -> str: return "0" * 40
     def disk_free_gib(self, path) -> float: return 500.0
 
@@ -897,6 +916,9 @@ def example_hint() -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--run-list", help="run-list JSON (saea-record-run-list-v1)")
+    ap.add_argument("--local-config", default=None,
+                    help="deployment profile for ${local.*} in the run list (default: $OMNI_LOCAL_CONFIG "
+                         "or configs/local/deployment.json)")
     ap.add_argument("--chain-dir", help="existing chain directory (with --resume)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--ts", help="UTC stamp used in every report name (default: now)")
@@ -914,6 +936,8 @@ def main() -> int:
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     split = lambda s: {x for x in s.split(",") if x}
+    if args.local_config:
+        pc.local_profile.use(args.local_config)
     if args.resume:
         chain_dir = Path(args.chain_dir or sys.exit("--resume needs --chain-dir"))
         config = pc.read_json(chain_dir / "config.json") or sys.exit(f"{chain_dir} holds no chain")
@@ -921,7 +945,11 @@ def main() -> int:
     else:
         if not args.run_list:
             sys.exit("--run-list is required")
-        doc = json.loads(Path(args.run_list).read_text(encoding="utf-8"))
+        raw = json.loads(Path(args.run_list).read_text(encoding="utf-8"))
+        try:
+            doc = pc.local_profile.expand(raw)  # ${local.*}: the run list names deployment paths, not literals
+        except pc.local_profile.ProfileError as error:
+            sys.exit(f"refused: {error}")
         ts = args.ts or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         chain_dir = None
     try:
@@ -944,11 +972,15 @@ def main() -> int:
         code = chain.run()
         print(json.dumps(pc.read_json(chain_dir / "chain-status.json")["decisions"], indent=1, sort_keys=True))
         return code
-    ops = RecordOps(LOGS, ts, args.resume)
-    if ops.hostname() != pc.EXPECTED_HOSTNAME:
-        sys.exit(f"refusing to run on {ops.hostname()!r}: recorded runs belong to host 181 ({pc.EXPECTED_HOSTNAME})")
+    ops = RecordOps(logs_root(), ts, args.resume)
+    try:
+        expected = pc.require_hostname()
+    except pc.local_profile.ProfileError as error:
+        sys.exit(f"refused: {error}")
+    if ops.hostname() != expected:
+        sys.exit(f"refusing to run on {ops.hostname()!r}: recorded runs belong to {expected!r}")
     if not args.resume:
-        chain_dir = Path(args.chain_dir or f"{LOGS}/record-runs-{ts}")
+        chain_dir = Path(args.chain_dir or f"{logs_root()}/record-runs-{ts}")
         if (chain_dir / "config.json").exists():
             sys.exit(f"{chain_dir} already holds a chain; use --resume")
         chain_dir.mkdir(parents=True, exist_ok=True)
@@ -959,7 +991,7 @@ def main() -> int:
     (chain_dir / "steps").mkdir(exist_ok=True)
     os.chmod(chain_dir / "steps", 0o777)
     pc.log(f"chain {chain_dir.name} pid {os.getpid()} resume={args.resume} dir {chain_dir}")
-    return RecordChain(ops, chain_dir, ts, LOGS, run_list, profile).run()
+    return RecordChain(ops, chain_dir, ts, logs_root(), run_list, profile).run()
 
 
 if __name__ == "__main__":

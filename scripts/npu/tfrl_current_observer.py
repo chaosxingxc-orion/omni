@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D, U, IMAGE, write, status
+from real500_successor_queue import data_root, publish_root, image, write, status
 
 
 def read(path):
@@ -13,6 +13,7 @@ def read(path):
 
 
 def observe(tree,queue,out):
+    D, U = data_root(), publish_root()
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):
         raise ValueError('fresh owned observer required')
     study=tree/'studies/speech-aware-evidence-acquisition'
@@ -43,7 +44,7 @@ def observe(tree,queue,out):
                     results[half]={'state':state,'completed_rows':None if checkpoint.exists() else 0,'total_rows':n,
                         'cards':8 if live else None,'instances':2 if live else None,'estimated_remaining_seconds':None};continue
                 target=out/(half+'-'+str(time.time_ns())+'.json')
-                env={**os.environ,'TREE':str(U),'CPUSET':'224-239','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+                env={**os.environ,'TREE':str(U),'CPUSET':'224-239','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
                     'PORT_DOCKER_FLAGS':'--network none --name saea-tfrl-current-progress-reader-v1'}
                 command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/real_engine_progress.py',
                     '--checkpoint',str(checkpoint),'--roster',str(out/(half+'-roster.json')),'--state',state,

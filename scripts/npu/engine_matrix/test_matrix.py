@@ -6,6 +6,9 @@ import sys
 import threading
 import pytest
 P=Path(__file__).parent
+sys.path.insert(0,str(P.parent))
+import profile_fixture  # noqa: E402
+profile_fixture.ensure()  # the engine matrix reads the deployment profile; the tests supply one
 spec=importlib.util.spec_from_file_location('matrix',P/'matrix.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 
@@ -33,13 +36,13 @@ def test_orphan_result_refused(tmp_path):
 
 
 def candidate():
-    return {'id':'c','container':'saea-omni-i0','url':'http://127.0.0.1:8200','model':m.MODEL,'image':m.IMAGE,
+    return {'id':'c','container':'saea-omni-i0','port':8200,'model':m.MODEL,
             'client_concurrency':2,'max_num_seqs':32,'max_num_batched_tokens':None,
             'enable_prefix_caching':True,'enable_chunked_prefill':True}
 
 
 def doc():
-    return {'Id':'id','Image':m.IMAGE,'State':{'Running':True,'Pid':100},'Args':['serve','model',
+    return {'Id':'id','Image':m.image(),'State':{'Running':True,'Pid':100},'Args':['serve','model',
             '--served-model-name',m.MODEL,'--port','8200','--tensor-parallel-size','2',
             '--max-model-len','24576','--max-num-seqs','32']}
 
@@ -52,7 +55,7 @@ def test_live_image_mismatch(field,value):
 
 def test_live_flag_evidence_required():
     with pytest.raises(ValueError,match='startup'):m.inspect_binding(candidate(),doc(),'')
-    assert m.inspect_binding(candidate(),doc(),'enable_prefix_caching=True enable_chunked_prefill=True')['image']==m.IMAGE
+    assert m.inspect_binding(candidate(),doc(),'enable_prefix_caching=True enable_chunked_prefill=True')['image']==m.image()
 
 
 def test_explicit_batch_default_mismatch():
@@ -101,7 +104,7 @@ def test_complete_trial_is_noop(tmp_path,monkeypatch):
     monkeypatch.setattr(m,'validate_live',lambda c:live)
     monkeypatch.setattr(tool,'preflight',lambda c:pytest.fail('completed trial contacted endpoint'))
     binding={'candidate':c,'live':live,'workload_sha256':m.digest([dataclasses.asdict(t) for t in trajectories]),
-             'tool_sha256':m.hashlib.sha256(m.TOOL.read_bytes()).hexdigest(),'runner_sha256':m.hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest()}
+             'tool_sha256':m.hashlib.sha256(m.tool_path().read_bytes()).hexdigest(),'runner_sha256':m.hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest()}
     m.durable(tmp_path/'binding.json',binding)
     for i in range(3):m.execute_request(tmp_path/'requests',str(i),{},lambda:{'status':'ok'})
     m.durable(tmp_path/'complete.json',{'completed':3,'new_requests':3,'errors':0,'request_result_hashes':{p.name:m.hashlib.sha256(p.read_bytes()).hexdigest() for p in (tmp_path/'requests').glob('*.result.json')}})

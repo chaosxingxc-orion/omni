@@ -67,17 +67,82 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = "/mnt/cephfs/xingchao/omni"
-LOGS = f"{ROOT}/work/logs"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+import local_profile  # noqa: E402
+
 SCRIPTS = Path(__file__).resolve().parent
 NPU_SERVE = str(SCRIPTS / "npu_serve.sh")
-JOBS = f"{ROOT}/work/watchdog/jobs.json"
-TREE = f"{ROOT}/work/dev/umbrella/studies/speech-aware-evidence-acquisition"
-IMAGE = "saea-base:20261027"
 SEED = "20261028"
 MODEL = "qwen3-omni-30b-a3b-thinking"
-EXPECTED_HOSTNAME = "A800I-03"  # host 181 (alias npu2); the chain refuses to run anywhere else
 CLIENT_CPUSET = "224-255"  # NUMA node 7: no instance is pinned there
+
+# ---------------------------------------------------------------- local deployment facts
+# Every host, path, service address and image reference comes from the deployment profile
+# (configs/local/deployment.json, or the file named by --local-config / OMNI_LOCAL_CONFIG).
+# These are FUNCTIONS on purpose: the values are read when a chain runs, never when a module
+# is imported, so importing this module -- which the offline tests do -- needs no profile.
+# A missing profile or key raises ProfileError naming the file and the key to add.
+
+
+def root() -> str:
+    """storage.shared_root: the shared root every run path hangs off."""
+    return str(local_profile.get("storage.shared_root"))
+
+
+def logs_root() -> str:
+    return f"{root()}/work/logs"
+
+
+def jobs_file() -> str:
+    return f"{root()}/work/watchdog/jobs.json"
+
+
+def tree() -> str:
+    """roots.source plus the study's fixed location inside it."""
+    return f"{local_profile.get('roots.source')}/studies/speech-aware-evidence-acquisition"
+
+
+def image() -> str:
+    """image.reference: the pinned runtime image this deployment runs."""
+    return str(local_profile.get("image.reference"))
+
+
+def url(port) -> str:
+    """A serving instance's base URL: the deployment's service host and the given port."""
+    return f"http://{local_profile.get('services.omni.host')}:{port}"
+
+
+def training_host() -> str:
+    """hosts.training: the host alias a watchdog job is registered against."""
+    return str(local_profile.get("hosts.training"))
+
+
+def rollout_host() -> str:
+    """hosts.rollout: the other machine.  Nothing in these chains is ever registered or run there."""
+    return str(local_profile.get("hosts.rollout"))
+
+
+def expected_hostname() -> str | None:
+    """identity.hostname, or None when this deployment does not declare one."""
+    return local_profile.optional("identity.hostname")
+
+
+def require_hostname() -> str:
+    """The machine this deployment belongs to; refusing is better than guessing."""
+    name = expected_hostname()
+    if not name:
+        raise local_profile.ProfileError(
+            f"{local_profile.profile_path()}: no value for identity.hostname; add it in the deployment profile "
+            "(the chains refuse to run on a machine they cannot identify)")
+    return str(name)
+
+
+def default_gate() -> str:
+    return f"{logs_root()}/prelim-E-chain-20261029T111900Z/chain-status.json"
+
+
+def default_arm_a_launch() -> str:
+    return f"{logs_root()}/prelim-chain-20261029T094933Z/arm-a-launch.json"
 SAMPLE_SECONDS = 10
 POLL_SECONDS = 2.0
 MIN_FREE_MIB = 2048
@@ -104,7 +169,6 @@ P3_LEVELS = (16, 32, 48, 64, 96)
 P3B_MIN_TOKENS = P2_MIN_TOKENS  # B's worst case: every completion forced to 4,096 tokens
 GATE_POLL_S = 120  # the gate chain's status file is read at most once every 2 minutes
 GATE_FINAL = ("done", "failed", "interrupted")
-DEFAULT_GATE = f"{LOGS}/prelim-E-chain-20261029T111900Z/chain-status.json"
 E_ENTRY = re.compile(r"^(prelim-E-chain|vllm-prelim-E\d.*|sweep-prelim-E\d.*)$")  # watchdog ids of the E crash trials
 OURS = re.compile(r"^saea-arm-[ab]-\d+$")
 ARM_B = [
@@ -373,8 +437,9 @@ def prom_sum(text: str, metric: str) -> float | None:
 class RealOps:
     """Docker, npu-smi, the sweep client and the watchdog registry. Every container name is checked against OURS."""
 
-    def __init__(self, logs: str, ts: str, resume: bool) -> None:
+    def __init__(self, logs: str, ts: str, resume: bool, jobs: str | None = None) -> None:
         self.logs, self.ts = logs, ts
+        self.jobs = jobs  # watchdog registry path; None means the deployment profile's jobs.json
         self.samples: list[dict] = []
         self.lock = threading.Lock()
         self.phase: str | None = None  # report prefix the samples belong to
@@ -449,8 +514,8 @@ class RealOps:
         subprocess.run(["docker", "rm", "-f", name], capture_output=True)  # a client left by a dead chain
         command = ["docker", "run", "--rm", "--name", name, "--network", "host", "--user",
                    f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp", "--cpuset-cpus", CLIENT_CPUSET,
-                   "-v", f"{ROOT}:{ROOT}", "-w", TREE, "-e", f"PYTHONPATH={TREE}/src",
-                   "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
+                   "-v", f"{root()}:{root()}", "-w", tree(), "-e", f"PYTHONPATH={tree()}/src",
+                   "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", image(),
                    "scripts/serving/synthetic_sweep.py"]
         for url in urls:
             command += ["--base-url", url]
@@ -642,7 +707,7 @@ class RealOps:
                     continue
                 if not self.container_running(spec["name"]):
                     raise ChainStop(f"{spec['name']} exited during startup (see its log)")
-                base = f"http://127.0.0.1:{spec['port']}"
+                base = url(spec["port"])
                 health, models = http_get(base + "/health"), http_get(base + "/v1/models")
                 if health and health[0] == 200 and models and models[0] == 200 and MODEL in models[1]:
                     state[spec["name"]] = True
@@ -663,14 +728,15 @@ class RealOps:
         return isinstance(pid, int) and pid > 0 and Path(f"/proc/{pid}").exists()
 
     def job_ids(self) -> list[str]:
-        jobs = read_json(JOBS)
+        jobs = read_json(self.jobs or jobs_file())
         if isinstance(jobs, dict):
             jobs = jobs.get("jobs", [])
         return [j["id"] for j in jobs] if isinstance(jobs, list) else []
 
     # --- watchdog registry (atomic replace; the watchdog re-reads jobs.json every cycle)
     def patch_jobs(self, upsert: list[dict], remove: list[str] = (), set_log: dict | None = None) -> None:
-        jobs = read_json(JOBS)
+        path = self.jobs or jobs_file()
+        jobs = read_json(path)
         if isinstance(jobs, dict):
             jobs = jobs.get("jobs", [])
         if not isinstance(jobs, list):
@@ -680,11 +746,11 @@ class RealOps:
             if job not in jobs:
                 jobs = [j for j in jobs if j["id"] != job["id"]] + [job]
         jobs = [j for j in jobs if j["id"] not in remove]
-        for job_id, path in (set_log or {}).items():
+        for job_id, log_path in (set_log or {}).items():
             for j in jobs:
                 if j["id"] == job_id:
-                    j["params"]["log"] = path
-        write_atomic(JOBS, json.dumps(jobs, indent=1) + "\n")
+                    j["params"]["log"] = log_path
+        write_atomic(path, json.dumps(jobs, indent=1) + "\n")
         log(f"watchdog registry patched: upsert={[j['id'] for j in upsert]} remove={list(remove)} "
             f"set_log={list((set_log or {}))}")
 
@@ -837,7 +903,7 @@ class Chain:
         return specs
 
     def urls(self, specs: list[dict]) -> list[str]:
-        urls = [f"http://127.0.0.1:{s['port']}" for s in specs]
+        urls = [url(s["port"]) for s in specs]
         self.url_name.update(zip(urls, (s["name"] for s in specs)))
         return urls
 
@@ -884,24 +950,24 @@ class Chain:
     # --- P2b: fresh arm A, worst case at 40 (then 32), arm A left up (plan 3.8 decision 3 item 1)
     def p2b_job_entries(self) -> list[dict]:
         prefix = self.p["P2b"]
-        return [{"id": "prelim-chain-p2b", "kind": "generic_log", "host": "npu2", "stall_s": 1800,
+        return [{"id": "prelim-chain-p2b", "kind": "generic_log", "host": training_host(), "stall_s": 1800,
                  "note": "P2b: fresh arm A + worst case at 40 (then 32); heartbeat every 60 s; BAD means the chain stopped "
                          "(endpoint_died or no admissible level; see chain-status.json)",
                  "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
                             "done_regex": "CHAIN DONE", "status_file": str(self.dir / "chain-status.json")}},
-                {"id": "sweep-armA-prelim-P2b-mintok4096", "kind": "sweep", "host": "npu2", "stall_s": 3600,
+                {"id": "sweep-armA-prelim-P2b-mintok4096", "kind": "sweep", "host": training_host(), "stall_s": 3600,
                  "note": "P2b worst case --min-tokens 4096 on a fresh arm A; a failing level 40 is a decision, "
                          "the next level runs on a relaunched arm A",
                  "params": {"run_prefix": prefix}}]
 
     def a_job_entries(self, a_specs: list[dict], logs: dict, tag: str = "P2b") -> list[dict]:
-        return [{"id": f"vllm-arm-a-{s['name'].rsplit('-', 1)[1]}", "kind": "vllm_server", "host": "npu2",
+        return [{"id": f"vllm-arm-a-{s['name'].rsplit('-', 1)[1]}", "kind": "vllm_server", "host": training_host(),
                  "note": f"arm A relaunched by prelim-chain-{self.ts} ({tag}); left UP afterwards",
                  "params": {"container": s["name"], "port": s["port"], "log": logs.get(s["name"])}} for s in a_specs]
 
     def wait_idle(self, alive: list[str], a_specs: list[dict]) -> None:
         """Never kill an instance that is serving someone (a finished level drains in seconds)."""
-        urls = {s["name"]: f"http://127.0.0.1:{s['port']}" for s in a_specs}
+        urls = {s["name"]: url(s["port"]) for s in a_specs}
         for name in alive:
             deadline = time.time() + 180
             while True:
@@ -980,7 +1046,7 @@ class Chain:
         return knee
 
     def b_job_entries(self, logs: dict) -> list[dict]:
-        return [{"id": f"vllm-arm-b-{i}", "kind": "vllm_server", "host": "npu2",
+        return [{"id": f"vllm-arm-b-{i}", "kind": "vllm_server", "host": training_host(),
                  "note": "preliminary arm B (P3); removed again when the chain stops it in P4",
                  "params": {"container": s["name"], "port": s["port"], "log": logs.get(s["name"])}}
                 for i, s in enumerate(ARM_B)]
@@ -1116,15 +1182,15 @@ class Chain:
 
     # --- P3 + P3b + P4 chain (plan 3.8 decision 3 items 3 and 4)
     def p3_job_entries(self) -> list[dict]:
-        return [{"id": "prelim-chain-p3", "kind": "generic_log", "host": "npu2", "stall_s": 3600,
+        return [{"id": "prelim-chain-p3", "kind": "generic_log", "host": training_host(), "stall_s": 3600,
                  "note": "P3 arm B + P3b worst case + P4 arm A relaunch; waits for the E chain first; heartbeat every 60 s; "
                          "BAD means the chain stopped (endpoint_died or a failed step; see chain-status.json)",
                  "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
                             "done_regex": "CHAIN DONE", "status_file": str(self.dir / "chain-status.json")}},
-                {"id": "sweep-armB-prelim-P3", "kind": "sweep", "host": "npu2", "stall_s": 3600,
+                {"id": "sweep-armB-prelim-P3", "kind": "sweep", "host": training_host(), "stall_s": 3600,
                  "note": "P3 arm B (2 x TP4, max-num-seqs 128) levels 16, 32, 48, 64, 96 per instance; one pass",
                  "params": {"run_prefix": self.p["P3"]}},
-                {"id": "sweep-armB-prelim-P3b-mintok4096", "kind": "sweep", "host": "npu2", "stall_s": 3600,
+                {"id": "sweep-armB-prelim-P3b-mintok4096", "kind": "sweep", "host": training_host(), "stall_s": 3600,
                  "note": "P3b arm B worst case --min-tokens 4096 at the highest passing P3 level; steps down until admissible",
                  "params": {"run_prefix": self.p["P3b"]}}]
 
@@ -1179,11 +1245,11 @@ class Chain:
 
     # --- resident worst case: the listed levels in order against the arm A that is up now (card-queue job R-A3-b6144-prelim)
     def wc_job_entries(self) -> list[dict]:
-        return [{"id": f"prelim-chain-wc-{self.ts}", "kind": "generic_log", "host": "npu2", "stall_s": 3600,
+        return [{"id": f"prelim-chain-wc-{self.ts}", "kind": "generic_log", "host": training_host(), "stall_s": 3600,
                  "note": "resident worst case (sweep overrides); BAD means the chain stopped (endpoint_died or an error)",
                  "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
                             "done_regex": "CHAIN DONE", "status_file": str(self.dir / "chain-status.json")}},
-                {"id": f"sweep-armA-prelim-WC-{self.ts}", "kind": "sweep", "host": "npu2", "stall_s": 5400,
+                {"id": f"sweep-armA-prelim-WC-{self.ts}", "kind": "sweep", "host": training_host(), "stall_s": 5400,
                  "note": "resident arm A worst case at the raised output cap; a failing level is data",
                  "params": {"run_prefix": self.p["WC"]}}]
 
@@ -1232,7 +1298,7 @@ class Chain:
                 specs = self.ops.inspect_arm_a()  # ChainStop unless saea-arm-a-0..3 are all running
                 busy = {}
                 for spec in specs:
-                    gauges = self.ops.load_gauges(f"http://127.0.0.1:{spec['port']}")
+                    gauges = self.ops.load_gauges(url(spec["port"]))
                     if gauges is None or gauges[0] > 0 or gauges[1] > 0:
                         busy[spec["name"]] = {"running": None if gauges is None else gauges[0],
                                               "waiting": None if gauges is None else gauges[1]}
@@ -1421,23 +1487,23 @@ class FakeOps:
 
 def preflight() -> int:
     """Read-only checks on host 181: the running arm A argv, endpoints, cards, free CPU node, and the sweep flags."""
-    ops = RealOps(LOGS, "preflight", False)
+    ops = RealOps(logs_root(), "preflight", False)
     hostname = Path("/etc/hostname").read_text().strip()
-    print(f"host {hostname} (expected {EXPECTED_HOSTNAME})")
+    print(f"host {hostname} (expected {expected_hostname() or 'not declared in the deployment profile'})")
     specs = ops.inspect_arm_a()
     print(json.dumps(specs, indent=1))
     for spec in specs:
-        base = f"http://127.0.0.1:{spec['port']}"
+        base = url(spec["port"])
         print(spec["name"], "health", (http_get(base + "/health") or ("none",))[0], "models",
               (http_get(base + "/v1/models") or ("none",))[0])
     print("cards (aicore %, hbm used MiB, total):", read_cards())
     sweep = subprocess.run(["docker", "run", "--rm", "--user", f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp",
-                            "--cpuset-cpus", CLIENT_CPUSET, "-v", f"{ROOT}:{ROOT}", "-w", TREE,
-                            "-e", f"PYTHONPATH={TREE}/src", "-e", "PYTHONDONTWRITEBYTECODE=1",
-                            "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
+                            "--cpuset-cpus", CLIENT_CPUSET, "-v", f"{root()}:{root()}", "-w", tree(),
+                            "-e", f"PYTHONPATH={tree()}/src", "-e", "PYTHONDONTWRITEBYTECODE=1",
+                            "--entrypoint", "/opt/saea-venv/bin/python", image(),
                             "scripts/serving/synthetic_sweep.py", "--help"], capture_output=True, text=True)
     print("synthetic_sweep.py --min-tokens flag present:", "--min-tokens" in sweep.stdout, "exit", sweep.returncode)
-    print("npu_serve.sh present:", Path(NPU_SERVE).exists(), "jobs.json readable:", read_json(JOBS) is not None)
+    print("npu_serve.sh present:", Path(NPU_SERVE).exists(), "jobs.json readable:", read_json(jobs_file()) is not None)
     return 0
 
 
@@ -1458,11 +1524,11 @@ def main() -> int:
                     help="run P2b (plan 3.8): stop idle saea-arm-a-*, fresh arm A from the capture, worst case at 40 then 32")
     ap.add_argument("--p3", action="store_true",
                     help="run P3 + P3b + P4 (plan 3.8): gate on the E chain, arm B levels, B's worst case, arm A relaunch")
-    ap.add_argument("--gate-file", default=DEFAULT_GATE,
+    ap.add_argument("--gate-file", default=None,
                     help="--p3 only: chain-status.json of the chain that holds the cards (read at most every 120 s)")
     ap.add_argument("--kv-peak", default="",
                     help="dry-run only: step=fraction pairs, e.g. p3b-L96=0.93,p3b-L64=0.95")
-    ap.add_argument("--arm-a-launch", default=f"{LOGS}/prelim-chain-20261029T094933Z/arm-a-launch.json",
+    ap.add_argument("--arm-a-launch", default=None,
                     help="--p2b and --p3: captured arm A argv to relaunch (copied into the new chain directory)")
     ap.add_argument("--sweep-json", default="",
                     help="sweep-client overrides, a JSON object or a path (keys max_tokens, thinking_budget, prompt_max, "
@@ -1513,14 +1579,18 @@ def main() -> int:
                 {"captured": utc_now(), "instances": ops.inspect_arm_a()}, indent=2) + "\n")
         mode = "wc" if wc else "stop" if args.stop_idle_arm_a else "p3" if args.p3 else "p2b" if args.p2b else "chain"
         if args.busy:
-            ops.load["http://127.0.0.1:8200"] = (2.0, 0.0)
+            ops.load[url(8200)] = (2.0, 0.0)
         code = Chain(ops, chain_dir, ts, logs, mode=mode, gate_path="/dry/gate.json", gate_poll=0.0,
                      sleep=lambda _s: None, sweep=sweep, wc=wc).run()
         print(json.dumps(read_json(chain_dir / "chain-status.json")["decisions"], indent=1, sort_keys=True))
         return code
     hostname = Path("/etc/hostname").read_text().strip()
-    if hostname != EXPECTED_HOSTNAME:
-        sys.exit(f"refusing to run on {hostname!r}: this chain belongs to host 181 ({EXPECTED_HOSTNAME})")
+    try:
+        expected = require_hostname()
+    except local_profile.ProfileError as error:
+        sys.exit(f"refused: {error}")
+    if hostname != expected:
+        sys.exit(f"refusing to run on {hostname!r}: this deployment's chain belongs to {expected!r}")
     if args.resume:
         chain_dir = Path(args.chain_dir or sys.exit("--resume needs --chain-dir"))
         config = read_json(chain_dir / "config.json")
@@ -1529,10 +1599,10 @@ def main() -> int:
         sweep, wc = config.get("sweep") or {}, config.get("wc")  # the stored settings win: a resume never changes the shape
     else:
         mode = "wc" if wc else "stop" if args.stop_idle_arm_a else "p3" if args.p3 else "p2b" if args.p2b else "chain"
-        gate_file = args.gate_file if args.p3 else None
+        gate_file = (args.gate_file or default_gate()) if args.p3 else None
         ts = args.ts or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         suffix = "-wc" if wc else "-stop" if args.stop_idle_arm_a else "-p3" if args.p3 else "-p2b" if args.p2b else ""
-        chain_dir = Path(args.chain_dir or f"{LOGS}/prelim-chain{suffix}-{ts}")
+        chain_dir = Path(args.chain_dir or f"{logs_root()}/prelim-chain{suffix}-{ts}")
         if (chain_dir / "config.json").exists():
             sys.exit(f"{chain_dir} already holds a chain; use --resume")
         chain_dir.mkdir(parents=True, exist_ok=True)
@@ -1545,7 +1615,7 @@ def main() -> int:
         if wc:
             config["wc"] = wc
         if args.p2b or args.p3:
-            source = Path(args.arm_a_launch)
+            source = Path(args.arm_a_launch or default_arm_a_launch())
             captured = read_json(source)
             if not captured:
                 sys.exit(f"--p2b/--p3 need a readable arm A capture: {source}")
@@ -1555,9 +1625,9 @@ def main() -> int:
     os.chmod(chain_dir / "config.json", 0o666)
     (chain_dir / "steps").mkdir(exist_ok=True)
     os.chmod(chain_dir / "steps", 0o777)
-    ops = RealOps(LOGS, ts, args.resume)
+    ops = RealOps(logs_root(), ts, args.resume)
     log(f"chain {chain_dir.name} mode {mode} pid {os.getpid()} resume={args.resume} dir {chain_dir}")
-    return Chain(ops, chain_dir, ts, LOGS, mode=mode, gate_path=gate_file, sweep=sweep, wc=wc).run()
+    return Chain(ops, chain_dir, ts, logs_root(), mode=mode, gate_path=gate_file, sweep=sweep, wc=wc).run()
 
 
 if __name__ == "__main__":

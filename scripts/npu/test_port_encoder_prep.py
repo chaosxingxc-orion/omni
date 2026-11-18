@@ -1,7 +1,7 @@
 """Tests of the generalised port encoder launcher (port_encoder_prep.sh) and its config writer (port_write_runtime_config.py).
 
 Hermetic: a throwaway study tree, data root and stub `docker`; no container, no encoder, no card, no real data. Run in the saea-base container:
-  bash port_py.sh -B -m pytest -q -p no:cacheprovider /mnt/cephfs/xingchao/omni/work/scripts/test_port_encoder_prep.py
+  bash port_py.sh -B -m pytest -q -p no:cacheprovider <repo>/scripts/npu/test_port_encoder_prep.py
 """
 import hashlib
 import importlib.util
@@ -59,11 +59,27 @@ def world(tmp_path):
     sh(["git", "init", "-q", str(study)])
     sh(git + ["add", "-A"])
     sh(git + ["commit", "-q", "-m", "fixture"])
-    return {"data": data, "tree": tree, "study": study, "head": sh(git + ["rev-parse", "HEAD"]).stdout.strip()}
+    # The launcher reads the image, the container user and every path from the deployment
+    # profile.  This fixture carries the recorded launch's identity so the argv comparison
+    # below still checks the exact spelling that was sealed; the literals live here, in a
+    # test fixture, not in the engineering base.
+    profile = {
+        "schema": "omni-local-deployment-v1",
+        "storage": {"shared_root": str(data), "hot_root": str(tmp_path / "hot"),
+                    "archive_root": str(tmp_path / "archive")},
+        "roots": {"model": str(tmp_path / "models"), "data": str(data), "source": str(tree)},
+        "image": {"reference": "saea-base:20261027", "digest": "sha256:" + "0" * 64},
+        "identity": {"uid": 1008, "gid": 1008},
+    }
+    profile_path = tmp_path / "deployment.json"
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {"data": data, "tree": tree, "study": study, "profile": profile, "profile_path": profile_path,
+            "head": sh(git + ["rev-parse", "HEAD"]).stdout.strip()}
 
 
 def env_for(world, **extra):
-    env = dict(os.environ, TREE=str(world["tree"]), OMNI_ROOT=str(world["data"]), DRY_RUN_PYTHON=sys.executable)
+    env = dict(os.environ, TREE=str(world["tree"]), OMNI_ROOT=str(world["data"]), DRY_RUN_PYTHON=sys.executable,
+               OMNI_LOCAL_CONFIG=str(world["profile_path"]))
     env.pop("PORT_ENCODER_CPUSET", None)
     env.update(extra)
     return env

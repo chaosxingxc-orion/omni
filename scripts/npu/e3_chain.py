@@ -53,14 +53,29 @@ import e_crash_chain as ec  # noqa: E402  (EReal: launch_e, crash_evidence, card
 import greedy_probe as gp  # noqa: E402  (compare_runs, load_results: the D3 protocol and compare logic)
 import prelim_chain as pc  # noqa: E402  (RealOps.measure_level with the 30 s liveness poll, helpers)
 
-ROOT, LOGS = pc.ROOT, pc.LOGS
+# Every host fact is a call, never a module constant (see prelim_chain): importing this module needs no profile.
+def root() -> str:
+    return pc.root()
+
+
+def logs_root() -> str:
+    return pc.logs_root()
+
+
+def d3_dir() -> str:
+    """The D3 greedy directory holding bodies.json, S2.json and S3.json (the sealed baseline of this study)."""
+    return f"{logs_root()}/prelim-D3-greedy-20261029T130527Z"
+
+
+def default_capture() -> str:
+    return ec.default_capture()
+
+
 SCRIPTS = Path(__file__).resolve().parent
 LEVEL = 48  # per instance: the known crash regime (P2 crashed 2 of 4 instances here)
 MIN_TOKENS = ec.MIN_TOKENS  # 4096: every completion forced long
 SEEDS = (str(ec.SEED_BASE), str(ec.SEED_BASE + 1))  # shm pass 1 and 2; the baseline pass uses SEEDS[0]
 SHM_ARGS = ec.SHM_ARGS
-D3_DIR = f"{LOGS}/prelim-D3-greedy-20261029T130527Z"
-DEFAULT_CAPTURE = ec.DEFAULT_CAPTURE
 GATE_POLL_S = 120
 GATE_APPEAR_TIMEOUT_S = 600
 GATE_GLOB = "prelim-chain-p3-*"
@@ -199,7 +214,7 @@ class E3Real(ec.EReal):
             raise pc.ChainStop(f"refusing to touch container(s) that are not ours: {bad}")
 
     def find_gate(self) -> str | None:
-        return newest_gate(LOGS)
+        return newest_gate(logs_root())
 
     def scan_logs(self, paths: dict[str, str]) -> dict[str, dict]:
         time.sleep(8)  # the detached `docker logs -f` followers may lag the containers' last lines
@@ -235,9 +250,10 @@ class E3Real(ec.EReal):
 # ---------------------------------------------------------------- the chain
 class E3Chain:
     def __init__(self, ops, chain_dir: Path, ts: str, logs: str, capture: list[dict], gate_path: str | None,
-                 baseline_dir: str = D3_DIR, gate_poll: float = GATE_POLL_S, sleep=time.sleep) -> None:
+                 baseline_dir: str | None = None, gate_poll: float = GATE_POLL_S, sleep=time.sleep) -> None:
         self.ops, self.dir, self.ts, self.logs = ops, chain_dir, ts, logs
-        self.capture, self.gate_path, self.baseline_dir = capture, gate_path, baseline_dir
+        self.capture, self.gate_path = capture, gate_path
+        self.baseline_dir = baseline_dir or d3_dir()
         self.gate_poll, self.sleep = gate_poll, sleep
         self.steps_dir = chain_dir / "steps"
         self.steps_dir.mkdir(parents=True, exist_ok=True)
@@ -287,7 +303,7 @@ class E3Chain:
 
     # --- watchdog registry
     def chain_entries(self) -> list[dict]:
-        return [{"id": "prelim-E3-chain", "kind": "generic_log", "host": "npu2", "stall_s": 3600,
+        return [{"id": "prelim-E3-chain", "kind": "generic_log", "host": pc.training_host(), "stall_s": 3600,
                  "note": "E3 (plan 3.11 ruling 3b): gate on the P3 chain, baseline pass, then shm probe + two shm passes "
                          "on 4 x TP2 at 48/instance, then arm A restored; heartbeat every 60 s; BAD means the chain stopped",
                  "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
@@ -297,20 +313,20 @@ class E3Chain:
         return f"{self.logs}/sweep-prelim-E3-{tag}-pass{index}-{self.ts}"
 
     def sweep_entry(self, tag: str, index: int) -> dict:
-        return {"id": f"sweep-prelim-E3-{tag}-pass{index}", "kind": "sweep", "host": "npu2", "stall_s": 3600,
+        return {"id": f"sweep-prelim-E3-{tag}-pass{index}", "kind": "sweep", "host": pc.training_host(), "stall_s": 3600,
                 "note": f"E3 {tag} pass {index}: worst case --min-tokens 4096 at {LEVEL}/instance on 4 x TP2; preemptions and "
                         "exits are the subject of the experiment, a BAD event here is expected data, not a defect",
                 "params": {"run_prefix": self.prefix_of(tag, index)}}
 
     def instance_entries(self, tag: str, logs: dict) -> list[dict]:
-        return [{"id": f"vllm-prelim-E3-{tag}-{i}", "kind": "vllm_server", "host": "npu2",
+        return [{"id": f"vllm-prelim-E3-{tag}-{i}", "kind": "vllm_server", "host": pc.training_host(),
                  "note": f"E3 {tag} instance {i} (plan 3.11); a death is the subject of the experiment; removed when the "
                          "group is stopped",
                  "params": {"container": cname(tag, i), "port": self.capture[i]["port"], "log": logs.get(cname(tag, i))}}
                 for i in range(len(self.capture))]
 
     def arm_a_entries(self, logs: dict) -> list[dict]:
-        return [{"id": f"vllm-arm-a-{s['name'].rsplit('-', 1)[1]}", "kind": "vllm_server", "host": "npu2",
+        return [{"id": f"vllm-arm-a-{s['name'].rsplit('-', 1)[1]}", "kind": "vllm_server", "host": pc.training_host(),
                  "note": f"arm A relaunched by prelim-E3-chain-{self.ts} after E3; left UP",
                  "params": {"container": s["name"], "port": s["port"], "log": logs.get(s["name"])}} for s in self.capture]
 
@@ -378,7 +394,7 @@ class E3Chain:
             spec = next(s for s in self.capture if s["name"] == name)
             waited = 0
             while True:
-                busy = self.ops.running_requests(f"http://127.0.0.1:{spec['port']}")
+                busy = self.ops.running_requests(pc.url(spec["port"]))
                 if not busy:
                     break
                 if waited >= 180:
@@ -396,7 +412,7 @@ class E3Chain:
         return [cname(tag, i) for i in range(len(self.capture))]
 
     def urls(self) -> list[str]:
-        return [f"http://127.0.0.1:{s['port']}" for s in self.capture]
+        return [pc.url(s["port"]) for s in self.capture]
 
     def launch_group(self, tag: str, extra: str) -> dict:
         """Launch (or adopt) the 4 instances; returns {name: log path}."""
@@ -876,8 +892,8 @@ def main() -> int:
                                                     "base_start_fail, probe_mismatch=I, gate_missing, arm_b_up, gate_waits=N")
     ap.add_argument("--gate-file", default="auto",
                     help="chain-status.json of the P3 chain; 'auto' = the newest prelim-chain-p3-*/ (waits up to 600 s for it)")
-    ap.add_argument("--arm-a-launch", default=DEFAULT_CAPTURE, help="captured arm A argv (copied into the chain dir)")
-    ap.add_argument("--baseline-dir", default=D3_DIR, help="D3 run directory holding bodies.json, S2.json, S3.json")
+    ap.add_argument("--arm-a-launch", help="captured arm A argv (default: the deployment's arm-A capture)")
+    ap.add_argument("--baseline-dir", help="D3 run directory holding bodies.json, S2.json, S3.json (default: the deployment's)")
     ap.add_argument("--out-root", help="dry-run only: output root (default: a temporary directory)")
     args = ap.parse_args()
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -896,28 +912,34 @@ def main() -> int:
         print(json.dumps(read_json(chain_dir / "chain-status.json")["decisions"], indent=1, sort_keys=True))
         return code
     hostname = Path("/etc/hostname").read_text().strip()
-    if hostname != pc.EXPECTED_HOSTNAME:
-        sys.exit(f"refusing to run on {hostname!r}: this chain belongs to host 181 ({pc.EXPECTED_HOSTNAME})")
+    try:
+        expected = pc.require_hostname()
+    except pc.local_profile.ProfileError as error:
+        sys.exit(f"refused: {error}")
+    if hostname != expected:
+        sys.exit(f"refusing to run on {hostname!r}: this chain belongs to {expected!r}")
+    arm_a_launch = args.arm_a_launch or default_capture()
+    baseline_dir = args.baseline_dir or d3_dir()
     if args.resume:
         chain_dir = Path(args.chain_dir or sys.exit("--resume needs --chain-dir"))
         ts = read_json(chain_dir / "config.json")["ts"]
     else:
         ts = args.ts or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        chain_dir = Path(args.chain_dir or f"{LOGS}/prelim-E3-chain-{ts}")
+        chain_dir = Path(args.chain_dir or f"{logs_root()}/prelim-E3-chain-{ts}")
         if (chain_dir / "config.json").exists():
             sys.exit(f"{chain_dir} already holds a chain; use --resume")
         for name in ("S2.json", "S3.json", "bodies.json"):
-            if not (Path(args.baseline_dir) / name).exists():
-                sys.exit(f"baseline file missing: {Path(args.baseline_dir) / name}")
-        captured = read_json(args.arm_a_launch)
+            if not (Path(baseline_dir) / name).exists():
+                sys.exit(f"baseline file missing: {Path(baseline_dir) / name}")
+        captured = read_json(arm_a_launch)
         if not captured:
-            sys.exit(f"needs a readable arm A capture: {args.arm_a_launch}")
+            sys.exit(f"needs a readable arm A capture: {arm_a_launch}")
         chain_dir.mkdir(parents=True, exist_ok=True)
         ec.chmod_quiet(chain_dir, 0o777)
         write_atomic(chain_dir / "arm-a-launch.json", json.dumps(captured, indent=2) + "\n")
         write_atomic(chain_dir / "config.json", json.dumps(
             {"ts": ts, "created": utc_now(), "script": str(Path(__file__).resolve()), "gate_file": args.gate_file,
-             "arm_a_launch_source": args.arm_a_launch, "baseline_dir": args.baseline_dir}) + "\n")
+             "arm_a_launch_source": arm_a_launch, "baseline_dir": baseline_dir}) + "\n")
     ec.chmod_quiet(chain_dir / "config.json", 0o666)
     (chain_dir / "steps").mkdir(exist_ok=True)
     ec.chmod_quiet(chain_dir / "steps", 0o777)
@@ -925,7 +947,7 @@ def main() -> int:
     capture = read_json(chain_dir / "arm-a-launch.json")["instances"]
     gate = None if config["gate_file"] == "auto" else config["gate_file"]
     log(f"E3 chain {chain_dir.name} pid {os.getpid()} resume={args.resume} gate {config['gate_file']}")
-    return E3Chain(E3Real(args.resume), chain_dir, ts, LOGS, capture, gate, baseline_dir=config["baseline_dir"]).run()
+    return E3Chain(E3Real(args.resume), chain_dir, ts, logs_root(), capture, gate, baseline_dir=config["baseline_dir"]).run()
 
 
 if __name__ == "__main__":

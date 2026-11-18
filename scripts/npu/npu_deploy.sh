@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resident multi-instance vLLM deployment from a study deployment profile (configs/deployment/<id>.json).
 #
-# usage (on the profile's host, e.g. `ssh npu2 bash /mnt/cephfs/xingchao/omni/work/scripts/npu_deploy.sh up <id>`):
+# usage (on the profile's host): bash npu_deploy.sh up <id>   # see docs/engineering/Experiment-Base.md
 #   bash npu_deploy.sh plan   <profile>  # print the exact per-instance docker commands; runs nothing on a card
 #   bash npu_deploy.sh up     <profile>  # refuse busy cards, start every instance detached + resident, wait for health
 #   bash npu_deploy.sh wait   <profile>  # wait for /health and /v1/models on every instance port
@@ -14,8 +14,12 @@
 # network; the host NIC is derived HERE (the container has no network) and passed as --nic; this script only executes the NUL-delimited argv it emits (no eval). Nothing here uses llama.cpp slots.
 # Env (every path derives from ONE root):
 #   OMNI_ROOT            the data root, mounted at the same path in every container; the weights are
-#                        $OMNI_ROOT/<profile model_relpath>. Default /mnt/cephfs/xingchao/omni.
-#   SAEA_SRC             the study's src dir; default $OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
+#                        $OMNI_ROOT/<profile model_relpath>. Default: storage.shared_root in the local
+#                        deployment profile (scripts/lib/local_profile.sh).
+#   SAEA_SRC             the study's src dir; default $OMNI_ROOT/<roots.source basename>/studies/.../src
+#                        resolved from the local deployment profile's roots.source
+#   IMAGE                the pinned runtime image; default image.reference from the local profile
+#                        (release modes require SAEA_RELEASE_IMAGE_ID instead)
 #   DEPLOY_WAIT_SECONDS  readiness timeout for up/wait (default 2400)
 #   SAEA_DEPLOY_MODE     legacy | release | mounted-release. mounted-release uses
 #                        SAEA_RELEASE_SOURCE_DIR as a complete read-only source
@@ -27,11 +31,15 @@
 set -euo pipefail
 CMD=${1:?usage: npu_deploy.sh plan|up|wait|status|down <profile>}
 PROFILE=${2:?usage: npu_deploy.sh plan|up|wait|status|down <profile>}
-OMNI_ROOT=${OMNI_ROOT:-/mnt/cephfs/xingchao/omni}
-SAEA_SRC=${SAEA_SRC:-$OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src}
+ND_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$ND_DIR/../lib/local_profile.sh" || { echo "refused: cannot load the local deployment profile" >&2; exit 1; }
+lp_default OMNI_ROOT storage.shared_root || exit 1
+SOURCE_TREE=$(lp_get roots.source) || exit 1
+SAEA_SRC=${SAEA_SRC:-$SOURCE_TREE/studies/speech-aware-evidence-acquisition/src}
 REPO=$(dirname "$SAEA_SRC")
 MODE=${SAEA_DEPLOY_MODE:-legacy}
-IMAGE=saea-base:20261027
+IMAGE=${IMAGE:-$(lp_get image.reference)} || exit 1
 RELEASE_ROOT=/opt/saea-release
 RELEASE_STUDY=$RELEASE_ROOT/studies/speech-aware-evidence-acquisition
 SOURCE_MOUNTS=()

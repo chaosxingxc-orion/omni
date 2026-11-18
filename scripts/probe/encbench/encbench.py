@@ -38,7 +38,9 @@ import time
 from pathlib import Path
 
 SCHEMA = "saea-encbench-v1"
-DATA_ROOT = Path(os.environ.get("SAEA_DATA_ROOT", "/mnt/cephfs/xingchao/omni"))
+# The data root is a deployment fact: run_container.sh passes it in, and a bare
+# invocation must be told explicitly rather than guess someone's mount point.
+DATA_ROOT = Path(os.environ["SAEA_DATA_ROOT"]) if os.environ.get("SAEA_DATA_ROOT") else None
 SAMPLE_RATE = 16000
 # The port's registered bounds (configs/preparation/*-npu-port-v1.json).
 MAX_AUDIO_SAMPLES = 1920000

@@ -19,7 +19,7 @@ def setup(tmp):
 
 def test_generation_seal_does_not_wait_for_cpu_scoring(tmp_path):
     spec,d,root,terminal=setup(tmp_path)
-    with patch.object(m,'D',tmp_path):p=m.wait_seal(spec,terminal,root)
+    with patch.object(m,'data_root',lambda: tmp_path):p=m.wait_seal(spec,terminal,root)
     assert p==d/'run.generation-manifest.json'
     assert json.loads((root/'predecessor-seal.json').read_bytes())['cpu_scoring_may_continue']
     assert not terminal.exists()
@@ -27,11 +27,11 @@ def test_generation_seal_does_not_wait_for_cpu_scoring(tmp_path):
 
 def test_failed_generation_never_advances(tmp_path):
     spec,d,root,terminal=setup(tmp_path);terminal.write_text('1\n')
-    with patch.object(m,'D',tmp_path),pytest.raises(ValueError,match='predecessor failed'):m.wait_seal(spec,terminal,root)
+    with patch.object(m,'data_root',lambda: tmp_path),pytest.raises(ValueError,match='predecessor failed'):m.wait_seal(spec,terminal,root)
     assert not (root/'predecessor-seal.json').exists()
 
 
 def test_live_lease_never_advances(tmp_path):
     spec,d,root,terminal=setup(tmp_path);(tmp_path/'locks/flight.lock').touch()
-    with patch.object(m,'D',tmp_path),patch.object(m.time,'sleep',side_effect=RuntimeError('waiting')),pytest.raises(RuntimeError,match='waiting'):m.wait_seal(spec,terminal,root)
+    with patch.object(m,'data_root',lambda: tmp_path),patch.object(m.time,'sleep',side_effect=RuntimeError('waiting')),pytest.raises(RuntimeError,match='waiting'):m.wait_seal(spec,terminal,root)
     assert not (root/'predecessor-seal.json').exists()

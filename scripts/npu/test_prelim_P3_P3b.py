@@ -11,6 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import prelim_chain as pc  # noqa: E402
+import profile_fixture  # noqa: E402
+
+profile_fixture.ensure()  # every host fact comes from a deployment profile; the tests supply one
 
 
 class GateOps(pc.FakeOps):
@@ -237,11 +240,11 @@ class P3ChainTests(P3Base):
         readded = [c for c in jobs if "upsert=['vllm-arm-a-0'" in c]
         self.assertEqual(len(readded), 1)
 
-    def test_job_entries_name_the_p3_and_p3b_prefixes_and_are_npu2(self):
+    def test_job_entries_name_the_p3_and_p3b_prefixes_and_the_training_host(self):
         with tempfile.TemporaryDirectory() as d:
             chain = pc.Chain(pc.FakeOps(), Path(d) / "c", "T", d, mode="p3")
             entries = chain.p3_job_entries()
-        self.assertEqual({e["host"] for e in entries}, {"npu2"})
+        self.assertEqual({e["host"] for e in entries}, {pc.training_host()})
         self.assertEqual([e["id"] for e in entries],
                          ["prelim-chain-p3", "sweep-armB-prelim-P3", "sweep-armB-prelim-P3b-mintok4096"])
         self.assertIn("P3b-mintok4096", entries[2]["params"]["run_prefix"])

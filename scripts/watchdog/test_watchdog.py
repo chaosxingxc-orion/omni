@@ -2,9 +2,13 @@
 """Offline tests for watchdog.py: fake docker / npu-smi / HTTP readers and fixture logs in the real schemas.
 Run: python3 -m pytest test_watchdog.py   or   python3 test_watchdog.py"""
 import json, os, shutil, sys, tempfile, time, unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import watchdog as wd
+
+# Stand-in for the deployment profile's services.omni.host; nothing here is a machine value.
+HOST = "fixture-host"
 
 
 class FakeEnv:
@@ -85,6 +89,11 @@ class Base(unittest.TestCase):
 class VllmTests(Base):
     def setUp(self):
         super().setUp()
+        # The endpoint address is a deployment fact read from the profile; these
+        # tests are hermetic, so they pin the accessor instead of writing a profile.
+        patcher = mock.patch.object(wd, "service_host", lambda: HOST)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.log = os.path.join(self.d, "srv.log")
         write(self.log, "(EngineCore pid=86) INFO started\nTraceback (most recent call last):\nold failure\n")
         self.start({"id": "srv", "kind": "vllm_server", "params": {"container": "c0", "port": 8200, "log": self.log}})
@@ -92,8 +101,8 @@ class VllmTests(Base):
         self.up(0.0)
 
     def up(self, pre):
-        self.env.http = {"http://127.0.0.1:8200/v1/models": (200, "{}"),
-                         "http://127.0.0.1:8200/metrics": (200, prom_text(3, 1, 0.25, pre))}
+        self.env.http = {"http://%s:8200/v1/models" % HOST: (200, "{}"),
+                         "http://%s:8200/metrics" % HOST: (200, prom_text(3, 1, 0.25, pre))}
 
     def test_running_and_old_errors_ignored_and_dedup(self):
         out, lines = self.cyc()

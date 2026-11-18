@@ -54,13 +54,39 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import prelim_chain as pc  # noqa: E402  (helpers reused: Liveness, per_instance_stats, RealOps, http_get, prom_sum, ...)
 
-ROOT, LOGS, TREE, MODEL, IMAGE = pc.ROOT, pc.LOGS, pc.TREE, pc.MODEL, pc.IMAGE
+# Every host fact is a call, never a module constant: it comes from the deployment profile when a chain runs, so importing
+# this module (the offline launchers' tests do) needs no profile.  MODEL and SEED_BASE are policy, not local information.
+MODEL = pc.MODEL
+
+
+def root() -> str:
+    return pc.root()
+
+
+def logs_root() -> str:
+    return pc.logs_root()
+
+
+def tree() -> str:
+    return pc.tree()
+
+
+def image() -> str:
+    return pc.image()
+
+
 SCRIPTS = Path(__file__).resolve().parent
 NPU_SERVE_E = str(SCRIPTS / "npu_serve_e.sh")
 FLAGCHECK = str(SCRIPTS / "e_flagcheck.py")
 FLAGCHECK_CPUSET = "96-127"  # no instance and no client is pinned there
-DEFAULT_CAPTURE = f"{LOGS}/prelim-chain-20261029T094933Z/arm-a-launch.json"
-DEFAULT_GATE = f"{LOGS}/prelim-chain-p2b-20261029T105349Z/chain-status.json"
+
+
+def default_capture() -> str:
+    return f"{logs_root()}/prelim-chain-20261029T094933Z/arm-a-launch.json"
+
+
+def default_gate() -> str:
+    return f"{logs_root()}/prelim-chain-p2b-20261029T105349Z/chain-status.json"
 GATE_POLL_S = 120  # the owner asked for at most one read of the gate file every 2 minutes
 GATE_FINAL = ("done", "failed", "interrupted")
 MIN_TOKENS = 4096
@@ -231,7 +257,7 @@ def eq_bodies(ss, model: str) -> list[dict]:
 
 def load_sweep_module():
     """The study's synthetic_sweep.py, imported read-only by path (no bytecode written, nothing in the tree changes)."""
-    path = f"{TREE}/scripts/serving/synthetic_sweep.py"
+    path = f"{tree()}/scripts/serving/synthetic_sweep.py"
     spec = importlib.util.spec_from_file_location("synthetic_sweep_ro", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -276,7 +302,7 @@ class EReal(pc.RealOps):
     jobs_lock = threading.Lock()
 
     def __init__(self, resume: bool = False) -> None:
-        super().__init__(LOGS, "e", resume)
+        super().__init__(logs_root(), "e", resume)
 
     @staticmethod
     def _check_ours(names: list[str]) -> None:
@@ -315,7 +341,7 @@ class EReal(pc.RealOps):
             ["docker", "run", "--rm", "--network", "none", "--cpuset-cpus", FLAGCHECK_CPUSET,
              "-e", "PYTHONDONTWRITEBYTECODE=1", "-v", "/usr/local/Ascend/driver:/usr/local/Ascend/driver:ro",
              "-v", "/usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro",
-             "-v", f"{SCRIPTS}:/s:ro", "--entrypoint", "python3", IMAGE, "/s/e_flagcheck.py"],
+             "-v", f"{SCRIPTS}:/s:ro", "--entrypoint", "python3", image(), "/s/e_flagcheck.py"],
             capture_output=True, text=True, timeout=900)
         rows = {}
         for line in done.stdout.splitlines():
@@ -381,8 +407,8 @@ class EReal(pc.RealOps):
         subprocess.run(["docker", "rm", "-f", client], capture_output=True)
         command = ["docker", "run", "--rm", "--name", client, "--network", "host", "--user",
                    f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp", "--cpuset-cpus", pc.CLIENT_CPUSET,
-                   "-v", f"{ROOT}:{ROOT}", "-w", TREE, "-e", f"PYTHONPATH={TREE}/src",
-                   "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
+                   "-v", f"{root()}:{root()}", "-w", tree(), "-e", f"PYTHONPATH={tree()}/src",
+                   "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", image(),
                    "scripts/serving/synthetic_sweep.py", "--base-url", url, "--model", MODEL, "--levels", str(level),
                    "--seed", seed, "--label", label, "--out", str(out), "--min-tokens", str(MIN_TOKENS)]
         poll = {"stop": threading.Event(), "kv": None, "first": None, "last": None, "last_ok": None}
@@ -510,20 +536,20 @@ class EChain:
 
     # --- watchdog registry
     def job_entries(self) -> list[dict]:
-        return [{"id": "prelim-E-chain", "kind": "generic_log", "host": "npu2", "stall_s": 3600,
+        return [{"id": "prelim-E-chain", "kind": "generic_log", "host": pc.training_host(), "stall_s": 3600,
                  "note": "E1/E2 crash experiments (plan 3.8): gate on the P2b chain, then E1 (cards 0,1) and E2 (cards "
                          "6,7) in parallel; heartbeat every 60 s; BAD means the chain stopped (see chain-status.json)",
                  "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
                             "done_regex": "CHAIN DONE", "status_file": str(self.dir / "chain-status.json")}}]
 
     def sweep_entry(self, track: str, tag: str, index: int, prefix: str) -> dict:
-        return {"id": f"sweep-prelim-{track}-{tag}-pass{index}", "kind": "sweep", "host": "npu2", "stall_s": 3600,
+        return {"id": f"sweep-prelim-{track}-{tag}-pass{index}", "kind": "sweep", "host": pc.training_host(), "stall_s": 3600,
                 "note": f"{track} {tag} pass {index}, worst case --min-tokens 4096 on ONE endpoint; preemption and "
                         "exit are the subject of the experiment, a BAD event here is expected data, not a defect",
                 "params": {"run_prefix": prefix}}
 
     def a_entry(self, arm_name: str, port: int, log_path: str | None) -> dict:
-        return {"id": f"vllm-arm-a-{arm_name.rsplit('-', 1)[1]}", "kind": "vllm_server", "host": "npu2",
+        return {"id": f"vllm-arm-a-{arm_name.rsplit('-', 1)[1]}", "kind": "vllm_server", "host": pc.training_host(),
                 "note": f"arm A instance relaunched by prelim-E-chain-{self.ts} after its E run; left UP",
                 "params": {"container": arm_name, "port": port, "log": log_path}}
 
@@ -565,7 +591,7 @@ class EChain:
         spec = self.spec_of(track)
         cards = [int(c) for c in spec["cards"].split(",")]
         if arm in self.ops.running_names():
-            url = f"http://127.0.0.1:{spec['port']}"
+            url = pc.url(spec["port"])
             deadline = time.time() + 180
             while True:  # never stop an instance that is serving someone
                 busy = self.ops.running_requests(url)
@@ -616,7 +642,7 @@ class EChain:
             return prior
         spec = self.spec_of(track)
         name = CONTAINER[key]
-        url = f"http://127.0.0.1:{spec['port']}"
+        url = pc.url(spec["port"])
         label_role = "DIAGNOSTIC ONLY" if role == "diagnostic" else "candidate"
         arm = {"key": key, "container": name, "role": role, "extra_args": extra, "cards": spec["cards"],
                "port": spec["port"], "cpuset": spec["cpuset"], "hccl_base_port": spec["hccl_base_port"],
@@ -677,7 +703,7 @@ class EChain:
         expected_cmd = list(spec["cmd"]) + (extra.split() if extra else [])
         same = (now["cmd"] == expected_cmd and now["cpuset"] == spec["cpuset"]
                 and now["hccl_base_port"] == spec["hccl_base_port"] and now["devices"] == spec["devices"])
-        self.ops.patch_jobs([{"id": f"vllm-prelim-{key}", "kind": "vllm_server", "host": "npu2",
+        self.ops.patch_jobs([{"id": f"vllm-prelim-{key}", "kind": "vllm_server", "host": pc.training_host(),
                               "note": f"{key} experiment instance (plan 3.8); preemption BAD events and a death are the "
                                       "subject of the experiment; removed when its arm A instance is restored",
                               "params": {"container": name, "port": spec["port"], "log": arm["server_log"]}}])
@@ -1039,8 +1065,8 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="rehearse with scripted operations (CPU only)")
     ap.add_argument("--scenario", default="", help="dry-run only: comma list of e1_exit=N, e2_exit=N, e2_start_fail, "
                                                     "e1_low=N, e2_low=N, eq_mismatch=I")
-    ap.add_argument("--gate-file", default=DEFAULT_GATE, help="chain-status.json of the chain that holds the cards")
-    ap.add_argument("--arm-a-launch", default=DEFAULT_CAPTURE, help="captured arm A argv (copied into the chain dir)")
+    ap.add_argument("--gate-file", help="chain-status.json of the chain that holds the cards (default: the deployment's)")
+    ap.add_argument("--arm-a-launch", help="captured arm A argv (default: the deployment's arm-A capture)")
     ap.add_argument("--out-root", help="dry-run only: output root (default: a temporary directory)")
     args = ap.parse_args()
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
@@ -1068,33 +1094,39 @@ def main() -> int:
         print(json.dumps(read_json(chain_dir / "chain-status.json")["decisions"], indent=1, sort_keys=True))
         return code
     hostname = Path("/etc/hostname").read_text().strip()
-    if hostname != pc.EXPECTED_HOSTNAME:
-        sys.exit(f"refusing to run on {hostname!r}: this chain belongs to host 181 ({pc.EXPECTED_HOSTNAME})")
+    try:
+        expected = pc.require_hostname()
+    except pc.local_profile.ProfileError as error:
+        sys.exit(f"refused: {error}")
+    if hostname != expected:
+        sys.exit(f"refusing to run on {hostname!r}: this chain belongs to {expected!r}")
+    gate_file = args.gate_file or default_gate()
+    arm_a_launch = args.arm_a_launch or default_capture()
     if args.resume:
         chain_dir = Path(args.chain_dir or sys.exit("--resume needs --chain-dir"))
         config = read_json(chain_dir / "config.json")
         ts = config["ts"]
     else:
         ts = args.ts or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        chain_dir = Path(args.chain_dir or f"{LOGS}/prelim-E-chain-{ts}")
+        chain_dir = Path(args.chain_dir or f"{logs_root()}/prelim-E-chain-{ts}")
         if (chain_dir / "config.json").exists():
             sys.exit(f"{chain_dir} already holds a chain; use --resume")
         chain_dir.mkdir(parents=True, exist_ok=True)
         chmod_quiet(chain_dir, 0o777)
-        captured = read_json(args.arm_a_launch)
+        captured = read_json(arm_a_launch)
         if not captured:
-            sys.exit(f"needs a readable arm A capture: {args.arm_a_launch}")
+            sys.exit(f"needs a readable arm A capture: {arm_a_launch}")
         write_atomic(chain_dir / "arm-a-launch.json", json.dumps(captured, indent=2) + "\n")
         write_atomic(chain_dir / "config.json", json.dumps(
-            {"ts": ts, "created": utc_now(), "script": str(Path(__file__).resolve()), "gate_file": args.gate_file,
-             "arm_a_launch_source": args.arm_a_launch}) + "\n")
+            {"ts": ts, "created": utc_now(), "script": str(Path(__file__).resolve()), "gate_file": gate_file,
+             "arm_a_launch_source": arm_a_launch}) + "\n")
     chmod_quiet(chain_dir / "config.json", 0o666)
     (chain_dir / "steps").mkdir(exist_ok=True)
     chmod_quiet(chain_dir / "steps", 0o777)
     config = read_json(chain_dir / "config.json")
     capture = read_json(chain_dir / "arm-a-launch.json")["instances"]
     log(f"E chain {chain_dir.name} pid {os.getpid()} resume={args.resume} gate {config['gate_file']}")
-    return EChain(EReal(args.resume), chain_dir, ts, LOGS, capture, config["gate_file"]).run()
+    return EChain(EReal(args.resume), chain_dir, ts, logs_root(), capture, config["gate_file"]).run()
 
 
 if __name__ == "__main__":

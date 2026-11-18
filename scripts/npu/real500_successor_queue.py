@@ -12,10 +12,28 @@ import os
 from pathlib import Path
 import subprocess
 import shutil
+import sys
 import time
 
-D=Path('/mnt/cephfs/xingchao/omni')
-U=D/'publish/omni';IMAGE='sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026'
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import local_profile  # noqa: E402
+
+# Deployment facts are FUNCTIONS, not module constants: the profile is read when a queue step runs,
+# never when this module is imported, so the sibling queue drivers and their offline tests import it
+# without a profile and every path below comes from one deployment file.
+def data_root():
+    """storage.shared_root: the mount this queue family reads and writes under."""
+    return Path(local_profile.get('storage.shared_root'))
+
+
+def publish_root():
+    """The public repository inside that mount, where the queue's own scripts live."""
+    return data_root() / 'publish/omni'
+
+
+def image():
+    """image.digest: the frozen saea image every fixed-container call pins."""
+    return local_profile.get('image.digest')
 
 
 def read(p):return json.loads(p.read_bytes())
@@ -30,15 +48,16 @@ def call(args,log,env=None):
 
 
 def formal(tree,args,log,profile=None):
-    env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,'PORT_DOCKER_FLAGS':'--pid host --network host'}
+    env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),'PORT_DOCKER_FLAGS':'--pid host --network host'}
     if profile:env['SAEA_DEPLOYMENT_PROFILE']=profile
-    call(['bash',str(D/'work/scripts/port_py.sh'),*args],log,env)
+    call(['bash',str(data_root()/'work/scripts/port_py.sh'),*args],log,env)
 
 
 def git(study,*args):return subprocess.check_output(['git','-c','safe.directory='+str(study),'-C',str(study),*args],text=True).rstrip()
 
 
 def wait_seal(spec,terminal,root):
+    D=data_root()
     directory=D/'runs'/spec['run_id']/spec['attempt_id']
     generation=directory/(spec['run_id']+'.generation-manifest.json')
     while True:
@@ -57,6 +76,7 @@ def wait_seal(spec,terminal,root):
 
 
 def capture(study,transition,out):
+    D=data_root()
     out.mkdir(exist_ok=False)
     with (D/'locks/generation.guard').open('r+') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -65,21 +85,22 @@ def capture(study,transition,out):
         names=[c['name'] for c in plan['after']]
         live=json.loads(subprocess.check_output(['docker','inspect',*names]));observations={}
         for c,d in zip(plan['after'],live):
-            if d['Id']!=ids[c['name']] or d['Image']!=IMAGE or not d['State']['Running'] or d['RestartCount']:raise ValueError('target identity changed')
+            if d['Id']!=ids[c['name']] or d['Image']!=image() or not d['State']['Running'] or d['RestartCount']:raise ValueError('target identity changed')
             if d['Config'].get('Labels',{}).get('saea.deployment.profile')!=plan['target']:raise ValueError('target ownership changed')
             log=subprocess.run(['docker','logs',c['name']],capture_output=True,check=True);raw=log.stdout+log.stderr
             (out/(c['name']+'.startup.log')).write_bytes(raw)
             observations[c['name']]={'pid':d['State']['Pid'],'started_at':d['State']['StartedAt'],'startup_stdout_sha256':hashlib.sha256(raw).hexdigest()}
         write(out/'observations.json',observations);write(out/'docker-identity.json',live)
         archived=json.loads(subprocess.check_output(['docker','inspect',*[plan['old_names'][c['name']] for c in plan['before']]]));write(out/'archived-inspect.json',archived)
-        args=['docker','run','--rm','--pid','host','--network','host','--user','0:0','--cpuset-cpus','32-47','-v',f'{D}:{D}:ro','-v',f'{out}:{out}','-w',str(study),'-e',f'PYTHONPATH={study}/src','-e','PYTHONDONTWRITEBYTECODE=1','-e',f'SPEECHRL_DATA_DIR={D}','--entrypoint','/opt/saea-venv/bin/python',IMAGE,'scripts/write_vllm_runtime_receipt.py']
+        args=['docker','run','--rm','--pid','host','--network','host','--user','0:0','--cpuset-cpus','32-47','-v',f'{D}:{D}:ro','-v',f'{out}:{out}','-w',str(study),'-e',f'PYTHONPATH={study}/src','-e','PYTHONDONTWRITEBYTECODE=1','-e',f'SPEECHRL_DATA_DIR={D}','--entrypoint','/opt/saea-venv/bin/python',image(),'scripts/write_vllm_runtime_receipt.py']
         for name,o in observations.items():args+=['--instance',f"{name}={o['pid']}"]
-        args+=['--model-lock-key','qwen3-omni-30b-a3b-thinking-bf16','--materialization-root',str(D),'--image-ref',IMAGE,'--image-id',IMAGE,'--namespace-policy','shared-pid-host','--output',str(out/'runtime-receipt.json')]
+        args+=['--model-lock-key','qwen3-omni-30b-a3b-thinking-bf16','--materialization-root',str(D),'--image-ref',image(),'--image-id',image(),'--namespace-policy','shared-pid-host','--output',str(out/'runtime-receipt.json')]
         call(args,out/'receipt.log')
         write(out/'complete.json',{'runtime_receipt_sha256':hashlib.sha256((out/'runtime-receipt.json').read_bytes()).hexdigest(),'model_calls':0})
 
 
 def run(tree,root):
+    D=data_root()
     study=tree/'studies/speech-aware-evidence-acquisition'
     previous='slurp-real500-tp4-s96-v1';terminal=D/'work/codex/host-recovery-client-v1/run-real500-tp4-s96.exit'
     previous_started=D/'work/codex/real500-tp4-s96-run-v1/started.json'
@@ -94,13 +115,13 @@ def run(tree,root):
         elapsed=seal.stat().st_mtime-read(previous_started)['time']
         if elapsed<=0:raise ValueError('invalid predecessor run boundary')
         formal(tree,['scripts/analysis/real_engine_progress.py','--checkpoint',str(seal.parent/(prev['run_id']+'.rows.ckpt.jsonl')),'--roster',str(D/'work/codex/real-engine-500-v1/roster.json'),'--state','complete','--elapsed-seconds',str(elapsed),'--cards','8','--instances','2' if 'tp4' in previous else '1','--output',str(item/'predecessor-complete-check.json')],item/'predecessor-check.log')
-        metric_args=['python3',str(U/'scripts/npu/real_engine_metrics.py'),'--port','8200']
+        metric_args=['python3',str(publish_root()/'scripts/npu/real_engine_metrics.py'),'--port','8200']
         if 'tp4' in previous:metric_args+=['--port','8201']
         metric_args+=['--output',str(item/'predecessor-metrics-at-release.json')]
         call(metric_args,item/'predecessor-metrics.log')
         status(root,'switching_topology',candidate=name)
         transition=D/'work/codex/frozen-engine-deployment'/('queue-'+name)
-        switch=U/'scripts/npu/freeze_engine/topology_switch.py'
+        switch=publish_root()/'scripts/npu/freeze_engine/topology_switch.py'
         call(['python3',str(switch),'plan','--source',prev['profile'],'--target',spec['profile'],'--record',str(transition)],item/'plan.log')
         call(['python3',str(switch),'apply','--record',str(transition)],item/'apply.log')
         runtime=item/'runtime';status(root,'capturing_runtime',candidate=name);capture(study,transition,runtime)
@@ -116,13 +137,13 @@ def run(tree,root):
         ports_args=' '.join('--port '+p for p in ports)
         script.write_text(f'''#!/usr/bin/env bash
 set -uo pipefail
-export TREE={tree} CPUSET=32-63 PORT_CONTAINER_USER=0:0 PORT_IMAGE={IMAGE}
+export TREE={tree} CPUSET=32-63 PORT_CONTAINER_USER=0:0 PORT_IMAGE={image()}
 export SAEA_DEPLOYMENT_PROFILE={spec['profile']}
 export PORT_DOCKER_FLAGS='--pid host --network host --name saea-{name}-generation -e SAEA_STAGE_TIMING_PATH={item}/stages.jsonl'
-python3 {U}/scripts/npu/real_engine_metrics.py {ports_args} --output {item}/metrics-before.json || exit "$?"
+python3 {publish_root()}/scripts/npu/real_engine_metrics.py {ports_args} --output {item}/metrics-before.json || exit "$?"
 bash {D}/work/scripts/port_py.sh scripts/analysis/run_real_engine_candidate.py --repo {study} --data {D} --candidate {name} --out {item}/run > {item}/run.log 2>&1
 code=$?
-python3 {U}/scripts/npu/real_engine_metrics.py {ports_args} --output {item}/metrics-after.json
+python3 {publish_root()}/scripts/npu/real_engine_metrics.py {ports_args} --output {item}/metrics-after.json
 printf '%s\\n' "$code" > {item}/run.exit
 exit "$code"
 ''')
@@ -144,7 +165,7 @@ exit "$code"
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--tree',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
-    if not a.out.resolve().is_relative_to(D/'work/codex'):raise ValueError('owned output required')
+    if not a.out.resolve().is_relative_to(data_root()/'work/codex'):raise ValueError('owned output required')
     a.out.mkdir(exist_ok=False)
     try:run(a.tree,a.out)
     except BaseException as e:status(a.out,'failed',error=str(e),automatic_retry=False);raise

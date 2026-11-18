@@ -8,10 +8,22 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 
-D=Path('/mnt/cephfs/xingchao/omni')
-IMAGE='sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026'
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import local_profile  # noqa: E402
+
+# Deployment facts are FUNCTIONS, not module constants: the profile is read when an export runs,
+# never when this module is imported, so offline tests import it without a profile.
+def data_root():
+    """storage.shared_root: the mount this exporter reads and writes under."""
+    return Path(local_profile.get('storage.shared_root'))
+
+
+def image():
+    """image.digest: the frozen saea image every fixed-container call pins."""
+    return local_profile.get('image.digest')
 
 
 def status(root,state,**extra):
@@ -21,12 +33,13 @@ def status(root,state,**extra):
 
 
 def run(root):
+    D = data_root()
     if root.exists() or not root.resolve().is_relative_to((D/'work/codex').resolve()):
         raise ValueError('fresh owned output required')
     root.mkdir()
     items=[('slurp-real500-tp4-s128-v1','real500-successors'),('slurp-real500-tp8-s256-v1','real500-successors-tp8')]
     env={**os.environ,'TREE':str(D/'publish/omni'),'CPUSET':'32-47','PORT_CONTAINER_USER':'0:0',
-         'PORT_IMAGE':IMAGE,'PORT_DOCKER_FLAGS':'--network none --name saea-real500-result-export'}
+         'PORT_IMAGE':image(),'PORT_DOCKER_FLAGS':'--network none --name saea-real500-result-export'}
     for candidate,tree in items:
         item=D/'work/codex/real500-successor-queue-v1'/candidate
         terminal=item/'run.exit'

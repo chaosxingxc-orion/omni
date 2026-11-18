@@ -23,9 +23,12 @@ import threading
 import time
 from pathlib import Path
 
-TREE = "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition"
-ROOT = "/mnt/cephfs/xingchao/omni"
-IMAGE = "saea-base:20261027"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import local_profile  # noqa: E402
+
+# Deployment facts are FUNCTIONS, not module constants: the profile is read when a level runs, never when
+# this module is imported, so a missing profile stops the run with the key it needs instead of silently
+# pointing at someone else's tree.
 SEED = "20261028"
 MODEL = "qwen3-omni-30b-a3b-thinking"
 SAMPLE_SECONDS = 30
@@ -33,6 +36,21 @@ MIN_FREE_MIB = 2048
 MAX_LATENCY_S = 420.0
 MIN_P10 = 10.0
 CLIENT_CPUSET = "224-255"  # NUMA node 7: no instance is pinned there
+
+
+def tree():
+    """roots.source plus the study's fixed location inside it: where synthetic_sweep.py lives."""
+    return Path(local_profile.get('roots.source')) / 'studies/speech-aware-evidence-acquisition'
+
+
+def shared_root():
+    """storage.shared_root: the mount the client container gets at the same path."""
+    return Path(local_profile.get('storage.shared_root'))
+
+
+def image():
+    """image.reference: the fixed saea image the sweep client runs in."""
+    return local_profile.get('image.reference')
 
 ROW1 = re.compile(r"^\|\s*(\d+)\s+\S+\s+\|\s*OK\s*\|")
 ROW2 = re.compile(r"^\|\s*\d+\s+\|\s*[0-9A-Fa-f:.]+\s+\|\s*(\d+)\s+\d+\s*/\s*\d+\s+(\d+)\s*/\s*(\d+)\s*\|")
@@ -76,14 +94,15 @@ class Sampler(threading.Thread):
 
 def run_level(prefix: str, level: int, urls: list[str]) -> Path:
     out = Path(f"{prefix}-L{level}.json")
+    root, study = shared_root(), tree()
     uid, gid = os.getuid(), os.getgid()
     name = f"saea-sweep-{Path(prefix).name}-L{level}"
     # A client container left by a dead driver would still be loading the servers; remove it before (re)running.
     subprocess.run(["docker", "rm", "-f", name], capture_output=True)
     command = ["docker", "run", "--rm", "--name", name, "--network", "host", "--user", f"{uid}:{gid}", "-e", "HOME=/tmp",
-               "--cpuset-cpus", CLIENT_CPUSET, "-v", f"{ROOT}:{ROOT}", "-w", TREE,
-               "-e", f"PYTHONPATH={TREE}/src", "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint",
-               "/opt/saea-venv/bin/python", IMAGE, "scripts/serving/synthetic_sweep.py"]
+               "--cpuset-cpus", CLIENT_CPUSET, "-v", f"{root}:{root}", "-w", str(study),
+               "-e", f"PYTHONPATH={study}/src", "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint",
+               "/opt/saea-venv/bin/python", image(), "scripts/serving/synthetic_sweep.py"]
     for url in urls:
         command += ["--base-url", url]
     command += ["--model", MODEL, "--levels", str(level), "--seed", SEED,

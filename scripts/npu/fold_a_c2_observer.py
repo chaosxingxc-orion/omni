@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D, IMAGE, status, write
+from real500_successor_queue import data_root, image, status, write
 from card_utilization_monitor import sample as hardware
 RUN='SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1'
 NAME='slurp-a0-fold-a-current-c2-v1'
@@ -19,6 +19,7 @@ def read(p):return json.loads(p.read_bytes()) if p.exists() else None
 
 
 def observe(tree,run,out,terminal,container):
+    D=data_root()
     for p in (tree,run,out,terminal):
         if not p.resolve().is_relative_to(D):raise ValueError('owned paths required')
     if out.exists():raise ValueError('fresh observer output required')
@@ -42,7 +43,7 @@ def observe(tree,run,out,terminal,container):
                 if start['candidate']!=NAME or start['rows']!=1080:raise ValueError('unexpected run boundary')
                 if checkpoint.exists() and state!='unconfirmed_process_state':
                     target=out/('snapshot-'+str(time.time_ns())+'.json')
-                    env={**os.environ,'TREE':str(tree),'CPUSET':'176-191','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+                    env={**os.environ,'TREE':str(tree),'CPUSET':'176-191','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
                         'PORT_DOCKER_FLAGS':'--network none --name saea-fold-a-c2-observation-v1'}
                     command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/real_engine_progress.py',
                         '--checkpoint',str(checkpoint),'--roster',str(roster),'--state',state,

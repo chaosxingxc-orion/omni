@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "storage": {
+    "shared_root": "${local.storage.shared_root}",
+    "run_root": "${shared_root}/execution"
+  },
+  "release": {
+    "image_digest": "${local.image.digest}"
+  },
+  "experiment": {
+    "id": "REPLACE_WITH_NEW_APPROVED_ID",
+    "model": "qwen3-omni-30b-a3b-instruct",
+    "thinking": false,
+    "dataset": {
+      "manifest": "${local.roots.data}/onboarding-drill-manifest.json",
+      "version": "onboarding-drill-v1"
+    },
+    "science": {
+      "node": "none",
+      "split": "none",
+      "purpose": "onboarding drill only: proves the base starts from the deployment profile alone; not a scientific result"
+    }
+  },
+  "execution": {
+    "network": "none",
+    "controller": {
+      "kind": "subprocess"
+    },
+    "parallelism": {
+      "cpu": 2,
+      "npu": 1
+    },
+    "lanes": {
+      "npu": []
+    }
+  },
+  "tasks": [
+    {
+      "id": "layout",
+      "resource": "cpu",
+      "argv": [
+        "/bin/true"
+      ],
+      "cwd": "${shared_root}"
+    },
+    {
+      "id": "summarise",
+      "resource": "cpu",
+      "depends_on": [
+        "layout"
+      ],
+      "argv": [
+        "/bin/true"
+      ],
+      "cwd": "${shared_root}"
+    }
+  ]
+}

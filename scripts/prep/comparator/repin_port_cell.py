@@ -15,7 +15,12 @@ usage: repin_port_cell.py <sealed-shas.json>
 import json, re, sys
 from pathlib import Path
 
-WT = Path("/mnt/cephfs/xingchao/omni/work/dev/wt-port/studies/speech-aware-evidence-acquisition")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
+import local_profile  # noqa: E402
+
+# paths.port_worktree: where this deployment keeps the port worktree (the tree holding
+# `studies/` and `docs/datasets.lock.json`).  Nothing here names a machine path.
+WT = Path(local_profile.get("paths.port_worktree")) / "studies/speech-aware-evidence-acquisition"
 BASE = WT / "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json"
 EXP = WT / "configs/experiment/slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1.json"
 

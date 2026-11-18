@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Launch the registered port MF-7b KEYS pass (SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1) detached on this host
-# (npu): CPU float32, 4 pinned workers x 16 threads on cores 128-191; when it seals, the model-free kus3 conversion
+# Launch the registered port MF-7b KEYS pass (SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1) detached on this host:
+# CPU float32, 4 pinned workers x 16 threads on cores 128-191; when it seals, the model-free kus3 conversion
 # (build_slurp_kus3_vectors.py --facets-only) writes vectors/slurp-kus3/facet-vectors.jsonl.
-# usage: bash port_mf7b_keys.sh       log: /mnt/cephfs/xingchao/omni/work/logs/port-mf7b-keys-<stamp>.log
+# usage: bash port_mf7b_keys.sh       log: $OMNI_ROOT/work/logs/port-mf7b-keys-<stamp>.log
 set -euo pipefail
-TREE=${TREE:-/mnt/cephfs/xingchao/omni/work/dev/umbrella}
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default TREE roots.source || exit 6
+lp_default D storage.shared_root || exit 6
 S=$TREE/studies/speech-aware-evidence-acquisition
-D=/mnt/cephfs/xingchao/omni
 NAME=saea-port-mf7b-keys
 ROW=SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1
 LOG=$D/work/logs/port-mf7b-keys-$(date +%Y%m%dT%H%M%S).log
@@ -19,10 +22,13 @@ if [ "$want" != "$have" ]; then echo "refusing: train-facets.jsonl is $have, the
 HEAD=$(git -c safe.directory='*' -C "$S" rev-parse HEAD)
 echo "head $HEAD input $have" | tee "$LOG"
 PY=/usr/local/python3.12.13/bin/python3
-nohup docker run --rm --name "$NAME" --user 1008:1008 -e HOME=/tmp -e USER=saea \
+IMAGE=$(lp_get image.reference) || exit 6
+UID_N=$(lp_get identity.uid) || exit 6
+GID_N=$(lp_get identity.gid) || exit 6
+nohup docker run --rm --name "$NAME" --user "$UID_N:$GID_N" -e HOME=/tmp -e USER=saea \
   -e LOGNAME=saea -e TORCHINDUCTOR_CACHE_DIR=/tmp/inductor -e TORCH_DEVICE_BACKEND_AUTOLOAD=0 -e HF_HUB_OFFLINE=1 \
   --cpuset-cpus 128-191 -v "$D:$D" -w "$S" -e PYTHONPATH="$S/src" -e PYTHONDONTWRITEBYTECODE=1 -e SPEECHRL_DATA_DIR=$D \
-  --entrypoint bash saea-base:20261027 -c \
+  --entrypoint bash "$IMAGE" -c \
   "git config --global --add safe.directory '*' && \
    $PY scripts/slurp_mf7b_nemotron_embedding_pass.py --sets keys --runtime cpu-float32 --workers 4 --cores 128-191 --attention-geometry causal \
      --exposure-row $ROW && \

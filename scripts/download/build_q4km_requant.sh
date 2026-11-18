@@ -13,8 +13,11 @@ set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 export DL_LOG=${DL_LOG:-$(dirname "$HERE")/dl_logs/q4km-requant.log}
 source "$HERE/_daemonize.sh"
-
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default SPEECHRL_DATA_DIR storage.shared_root || exit 6
+export SPEECHRL_DATA_DIR
+DR=$SPEECHRL_DATA_DIR
 SRC_DIR=$DR/models/qwen3-omni-30b-a3b-instruct-gguf
 OUT_DIR=$DR/models/qwen3-omni-30b-a3b-instruct-gguf-q4km
 QUANTIZE=${LLAMA_QUANTIZE:-$DR/src/llama.cpp/build/bin/llama-quantize}

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D,IMAGE,write,status
+from real500_successor_queue import data_root, image, write, status
 
 
 def ready(completions,queue_state):
@@ -21,6 +21,7 @@ def ready(completions,queue_state):
 
 
 def run(tree,source,queue,out):
+    D=data_root()
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):raise ValueError('fresh owned pool queue required')
     study=tree/'studies/speech-aware-evidence-acquisition';src=source/'studies/speech-aware-evidence-acquisition'
     recipe=study/'docs/readiness/tfrl-current-seed-i1-pool-read/analysis-recipe-v1.json'
@@ -38,7 +39,7 @@ def run(tree,source,queue,out):
             time.sleep(600)
         if hashlib.sha256(recipe.read_bytes()).hexdigest()!=digest:raise ValueError('registered pool recipe changed')
         status(out,'verifying_and_pooling')
-        env={**os.environ,'TREE':str(tree),'CPUSET':'224-239','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'224-239','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'PORT_DOCKER_FLAGS':'--network none --name saea-tfrl-current-pool-read-v1'}
         command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/tfrl_current_pool_read.py','run',
             '--repo',str(study),'--source',str(src),'--data',str(D)]

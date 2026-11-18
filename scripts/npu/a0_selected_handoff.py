@@ -10,13 +10,14 @@ from pathlib import Path
 import subprocess
 import time
 
-from real500_successor_queue import D,U,IMAGE,formal,call,git,capture,write,status
+from real500_successor_queue import data_root, publish_root, image, formal, call, git, capture, write, status
 
 NAME='slurp-a0-remaining353-c2-v1'
 PREVIOUS='slurp-real500-tp8-s256-v1'
 
 
 def handoff(tree,source_tree,selection,out):
+    D, U = data_root(), publish_root()
     if not out.resolve().is_relative_to(D/'work/codex') or out.exists():
         raise ValueError('fresh owned handoff output required')
     study=tree/'studies/speech-aware-evidence-acquisition'
@@ -69,7 +70,7 @@ def handoff(tree,source_tree,selection,out):
             '--data-root',str(D),'--runtime-root',str(D/'work/scratch/runtime-root'),'--lock-path',str(tree/'docs/datasets.lock.json'),
             '--experiment',NAME,'--cell',NAME,'--read-only'],out/'preflight.log',spec['profile'])
         status(out,'running353',source_commit=git(study,'rev-parse','HEAD'))
-        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'SAEA_DEPLOYMENT_PROFILE':spec['profile'],
             'PORT_DOCKER_FLAGS':'--pid host --network host --name saea-a0-remaining353-generation -e SAEA_STAGE_TIMING_PATH='+str(out/'stages.jsonl')}
         call(['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/run_real_engine_candidate.py',

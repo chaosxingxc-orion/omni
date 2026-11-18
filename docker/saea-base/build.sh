@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Build the SAEA base experiment image. RUN THIS ON AN NPU HOST (ssh aliases npu or npu2):
-#   ssh npu  'bash /mnt/cephfs/xingchao/docker/saea-base/build.sh'
-# It must run there because those hosts already hold quay.io/ascend/vllm-ascend:v0.30.0rc2
-# (24 GB) and have no internet to pull it, while this build context on the shared disk carries
+# Build the SAEA base experiment image. RUN THIS ON AN NPU HOST -- one that already holds the base
+# image (see docker/saea-base/Dockerfile). The host is a deployment fact, so it is named by the
+# local deployment profile, never here:
+#   ssh <hosts.training> "bash <storage.shared_root>/docker/saea-base/build.sh"
+# It must run there because that host already holds quay.io/ascend/vllm-ascend:v0.30.0rc2
+# (24 GB) and has no internet to pull it, while the build context on the shared disk carries
 # everything else the image needs. Runs detached and logs beside itself, so an ssh drop cannot
-# kill it. Both hosts see the same /mnt/cephfs, but a Docker image is local to the host that
+# kill it. Both hosts see the same shared root, but a Docker image is local to the host that
 # built it -- build on each host that has to run it, or `docker save`/`load` through the share.
 set -uo pipefail
 C=$(cd "$(dirname "$0")" && pwd)

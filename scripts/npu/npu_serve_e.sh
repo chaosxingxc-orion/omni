@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# COPY of npu_serve.sh for the E1/E2 crash experiments (plan 3.8). npu_serve.sh itself is NOT edited. Differences:
+# COPY of npu_serve.sh for the E1/E2 crash experiments (plan 3.8).  npu_serve.sh has moved on since the fork (S10, the
+# deployment profile); this copy stays frozen at the shape the sealed E runs used, so its serve argv is the arm-A argv.
+# Differences from the launcher it was cut from:
 #   * EXTRA_ARGS (env, whitespace-separated words) is appended to the end of the thinking argv, e.g.
 #     EXTRA_ARGS="--mm-processor-cache-type shm"; unset or empty leaves the argv identical to npu_serve.sh;
 #   * E_PRINT_ONLY=1 prints the docker command line and exits (no busy-card check, no docker, no log follower);
@@ -16,11 +18,19 @@
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
 KIND=$1; shift
-M=/mnt/cephfs/xingchao/omni/models
-LOGS=/mnt/cephfs/xingchao/omni/work/logs
-IMAGE=saea-base:20261027
+# Every path, the image and the bind address come from the local deployment profile
+# (scripts/lib/local_profile.sh, default configs/local/deployment.json). Each keeps its
+# per-call environment override; there is no built-in default.
+SERVE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+. "$SERVE_DIR/../lib/local_profile.sh" || exit 1
+lp_default OMNI_ROOT storage.shared_root || exit 1
+lp_default M roots.model || exit 1
+lp_default IMAGE image.reference || exit 1
+LOGS=${SERVE_LOGS:-$OMNI_ROOT/work/logs}
+BIND_HOST=${BIND_HOST:-$(lp_get services.omni.host)} || exit 1
+SRC=$(lp_get roots.source) || exit 1
+SRC=$SRC/studies/speech-aware-evidence-acquisition/src
 BUSY_MIB=4096
-SRC=/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
 
 devices() {
   local args=(--device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc)
@@ -66,7 +76,7 @@ run() {
     -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi:ro \
     -v /etc/hccn.conf:/etc/hccn.conf:ro -v /etc/ascend_install.info:/etc/ascend_install.info:ro \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro -v /usr/local/dcmi:/usr/local/dcmi:ro \
-    -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
+    -v "$OMNI_ROOT:$OMNI_ROOT" \
     --entrypoint vllm "$IMAGE" serve "$@" > /dev/null
   setsid nohup docker logs -f "$name" > "$log" 2>&1 < /dev/null &
   echo "started $name; log $log"
@@ -83,7 +93,7 @@ case $KIND in
     # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
     REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")
     run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
-      --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
+      --served-model-name qwen3-omni-30b-a3b-thinking --host "$BIND_HOST" --port "$PORT" \
       --dtype bfloat16 --tensor-parallel-size "$TP" \
       --max-model-len 24576 --max-num-seqs "${MAX_NUM_SEQS:-4}" \
       --reasoning-parser qwen3 --reasoning-config "$REASONING" \
@@ -95,7 +105,7 @@ case $KIND in
     VIEW=$1 CARD=$2 PORT=$3
     refuse_busy "$CARD"
     ARGS=$(PYTHONPATH=$SRC \
-      docker run --rm -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni -e PYTHONPATH \
+      docker run --rm -v "$OMNI_ROOT:$OMNI_ROOT" -e PYTHONPATH \
       --entrypoint /opt/saea-venv/bin/python "$IMAGE" -c '
 import json, sys
 from pathlib import Path
@@ -103,9 +113,9 @@ from speech_aware_evidence_acquisition.core import vllm_serving_view as sv
 view = Path(sys.argv[1])
 receipt = sv.verify_serving_view(view)
 argv = sv.vllm_embedding_serve_args(view, receipt, served_model_name=sys.argv[2], max_model_len=8192,
-                                    host="127.0.0.1", port=int(sys.argv[3]))
+                                    host=sys.argv[4], port=int(sys.argv[3]))
 assert not any("\n" in a for a in argv)
-print("\n".join(argv[2:]))' "$M/serving-views/$VIEW" "$VIEW" "$PORT")
+print("\n".join(argv[2:]))' "$M/serving-views/$VIEW" "$VIEW" "$PORT" "$BIND_HOST")
     mapfile -t SERVE <<< "$ARGS"
     run "saea-serve-embed-$VIEW" "$CARD" "${SERVE[@]}"
     ;;

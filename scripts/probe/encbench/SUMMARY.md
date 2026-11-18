@@ -89,9 +89,10 @@ nemotron cos min 0.99973, lco3b 0.99968, lco7b 0.99942. The NPU bf16 run should 
 8. Vectors are deterministic: repeated calls at the same thread count are bit-identical. Changing the thread
    count changes vectors by at most 1.8e-6.
 
-## NPU half (later, when cards are free; on host npu)
-    CARDS=0,1,2,3 nohup bash /mnt/cephfs/xingchao/work/scratch/encbench/run_npu_half.sh \
-      > /mnt/cephfs/xingchao/work/scratch/encbench/logs/npu-chain.log 2>&1 &
+## NPU half (later, when cards are free; on the deployment's rollout host)
+    # <scratch> = <storage.shared_root>/work/scratch/encbench, from the local deployment profile
+    CARDS=0,1,2,3 nohup bash <scratch>/run_npu_half.sh \
+      > <scratch>/logs/npu-chain.log 2>&1 &
 This runs nemotron/lco3b/lco7b x bf16/fp32 on npu:0. The pool is one worker per card. Then it runs `compare`
 against the `*-cpu-float32.npz` vectors. run_container.sh refuses any card with more than 4 GiB in use.
 A single run:

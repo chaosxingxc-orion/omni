@@ -37,11 +37,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parents[1] / "lib"))
 import cellinfo  # noqa: E402
+import local_profile  # noqa: E402
 
-PORT_PY = "/mnt/cephfs/xingchao/omni/work/scripts/port_py.sh"
 DEFAULT_PROFILE = "qwen3-omni-thinking-bf16-181-4xtp2-v2"
-DEFAULT_STATE_ROOT = "/mnt/cephfs/xingchao/omni/work/flight_state/fold-b-npu-port"
 READ_ONLY_CPUSET = "176-191"
 RECEIPT_SCHEMA = "saea-runtime-receipt-vllm-v1"
 AICORE_BUSY_PCT = 5.0
@@ -70,7 +70,8 @@ class Ops:
 
     def study_python(self, args: list[str], timeout: float = 900) -> tuple[int, str]:
         """Run `python <args>` inside saea-base through port_py.sh on the read-only CPU set."""
-        runner = os.environ.get("FLIGHT_STEPS_RUNNER", PORT_PY)
+        runner = os.environ.get("FLIGHT_STEPS_RUNNER") or str(
+            Path(local_profile.get("storage.shared_root")) / "work/scripts/port_py.sh")
         return self.run(["bash", runner, *args], timeout=timeout, env={"CPUSET": READ_ONLY_CPUSET})
 
     def http_get(self, url: str, timeout: float = 5.0) -> tuple[int, str]:
@@ -300,7 +301,13 @@ class Preflight:
     def check_endpoints(self) -> None:
         if self.profile is None:
             return
-        host = self.profile.get("bind_host", "127.0.0.1")
+        # A sealed deployment profile may pin its own bind host; otherwise the
+        # deployment profile says where this machine's instances listen.
+        try:
+            host = self.profile.get("bind_host") or local_profile.get("services.omni.host")
+        except local_profile.ProfileError as error:
+            self.add("endpoints", False, "endpoint host unknown", [str(error)])
+            return
         items = []
         for inst in self.profile["instances"]:
             base = f"http://{host}:{inst['port']}"
@@ -412,17 +419,31 @@ def render(findings: list[Finding]) -> str:
 def main(argv=None, ops: Ops | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", required=True, choices=("smoke", "flight", "post"))
+    parser.add_argument("--local-config", default=None, help="local deployment profile")
     parser.add_argument("--profile", default=os.environ.get("FLIGHT_STEPS_PROFILE", DEFAULT_PROFILE))
-    parser.add_argument("--study", default=os.environ.get("FLIGHT_STEPS_STUDY", cellinfo.DEFAULT_STUDY))
-    parser.add_argument("--omni-root", default=os.environ.get("OMNI_ROOT", cellinfo.DEFAULT_OMNI))
-    parser.add_argument("--state-root", default=os.environ.get("FLIGHT_STEPS_STATE", DEFAULT_STATE_ROOT))
+    parser.add_argument("--study", default=os.environ.get("FLIGHT_STEPS_STUDY") or None,
+                        help="study tree (default: <roots.source>/studies/speech-aware-evidence-acquisition)")
+    parser.add_argument("--omni-root", default=os.environ.get("OMNI_ROOT") or None,
+                        help="data root (default: storage.shared_root)")
+    parser.add_argument("--state-root", default=os.environ.get("FLIGHT_STEPS_STATE") or None,
+                        help="flight state root (default: <shared_root>/work/flight_state/fold-b-npu-port)")
     parser.add_argument("--min-free-gib", type=float, default=float(os.environ.get("FLIGHT_STEPS_MIN_FREE_GIB", DEFAULT_MIN_FREE_GIB)))
     parser.add_argument("--trace-read-id", default=None,
                         help="the READ id the step exports as SAEA_ROLLOUT_TRACE_READ_ID (default: the stage's own id for smoke/flight)")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
-    checker = Preflight(ops or Ops(), stage=args.stage, study=args.study, omni=args.omni_root, profile_id=args.profile,
-                        state_root=args.state_root, min_free_gib=args.min_free_gib, trace_read_id=args.trace_read_id)
+    try:
+        profile = local_profile.use(args.local_config)
+        study = args.study or str(Path(local_profile.get("roots.source", profile))
+                                  / "studies/speech-aware-evidence-acquisition")
+        omni = args.omni_root or local_profile.get("storage.shared_root", profile)
+        state_root = args.state_root or os.path.join(
+            local_profile.get("storage.shared_root", profile), "work/flight_state/fold-b-npu-port")
+    except local_profile.ProfileError as error:
+        print(f"preflight: {error}", file=sys.stderr)
+        return 2
+    checker = Preflight(ops or Ops(), stage=args.stage, study=study, omni=omni, profile_id=args.profile,
+                        state_root=state_root, min_free_gib=args.min_free_gib, trace_read_id=args.trace_read_id)
     findings = checker.run()
     if args.json:
         print(json.dumps([f.__dict__ for f in findings], indent=2))

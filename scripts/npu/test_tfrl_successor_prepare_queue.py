@@ -21,7 +21,7 @@ def test_stop_is_a_named_terminal_and_pass_is_only_preparation():
 def test_queue_stops_or_stages_without_model_work(tmp_path,monkeypatch,passed,install):
     import json
     import tfrl_successor_prepare_queue as m
-    monkeypatch.setattr(m,'D',tmp_path)
+    monkeypatch.setattr(m,'data_root',lambda: tmp_path);monkeypatch.setattr(m,'image',lambda: 'image-fixture')
     tree=tmp_path/'tree';study=tree/'studies/speech-aware-evidence-acquisition'
     recipe=study/'docs/readiness/tfrl-current-recovered-consumers/analysis-recipe-v1.json'
     recipe.parent.mkdir(parents=True);recipe.write_text(json.dumps({'sources':{

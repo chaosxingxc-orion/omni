@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D, U, IMAGE, write, status
+from real500_successor_queue import data_root, publish_root, image, write, status
 
 
 def ready(parent, complete):
@@ -18,6 +18,7 @@ def ready(parent, complete):
 
 
 def run(out, source_queue=None):
+    D, U = data_root(), publish_root()
     if out.exists() or not out.resolve().is_relative_to(D / 'work/codex'):
         raise ValueError('fresh owned queue required')
     study = U / 'studies/speech-aware-evidence-acquisition'
@@ -42,7 +43,7 @@ def run(out, source_queue=None):
         if any(sha(Path(p)) != digest for p, digest in pins.items()): raise ValueError('comparison source changed')
         status(out, 'verifying_and_comparing_full1080')
         env = {**os.environ, 'TREE': str(U), 'CPUSET': '176-191', 'PORT_CONTAINER_USER': '0:0',
-            'PORT_IMAGE': IMAGE, 'PORT_DOCKER_FLAGS': '--network none --name saea-a0-direct-full1080-comparison-v1'}
+            'PORT_IMAGE': image(), 'PORT_DOCKER_FLAGS': '--network none --name saea-a0-direct-full1080-comparison-v1'}
         args = ['bash', str(D / 'work/scripts/port_py.sh'), 'scripts/analysis/compare_a0_direct_full1080.py',
             '--data', str(D), '--parent', str(D / 'work/dev/real500-runtime/studies/speech-aware-evidence-acquisition/configs/dataset/slurp-speech-native-evo-fold-b-1080.json'),
             '--a0', str(source), '--out', str(target)]

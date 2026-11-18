@@ -1,10 +1,13 @@
 """Derive the owner's frozen deployment argv in the formal CPU container."""
-import argparse,json
+import argparse,json,sys
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'lib'))
+import local_profile  # noqa: E402
 from speech_aware_evidence_acquisition.contracts import assert_execution_environment
 from speech_aware_evidence_acquisition.core.deployment import load_deployment_profile,model_fragment_values,docker_run_argv,allocate_from_npu_smi,CardRefusal
 assert_execution_environment()
-S=Path('/mnt/cephfs/xingchao/omni/publish/omni/studies/speech-aware-evidence-acquisition')
+# roots.source: the engineering tree whose study profiles this deployment derives argv from.
+S=Path(local_profile.get('roots.source'))/'studies/speech-aware-evidence-acquisition'
 p=argparse.ArgumentParser();p.add_argument('--nic',required=True);p.add_argument('--smi');p.add_argument('--release-status',action='store_true');p.add_argument('--profile',default='qwen3-omni-thinking-bf16-4xtp2-s48-b2048-lock-v1');a=p.parse_args()
 profile=load_deployment_profile(a.profile,S)
 if a.smi:

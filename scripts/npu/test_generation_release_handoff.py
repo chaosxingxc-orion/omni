@@ -136,7 +136,7 @@ def test_next_generation_starts_before_first_score_finishes(tmp_path,failure):
 @pytest.mark.parametrize('iteration',[1,2,3])
 def test_real_queue_wires_verified_release_and_detached_children(tmp_path,monkeypatch,iteration):
     import tfrl_current_queue as m
-    monkeypatch.setattr(m,'D',tmp_path)
+    monkeypatch.setattr(m,'data_root',lambda: tmp_path);monkeypatch.setattr(m,'image',lambda: 'image-fixture')
     tree=tmp_path/'tree';study=tree/'studies/speech-aware-evidence-acquisition'
     prefix='seed' if iteration==1 else 'bank'
     def put(path,doc):path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(doc))

@@ -16,10 +16,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import e_crash_chain as e  # noqa: E402
 import prelim_chain as pc  # noqa: E402
+import profile_fixture  # noqa: E402
+
+profile_fixture.ensure()  # every host fact comes from a deployment profile; the tests supply one
 
 HERE = Path(__file__).resolve().parent
-CAPTURE = Path(e.DEFAULT_CAPTURE)
-REAL_LOG = Path(e.LOGS) / "saea-arm-a-0-20261029T081859.log"
+CAPTURE = Path(e.default_capture())
+REAL_LOG = Path(e.logs_root()) / "saea-arm-a-0-20261029T081859.log"
 
 
 def run_dry(scenario=None, out=None, gate_poll=0.0):
@@ -107,7 +110,7 @@ class PureLogicTests(unittest.TestCase):
 class SyntheticContactReuseTests(unittest.TestCase):
     """The crash needs contact k2 to REUSE contact 0's audio (and its evidence prefix). Confirm the sweep does."""
 
-    @unittest.skipUnless(Path(e.TREE, "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
+    @unittest.skipUnless(Path(e.tree(), "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
     def test_contacts_of_a_trajectory_share_audio_and_extend_the_prefix(self):
         ss = e.load_sweep_module()
         config = ss.SweepConfig(base_urls=["http://x"], model="m", levels=[2], min_tokens=4096)
@@ -126,14 +129,14 @@ class SyntheticContactReuseTests(unittest.TestCase):
         self.assertNotEqual(other, audio)  # different trajectories have different audio
         self.assertEqual(ss._decoding(config)["min_tokens"], 4096)
 
-    @unittest.skipUnless(Path(e.TREE, "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
+    @unittest.skipUnless(Path(e.tree(), "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
     def test_request_ids_carry_the_contact_index_used_to_confirm_the_mechanism(self):
-        text = Path(e.TREE, "scripts/serving/synthetic_sweep.py").read_text()
+        text = Path(e.tree(), "scripts/serving/synthetic_sweep.py").read_text()
         self.assertIn('f"sweep-c{level}-w{w}-t{trajectory.index}-k{contact}"', text)
         m = e.REQ_ID.search("chatcmpl-sweep-c56-w188-t188-k2-96e10751")
         self.assertEqual((m.group(1), m.group(4)), ("56", "2"))
 
-    @unittest.skipUnless(Path(e.TREE, "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
+    @unittest.skipUnless(Path(e.tree(), "scripts/serving/synthetic_sweep.py").exists(), "study tree not available")
     def test_eq_bodies_are_fixed_and_deterministic(self):
         ss = e.load_sweep_module()
         a, b = e.eq_bodies(ss, "m"), e.eq_bodies(ss, "m")
@@ -168,18 +171,29 @@ class LauncherCopyTests(unittest.TestCase):
         spec, args, _ = self.printed("--no-enable-prefix-caching", 0)
         self.assertEqual(args, spec["cmd"][1:] + ["--no-enable-prefix-caching"])
 
-    def test_original_launcher_is_untouched_and_the_copy_differs_only_by_the_extra_hooks(self):
-        # The copy was cut from the pre-S10 launcher; after the S10 swap that file is kept as npu_serve.sh.pre-s10-20261030.
-        pre_s10 = HERE / "npu_serve.sh.pre-s10-20261030"
-        original = (pre_s10 if pre_s10.exists() else HERE / "npu_serve.sh").read_text().splitlines()
-        copy = (HERE / "npu_serve_e.sh").read_text().splitlines()
-        removed = [l for l in original if l not in copy]
-        self.assertEqual(removed, ["    refuse_busy \"$CARDS\"", "      --seed 0"])  # only these two lines are replaced
-        self.assertNotIn("EXTRA_ARGS", (HERE / "npu_serve.sh").read_text())
-        # The serving launcher (the sidecar until the swap, npu_serve.sh after it) passes --gpu-memory-utilization.
-        sidecar = HERE / "npu_serve.sh.s10-next"
-        launcher = (sidecar if sidecar.exists() else HERE / "npu_serve.sh").read_text()
-        self.assertIn('--gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}"', launcher)
+    def test_the_copy_is_a_frozen_fork_that_still_renders_the_serving_argv(self):
+        # The copy was cut from the pre-S10 launcher to add EXTRA_ARGS and E_PRINT_ONLY, and it stays at that shape
+        # because the sealed E runs reproduced the arm-A argv with it.  The serving launcher has moved on since (S10,
+        # the deployment profile), so the guard is on what matters: the knobs are copy-only, and both launchers still
+        # render the same serve argv apart from the one flag the original gained after the fork.
+        original = (HERE / "npu_serve.sh").read_text()
+        self.assertNotIn("EXTRA_ARGS", original)
+        self.assertNotIn("E_PRINT_ONLY", original)
+        # The serving launcher the sidecar swap leaves behind passes --gpu-memory-utilization.
+        self.assertIn('--gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}"', original)
+
+        def rendered(script, flag):
+            env = dict(os.environ, NAME="guard", CPUSET="1-2", HCCL_BASE_PORT="1234", MAX_NUM_SEQS="4", **{flag: "1"})
+            out = subprocess.run(["bash", str(HERE / script), "thinking", "0", "8200", "1"], env=env,
+                                 capture_output=True, text=True, check=True).stdout
+            return [l.split(" ", 1)[1] for l in out.splitlines() if l.startswith(("DRY_ARG ", "E_PRINT_ARG "))]
+
+        serving = rendered("npu_serve.sh", "DRY_RUN")
+        copy = rendered("npu_serve_e.sh", "E_PRINT_ONLY")
+        i = serving.index("--gpu-memory-utilization")  # gained by the original after the fork; the copy is frozen
+        self.assertEqual(serving[i + 1], "0.92")
+        del serving[i:i + 2]
+        self.assertEqual(copy, serving)
 
     def test_container_name_guard(self):
         ops = e.EReal.__new__(e.EReal)

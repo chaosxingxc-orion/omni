@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D,IMAGE,write,status
+from real500_successor_queue import data_root, image, write, status
 from tfrl_current_pool_queue import ready
 
 
 def run(tree,source,queue,out):
+    D=data_root()
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):raise ValueError('fresh owned bank queue required')
     study=tree/'studies/speech-aware-evidence-acquisition';src=source/'studies/speech-aware-evidence-acquisition'
     recipe=study/'docs/readiness/tfrl-current-seed-i1-bank/analysis-recipe-v1.json'
@@ -31,7 +32,7 @@ def run(tree,source,queue,out):
                 or subprocess.check_output(['git','-C',str(study),'status','--porcelain']).strip()):
             raise ValueError('bank producer source changed')
         status(out,'verifying_sources_and_distilling')
-        env={**os.environ,'TREE':str(tree),'CPUSET':'192-207','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE,
+        env={**os.environ,'TREE':str(tree),'CPUSET':'192-207','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image(),
             'PORT_DOCKER_FLAGS':'--pid host --network host --name saea-tfrl-current-bank-production-v1'}
         command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/tfrl_current_bank_run.py','run',
             '--repo',str(study),'--source',str(src),'--data',str(D)]

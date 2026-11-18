@@ -8,7 +8,7 @@
    "kind": "sweep",
    "cmd": [
     "python3",
-    "/mnt/cephfs/xingchao/omni/work/scripts/prelim_chain.py",
+    "${local.storage.shared_root}/work/scripts/prelim_chain.py",
     "--resident-worstcase",
     "--levels",
     "32,24,16",
@@ -19,7 +19,7 @@
     "--sweep-json",
     "{\"max_tokens\":7168,\"thinking_budget\":6144,\"prompt_max\":17408,\"timeout\":800}"
    ],
-   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "cwd": "${local.storage.shared_root}/work/scripts",
    "log": "{queue_dir}/jobs/R-A3-b6144-prelim.log",
    "done_marker": "CHAIN DONE",
    "fail_marker": "CHAIN-BAD|CHAIN FAILED",
@@ -27,7 +27,7 @@
    "requires_cards_free": true,
    "on_fail": "continue",
    "cards_policy": "no_other",
-   "wait_for_final": "/mnt/cephfs/xingchao/omni/work/logs/prelim-E3-chain-20261030T041647Z/chain-status.json",
+   "wait_for_final": "${local.storage.shared_root}/work/logs/prelim-E3-chain-20261030T041647Z/chain-status.json",
    "note": "Budget-6144 worst case at 32, 24, 16 per instance against the RESIDENT arm A that E3 restores (nothing stopped or launched; arm A left up). PRELIMINARY."
   },
   {
@@ -35,10 +35,10 @@
    "kind": "chain",
    "cmd": [
     "python3",
-    "/mnt/cephfs/xingchao/omni/work/scripts/prelim_chain.py",
+    "${local.storage.shared_root}/work/scripts/prelim_chain.py",
     "--stop-idle-arm-a"
    ],
-   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "cwd": "${local.storage.shared_root}/work/scripts",
    "log": "{queue_dir}/jobs/stop-idle-arm-a.log",
    "done_marker": "CHAIN DONE",
    "fail_marker": "CHAIN-BAD|CHAIN FAILED",
@@ -52,11 +52,11 @@
    "kind": "record",
    "cmd": [
     "python3",
-    "/mnt/cephfs/xingchao/omni/work/scripts/record_runs.py",
+    "${local.storage.shared_root}/work/scripts/record_runs.py",
     "--run-list",
-    "/mnt/cephfs/xingchao/omni/work/scripts/record_run_list.base-lock-v1.json"
+    "${local.storage.shared_root}/work/scripts/record_run_list.base-lock-v1.json"
    ],
-   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "cwd": "${local.storage.shared_root}/work/scripts",
    "log": "{queue_dir}/jobs/recorded-base-lock-v1.log",
    "done_marker": "CHAIN DONE",
    "fail_marker": "CHAIN-BAD|CHAIN FAILED",

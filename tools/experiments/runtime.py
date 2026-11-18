@@ -38,16 +38,37 @@ def selected_tasks(doc, phase):
 
 def plan(doc, phase="all"):
     tasks = selected_tasks(doc, phase)
+    local = doc["local"]
     return {"schema_version": 1, "config_sha256": doc["sha256"], "run_dir": doc["run_dir"],
+            "local_sha256": local["local_sha256"] if local else None,
+            "local_keys": sorted(local["values"]) if local else [],
             "phase": phase, "order": [tid for tid in doc["order"] if any(t["id"] == tid for t in tasks)],
             "tasks": [{**t, "effective_env": task_environment(doc, t)} for t in tasks],
             "execution": doc["config"]["execution"],
             "scope": "execution orchestration and explicit legacy migration entry; legacy chains unchanged"}
 
 
+def check_local_identity(doc):
+    """A prepared run may only be resumed with the same local values it froze.
+
+    Runs prepared before the local profile existed have no ``local_sha256``; they
+    stay observable and are never back-filled.  ``--from-snapshot`` observation
+    carries no profile at all and skips this check by construction.
+    """
+    local = doc["local"]
+    if not local:
+        return
+    lock = read_json(run_path(doc) / "CONFIG-LOCK.json")
+    frozen = (lock or {}).get("local_sha256")
+    if frozen is not None and frozen != local["local_sha256"]:
+        raise ConfigError("local deployment profile changed for this experiment.id; "
+                          "prepared run keeps its frozen values")
+
+
 def assert_frozen(doc):
     root = run_path(doc)
     lock = read_json(root / "CONFIG-LOCK.json")
+    check_local_identity(doc)
     if not lock or lock.get("config_sha256") != doc["sha256"]:
         raise ConfigError("run is not prepared or configuration changed; use a new experiment.id")
     frozen = read_json(root / "CONFIG.json")
@@ -93,15 +114,30 @@ def verify_bindings(doc):
                 raise ConfigError(f"downstream configuration mismatch: {binding['path']} {target} != {source}")
 
 
+def exclusive_run_lock(store, root):
+    """Take RUN.lock, or say who is holding it.
+
+    A busy guard is normal -- a controller that has finished its tasks still holds
+    the lock until it writes its EXIT -- but the errno that ``flock`` raises tells a
+    newcomer nothing about the run they are looking at.
+    """
+    try:
+        return store.lock(root / "RUN.lock")
+    except BlockingIOError as error:
+        raise ConfigError(f"run is busy: another prepare/controller holds {root / 'RUN.lock'}; "
+                          f"observe it with status or reconcile, then retry") from error
+
+
 def prepare(doc, phase="all"):
     cfg, root, store = doc["config"], run_path(doc), store_for(doc)
     verify_bindings(doc)
     if not Path(cfg["storage"]["shared_root"]).is_dir():
         raise ConfigError("shared_root must already exist; no fallback storage")
     store.mkdir(root)
-    guard = store.lock(root / "RUN.lock")
+    guard = exclusive_run_lock(store, root)
     try:
         previous_lock = read_json(root / "CONFIG-LOCK.json")
+        check_local_identity(doc)
         if previous_lock and previous_lock.get("config_sha256") != doc["sha256"]:
             raise ConfigError("configuration changed for this experiment.id; original attempt preserved")
         frozen = read_json(root / "CONFIG.json")
@@ -138,8 +174,18 @@ def prepare(doc, phase="all"):
         # No existing attempt is overwritten, even if preparation was interrupted.
         if frozen is None:
             store.write(root / "CONFIG.json", cfg, exclusive=True)
+        local = doc["local"]
+        if local:
+            # Only the referenced subset is frozen: the profile itself may hold
+            # keys this experiment never used, and those must not affect resumption.
+            store.write(root / "LOCAL.json", {"schema_version": 1, "config_sha256": doc["sha256"],
+                                              "local_sha256": local["local_sha256"],
+                                              "file_sha256": local["file_sha256"],
+                                              "values": local["values"]})
         lock = {"config_sha256": doc["sha256"], "created_at": now(), "schema_version": 1,
                 "artifact_sha256": {v["path"]: v["sha256"] for v in checks}}
+        if local:
+            lock["local_sha256"] = local["local_sha256"]
         if previous_lock is None:
             store.write(root / "CONFIG-LOCK.json", lock, exclusive=True)
         snapshot = root / "inputs" / "dataset-manifest"
@@ -276,7 +322,7 @@ def _unresolved_controller(root):
 def launch(doc, cli, phase="all"):
     store, root = store_for(doc), run_path(doc)
     assert_frozen(doc)
-    guard = store.lock(root / "RUN.lock")
+    guard = exclusive_run_lock(store, root)
     try:
         previous = _unresolved_controller(root)
         if previous:

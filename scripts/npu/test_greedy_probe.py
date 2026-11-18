@@ -85,9 +85,12 @@ class CompareTests(unittest.TestCase):
         self.assertTrue(gp.classify(gp.matrix(runs, modes)["pairs"]).startswith("deterministic"))
 
     def test_post_parses_token_ids(self):
-        # exercise the response parsing path with a local stub server
+        # exercise the response parsing path with a local stub server.
+        # The stub binds an ephemeral loopback port for the duration of this test:
+        # it is this fixture's own server, not a deployment endpoint.
         import http.server
         import threading
+        host = "127.0.0.1"  # local-leak: allow ephemeral port of this test's own stub server
         payload = {"choices": [{"message": {"reasoning_content": "r", "content": "c"}, "finish_reason": "length",
                                 "logprobs": {"content": [{"token": "token_id:11", "logprob": -0.5,
                                                           "top_logprobs": [{"token": "token_id:11", "logprob": -0.5},
@@ -107,15 +110,15 @@ class CompareTests(unittest.TestCase):
             def log_message(self, *a):
                 pass
 
-        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        srv = http.server.ThreadingHTTPServer((host, 0), H)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         try:
-            r = gp.post(f"http://127.0.0.1:{srv.server_address[1]}", {"x": 1})
+            r = gp.post(f"http://{host}:{srv.server_address[1]}", {"x": 1})
             self.assertEqual(r["token_ids"], [11])
             self.assertEqual(len(r["top_logprobs"][0]), 2)
-            out = gp.send(f"http://127.0.0.1:{srv.server_address[1]}", [{"a": 1}, {"a": 2}, {"a": 3}], "burst", 2, True)
+            out = gp.send(f"http://{host}:{srv.server_address[1]}", [{"a": 1}, {"a": 2}, {"a": 3}], "burst", 2, True)
             self.assertEqual([x["index"] for x in out], [0, 1, 2])
-            out = gp.send(f"http://127.0.0.1:{srv.server_address[1]}", [{"a": 1}, {"a": 2}], "sequential", 2, True)
+            out = gp.send(f"http://{host}:{srv.server_address[1]}", [{"a": 1}, {"a": 2}], "sequential", 2, True)
             self.assertTrue(all(x["status"] == "ok" for x in out))
         finally:
             srv.shutdown()

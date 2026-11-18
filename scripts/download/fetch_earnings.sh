@@ -12,11 +12,16 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/_daemonize.sh"
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
 export PATH="$HOME/.local/bin:$PATH"
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
+lp_default SPEECHRL_DATA_DIR storage.shared_root || exit 6
+export SPEECHRL_DATA_DIR
+DR=$SPEECHRL_DATA_DIR
 DEST="$DR/datasets/earnings21-22"
 REV=c05ab6fd8b4b627d123c922a22a39e993dd37635
-MATERIALIZER=/home/xingchao/workspace/omni/exploring-l4-intelligence/scripts/data/materialize_lfs_pointers.py
+SIBLING=$(lp_opt paths.optional_sibling_checkout) || exit 6
+MATERIALIZER=$SIBLING/scripts/data/materialize_lfs_pointers.py
 
 retry() { local n; for n in 1 2 3 4 5 6 7 8 9 10; do "$@" && return 0; echo "retry $n: $*"; sleep $((n * 5)); done; return 1; }
 
@@ -49,6 +54,8 @@ pointers() { { grep -rlI -m1 '^version https://git-lfs.github.com/spec/v1' "$DES
 if [ "$(pointers)" != 0 ]; then
   retry git -C "$DEST" -c lfs.concurrenttransfers=16 -c lfs.transfer.maxretries=10 \
     lfs pull --include "earnings21/**,earnings22/**" || true
+  [ -f "$MATERIALIZER" ] || { echo "LFS pointer materializer not found: $MATERIALIZER" \
+    "(set paths.optional_sibling_checkout in $(lp_config))" >&2; exit 6; }
   retry python3 -I "$MATERIALIZER" "$DEST" earnings21 earnings22 --jobs 8
 fi
 

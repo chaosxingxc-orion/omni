@@ -14,10 +14,24 @@ import math
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import time
 import urllib.request
 
 from card_queue import parse_smi, read_json, write_atomic, iso
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import local_profile  # noqa: E402
+
+
+def service_host():
+    """services.omni.host: where the resident instances listen on this deployment."""
+    return local_profile.get('services.omni.host')
+
+
+def service_ports():
+    """ports.engine_matrix: the resident instances' metrics ports on that host."""
+    return [int(port) for port in local_profile.get('ports.engine_matrix')]
 
 
 def timestamp(value):
@@ -150,9 +164,15 @@ def sample(queue_dir):
         result['cards']=parse_smi(text)[0]
         result['time']=iso()  # hardware observation, before HTTP polling
     except (OSError,subprocess.SubprocessError) as e:result['errors'].append(type(e).__name__)
-    for port in range(8200,8204):
+    # An unreadable profile is an observation error like any other: it must not
+    # stop the sampler, and it must not be mistaken for idle cards.
+    try:
+        host, ports = service_host(), service_ports()
+    except Exception as e:
+        result['errors'].append(type(e).__name__); host, ports = None, []
+    for port in ports:
         try:
-            with urllib.request.urlopen('http://127.0.0.1:%d/metrics'%port,timeout=3) as response:
+            with urllib.request.urlopen('http://%s:%d/metrics'%(host,port),timeout=3) as response:
                 lines=response.read().decode().splitlines()
             gauges={}
             for name in ('num_requests_running','num_requests_waiting'):

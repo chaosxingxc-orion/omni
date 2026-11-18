@@ -7,7 +7,11 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/_daemonize.sh"
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
+# shellcheck source=../lib/local_profile.sh
+. "$HERE/../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default SPEECHRL_DATA_DIR storage.shared_root || exit 6
+export SPEECHRL_DATA_DIR
+DR=$SPEECHRL_DATA_DIR
 REV=8eb16545762be97ace75334109d73824217311f1
 REPO="$DR/repos/slurp" AUDIO="$DR/datasets/slurp"
 

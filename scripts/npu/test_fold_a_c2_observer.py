@@ -8,7 +8,7 @@ import fold_a_c2_observer as m
 
 
 def test_missing_container_does_not_declare_failure_or_restart(tmp_path,monkeypatch):
-    monkeypatch.setattr(m,'D',tmp_path)
+    monkeypatch.setattr(m,'data_root',lambda: tmp_path)
     monkeypatch.setattr(m.subprocess,'run',lambda *a,**k:SimpleNamespace(returncode=1,stdout=''))
     monkeypatch.setattr(m,'hardware',lambda _: {'cards':{},'errors':['unavailable']})
     sleeps=[]
@@ -24,7 +24,7 @@ def test_missing_container_does_not_declare_failure_or_restart(tmp_path,monkeypa
 
 
 def test_explicit_failed_exit_is_terminal(tmp_path,monkeypatch):
-    monkeypatch.setattr(m,'D',tmp_path)
+    monkeypatch.setattr(m,'data_root',lambda: tmp_path)
     monkeypatch.setattr(m.subprocess,'run',lambda *a,**k:SimpleNamespace(returncode=1,stdout=''))
     monkeypatch.setattr(m,'hardware',lambda _: {'cards':{},'errors':[]})
     monkeypatch.setattr(m.time,'sleep',lambda _:pytest.fail('terminal must not sleep'))

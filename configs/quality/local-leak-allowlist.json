@@ -1,0 +1,12 @@
+{
+  "schema": "omni-local-leak-allowlist-v1",
+  "note": "Each entry says where local machine facts may still live, and why that is not a leak. The list may only shrink: check_local_leak.py fails when an entry no longer covers any finding.",
+  "trees": {
+    "studies/speech-aware-evidence-acquisition": {
+      "reason": "Imported verbatim at upstream fba45821b163 (commit 539379a48) and sealed: its own receipts hash their own source, so rewriting a path inside it would invalidate that evidence. It is read-only reference, not the base; everything this deployment runs takes host, mount and service facts from the local deployment profile. Retiring this entry means re-importing the study at a commit that carries no machine facts.",
+      "owner": "base-maintainer",
+      "date": "2026-11-18"
+    }
+  },
+  "files": {}
+}

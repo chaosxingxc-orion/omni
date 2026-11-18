@@ -17,7 +17,11 @@ from tools.experiments import runtime
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("validate", "plan", "prepare", "run", "status", "reconcile"))
-    parser.add_argument("--config", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--config", help="experiment configuration")
+    source.add_argument("--from-snapshot", metavar="RUN_DIR",
+                        help="observe a prepared run through its frozen CONFIG.json; no local profile read")
+    parser.add_argument("--local-config", help="local deployment profile; required by ${local.*} macros")
     parser.add_argument("--phase", choices=("cpu", "npu", "all"), default="all")
     parser.add_argument("--_controller", help=argparse.SUPPRESS)
     parser.add_argument("--_worker", help=argparse.SUPPRESS)
@@ -26,7 +30,13 @@ def main(argv=None):
     parser.add_argument("--_dispatch-id", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     try:
-        doc = load_config(args.config)
+        if args.from_snapshot:
+            if args.local_config or args.command not in ("status", "reconcile"):
+                raise ConfigError("--from-snapshot is observation only and takes no local profile")
+            config = Path(args.from_snapshot) / "CONFIG.json"
+        else:
+            config = args.config
+        doc = load_config(config, args.local_config)
         if args._controller or args._worker:
             if args.command != "run" or (args._controller and args._worker):
                 raise ConfigError("invalid private invocation")
@@ -38,7 +48,9 @@ def main(argv=None):
                 raise ConfigError("worker requires dispatch id")
             return runtime.worker(doc, args._worker, args._dispatch_id, args._lane_fd)
         if args.command == "validate":
-            result = {"valid": True, "schema_version": 1, "config_sha256": doc["sha256"]}
+            result = {"valid": True, "schema_version": 1, "config_sha256": doc["sha256"],
+                      "local_sha256": (doc["local"] or {}).get("local_sha256"),
+                      "local_keys": sorted(doc["local"]["values"]) if doc["local"] else []}
         elif args.command == "plan":
             result = runtime.plan(doc, args.phase)
         elif args.command == "prepare":

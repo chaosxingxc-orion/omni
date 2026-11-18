@@ -7,17 +7,34 @@
 ## 日常接口
 
 ```bash
-python3 scripts/experiments/experiment.py validate --config experiment.json
-python3 scripts/experiments/experiment.py plan --config experiment.json
-python3 scripts/experiments/experiment.py prepare --config experiment.json
-python3 scripts/experiments/experiment.py run --config experiment.json
-python3 scripts/experiments/experiment.py status --config experiment.json
-python3 scripts/experiments/experiment.py reconcile --config experiment.json
+python3 scripts/experiments/experiment.py validate --config experiment.json --local-config configs/local/deployment.json
+python3 scripts/experiments/experiment.py plan --config experiment.json --local-config configs/local/deployment.json
+python3 scripts/experiments/experiment.py prepare --config experiment.json --local-config configs/local/deployment.json
+python3 scripts/experiments/experiment.py run --config experiment.json --local-config configs/local/deployment.json
+python3 scripts/experiments/experiment.py status --config experiment.json --local-config configs/local/deployment.json
+python3 scripts/experiments/experiment.py reconcile --from-snapshot <run_dir> --phase cpu
 ```
 
 `validate/plan` 只读。`prepare` 固化完整配置、数据清单和输入身份；配置变更必须使用新 experiment.id。`run` 在执行主机启动独立会话，不依赖 SSH 持续连接。`status/reconcile` 区分历史状态与当前可观测的进程身份；reconcile 只观察，不能自动修复、清租约或重发。`--phase cpu|npu|all` 可以分阶段执行，依赖尚未完成的阶段不抢 NPU 配额。
 
-配置只支持显式 `${shared_root}`、`${run_root}`、`${config_dir}`，未知变量或字段立即报错。argv 是参数数组，无 shell 插值；环境变量显式配置，不隐式继承代理、凭据和缓存路径。配置不能内嵌凭据。解释器、源码、业务配置和清单作为 release/task artifacts 固定。小控制文件及数据清单按内容核验；仅大于 1 MiB 且在 artifacts 中显式设置 `immutable: true` 的发布资产复用已验证记录，不能把可变数据伪装成 immutable 资产。
+## 本地部署配置（唯一本地信息入口）
+
+主机别名、共享/热/归档根、模型与数据根、镜像引用、服务地址与端口、UID/GID 只允许出现在**本地部署配置**里，不进入公共代码或实验配置。
+
+```bash
+cp configs/local/deployment.example.json configs/local/deployment.json   # 不提交
+```
+
+- 实验配置只通过 `${local.<dotted.key>}` 引用，例如 `${local.storage.shared_root}`、`${local.image.digest}`。
+- 键集合固定（`hosts.*`、`storage.*`、`roots.*`、`image.*`、`services.*`、`identity.*`），未知键、相对路径、含 `${}` 的值、疑似凭据的键名立即报错。
+- 引用未提供的键时，错误信息给出具体键名和 `--local-config`，不猜默认值。
+- 本地文件解析期只读一次；之后所有阶段读冻结的 `CONFIG.json`。
+- `prepare` 额外落 `LOCAL.json`：只含本次实际引用的键、`file_sha256` 与 `local_sha256`；`CONFIG-LOCK.json` 增 `local_sha256`。历史运行无该字段照常观察，不补写封存证据。
+- 已准备实验若本地引用值发生变化（即使解析结果相同）拒绝复用；`--from-snapshot <run_dir>` 用冻结配置观察，不需要本地文件，跨机也只读。
+
+新协作者从镜像启动实验的完整检查单、反向验收与实测耗时见[新人接入检查单](Newcomer-Onboarding.md)；其可执行版本是 `scripts/experiments/onboarding_drill.py`，由 `tests/experiments/test_onboarding_drill.py` 固定。
+
+配置只支持显式 `${shared_root}`、`${run_root}`、`${config_dir}` 与 `${local.*}`，未知变量或字段立即报错。argv 是参数数组，无 shell 插值；环境变量显式配置，不隐式继承代理、凭据和缓存路径。配置不能内嵌凭据。解释器、源码、业务配置和清单作为 release/task artifacts 固定。小控制文件及数据清单按内容核验；仅大于 1 MiB 且在 artifacts 中显式设置 `immutable: true` 的发布资产复用已验证记录，不能把可变数据伪装成 immutable 资产。
 
 `storage.run_root` 是共享执行命名空间，实验在 `experiments/<id>` 下隔离，输出在其 `outputs` 子目录，公共 lane 在 `lanes` 子目录。所有使用相同模型服务的后继实验必须使用相同 lane 配置；lane 是调度配额，不是物理卡授权。业务执行继续保留原生资源准入。任意 argv 本身不是沙箱：程序及容器仍须遵循声明的读写路径。
 

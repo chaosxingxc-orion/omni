@@ -13,6 +13,8 @@ import urllib.request
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "lib"))
+import local_profile  # noqa: E402
 STATES = ("running", "done", "failed", "stalled", "unknown")
 STATE_SEV = {"running": "INFO", "done": "INFO", "failed": "BAD", "stalled": "BAD", "unknown": "WARN"}
 KINDS = {}
@@ -158,6 +160,19 @@ def file_sig(paths):
 VLLM_ERR = re.compile(r"Traceback|\bERROR\b|ERR9|EngineDeadError|EngineCore.*(failed|died|fatal)|out of memory|\bOOM\b")
 
 
+def service_host():
+    """Where this deployment's instances listen (services.omni.host).
+
+    Read per evaluation, not at import: a host without a deployment profile must
+    still be able to run the watchdog for its non-serving jobs, and the missing
+    key then surfaces as an unknown endpoint rather than an import failure.
+    """
+    try:
+        return local_profile.get("services.omni.host")
+    except local_profile.ProfileError:
+        return None
+
+
 def prom(text):
     out = {}
     for l in text.splitlines():
@@ -182,11 +197,17 @@ def vllm_server(job, env, st):
         return result("failed", note="container %s is not running" % p["container"],
                       evidence=[ev(log)] if log else [])
     events, m = [], {}
-    r = env.http_get("http://127.0.0.1:%s/v1/models" % p["port"])
+    # The serving endpoint is a deployment fact, not a literal: this job runs on the
+    # host that serves it, so the profile names the address that host answers on.
+    host = service_host()
+    if host is None:
+        return result("unknown", note="deployment profile does not name the service host",
+                      evidence=[ev(log)] if log else [])
+    r = env.http_get("http://%s:%s/v1/models" % (host, p["port"]))
     ok = bool(r and r[0] == 200)
     st["down"] = 0 if ok else st.get("down", 0) + 1
     if ok:
-        mt = env.http_get("http://127.0.0.1:%s/metrics" % p["port"])
+        mt = env.http_get("http://%s:%s/metrics" % (host, p["port"]))
         g = prom(mt[1]) if mt and mt[0] == 200 else {}
         m = {"running": g.get("num_requests_running"), "waiting": g.get("num_requests_waiting"),
              "kv": round(g.get("kv_cache_usage_perc", 0), 3), "preempt": g.get("num_preemptions_total")}

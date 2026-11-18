@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # NPU half of the encoder benchmark: same protocol and JSON schema as the CPU half, then cosine agreement
-# against the CPU float32 vectors. NOT RUN YET. Run it on host npu only once the cards are free; run_container.sh
-# refuses any named card that has more than 4 GiB in use.
+# against the CPU float32 vectors. NOT RUN YET. Run it on the deployment's rollout host once the cards are
+# free; run_container.sh refuses any named card that has more than 4 GiB in use.
 #
-# usage (on host npu):  CARDS=0,1,2,3 nohup bash run_npu_half.sh > logs/npu-chain.log 2>&1 &
+# usage:  CARDS=0,1,2,3 nohup bash run_npu_half.sh > /tmp/npu-chain.log 2>&1 &
 #   The first card in CARDS does the single-process runs; all of CARDS form the pool (one worker per card).
 #   Inside the container the mounted cards are numbered npu:0..N-1.
+#
+# Results and logs go to the shared scratch tree named by the deployment profile (storage.shared_root), not
+# to this checkout; ENCBENCH_DIR overrides that location.
 set -uo pipefail
-HERE=/mnt/cephfs/xingchao/omni/work/scratch/encbench
-R=$HERE/results
-L=$HERE/logs
+HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=../../lib/local_profile.sh
+. "$HERE/../../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+ENCBENCH_DIR=${ENCBENCH_DIR:-$(lp_get storage.shared_root)/work/scratch/encbench} || exit 6
+R=$ENCBENCH_DIR/results
+L=$ENCBENCH_DIR/logs
 CARDS=${CARDS:?set CARDS, e.g. CARDS=0,1,2,3}
 N=$(echo "$CARDS" | tr ',' '\n' | wc -l)
 POOL=$(seq -s, -f 'npu:%g' 0 $((N - 1)))

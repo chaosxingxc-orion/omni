@@ -1,6 +1,8 @@
-import json, sys, threading, subprocess, wave, struct
+import json, os, sys, threading, subprocess, wave, struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
 M = "Considering the limited time by the user, I have to give the solution based on the thinking directly now."
+# A fake engine is this probe's own server, so it binds its own loopback port.
+BIND = "127.0.0.1"  # local-leak: allow a fake engine binds its own ephemeral test port
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def do_POST(self):
@@ -27,8 +29,10 @@ class H(BaseHTTPRequestHandler):
             code, doc = 200, {"choices": [{"message": {"reasoning": "Let me think " + M + "\n", "content": "ok"}}]}
         raw = json.dumps(doc).encode()
         self.send_response(code); self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
-srv = HTTPServer(("127.0.0.1", 18299), H)
+srv = HTTPServer((BIND, 18299), H)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 with wave.open("/tmp/a.wav", "wb") as w:
     w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(struct.pack("<100h", *[0]*100))
-sys.exit(subprocess.call([sys.executable, "/mnt/cephfs/xingchao/omni/work/scripts/npu_smoke_thinking.py", "--base-url", "http://127.0.0.1:18299", "--audio", "/tmp/a.wav", "--out", "/tmp/smoke-out"]))
+# The smoke script under test is this repository's own copy, wherever it is checked out.
+smoke = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "npu", "npu_smoke_thinking.py")
+sys.exit(subprocess.call([sys.executable, smoke, "--base-url", "http://%s:18299" % BIND, "--audio", "/tmp/a.wav", "--out", "/tmp/smoke-out"]))

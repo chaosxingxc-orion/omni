@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import card_queue as cq  # noqa: E402
+import profile_fixture  # noqa: E402
 
 FAKE_JOB = r'''#!/usr/bin/env python3
 """fake job: fake_job.py <trace> <name> <sleep_s> <exit> <lines...>   prints each line, sleeps, exits."""
@@ -244,6 +245,21 @@ class OrderAndVerdictTests(Base):
                     {"cards_policy": "whatever"}):
             self.write_queue(self.job("y", **bad))
             with self.assertRaises(cq.QueueError, msg=str(bad)):
+                cq.load_queue(self.queue_file, self.qdir)
+
+    def test_local_macros_come_from_the_deployment_profile(self):
+        profile_fixture.ensure()
+        self.write_queue(self.job("m", cwd="${local.storage.shared_root}", env={"DATA": "${local.roots.data}"}))
+        job = cq.load_queue(self.queue_file, self.qdir)["jobs"][0]
+        profile = json.load(open(os.environ["OMNI_LOCAL_CONFIG"]))
+        self.assertEqual(job["cwd"], profile["storage"]["shared_root"])
+        self.assertEqual(job["env"]["DATA"], profile["roots"]["data"])
+
+    def test_an_unknown_or_non_local_macro_is_refused_before_anything_runs(self):
+        profile_fixture.ensure()
+        for value in ("${local.no.such.key}", "${shared_root}/work", "${local.storage.shared_root"):
+            self.write_queue(self.job("m", cwd=value))
+            with self.assertRaises(cq.QueueError, msg=value):
                 cq.load_queue(self.queue_file, self.qdir)
 
     def test_existing_state_needs_resume(self):

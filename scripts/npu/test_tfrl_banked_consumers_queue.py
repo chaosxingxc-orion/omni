@@ -35,7 +35,7 @@ def test_verified_wait_requires_live_handle():
 def test_queue_launches_registered_consumer_once_after_results(tmp_path,monkeypatch):
     import json,hashlib
     import tfrl_banked_consumers_queue as m
-    monkeypatch.setattr(m,'D',tmp_path)
+    monkeypatch.setattr(m,'data_root',lambda: tmp_path);monkeypatch.setattr(m,'image',lambda: 'image-fixture')
     pool,bank,rel=m.identities(2);tree=tmp_path/'tree';study=tree/'studies/speech-aware-evidence-acquisition'
     p=study/rel;p.parent.mkdir(parents=True)
     p.write_text(json.dumps({'iteration':2,'bank_run_id':bank,'sources':{

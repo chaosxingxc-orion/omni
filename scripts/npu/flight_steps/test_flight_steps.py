@@ -1,6 +1,10 @@
 """Offline tests for the operator flight steps (CPU only: fake operations, no docker, no card, no network, no model).
 
-Run on npu2:  cd /mnt/cephfs/xingchao/omni/work/scripts/flight_steps && taskset -c 176-191 python3 -m pytest -q test_flight_steps.py
+Run on the deployment host inside the flight_steps directory:
+  cd <repo>/scripts/npu/flight_steps && taskset -c 176-191 python3 -m pytest -q test_flight_steps.py
+
+The study tree and the shared-root sample come from the local deployment profile
+(OMNI_LOCAL_CONFIG, default configs/local/deployment.json); there is no built-in path.
 """
 import json
 import os
@@ -15,12 +19,22 @@ import pytest
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parents[1] / "lib"))
 
 import cellinfo  # noqa: E402
+import local_profile  # noqa: E402
 import preflight as pf  # noqa: E402
 
-STUDY = Path(cellinfo.DEFAULT_STUDY)
-SAMPLE_SMI = Path("/mnt/cephfs/xingchao/omni/work/npu-smi-sample.txt")
+
+def _study_dir():
+    try:
+        return Path(cellinfo.default_study())
+    except local_profile.ProfileError as error:
+        pytest.skip(f"needs a deployment profile: {error}", allow_module_level=True)
+
+
+STUDY = _study_dir()
+SAMPLE_SMI = Path(local_profile.get("storage.shared_root")) / "work/npu-smi-sample.txt"
 PROFILE_ID = pf.DEFAULT_PROFILE
 PROFILE = json.loads((STUDY / "configs/deployment" / f"{PROFILE_ID}.json").read_text())
 STEPS = ["lease", "smoke_worker", "fit", "smoke_read", "signoff", "campaign", "seal", "score", "read", "ledger_close"]
@@ -49,7 +63,7 @@ class FakeOps(pf.Ops):
     def __init__(self, tmp: Path, **over):
         self.tmp = tmp
         self.state = {
-            "hostname": "A800I-03", "dirty": "", "head": "a" * 40, "pin": None, "free_gib": 5000,
+            "hostname": PROFILE["host"], "dirty": "", "head": "a" * 40, "pin": None, "free_gib": 5000,
             "registration": (0, "flight registration check: PASS"), "cli": (0, json.dumps({"preflight": {}, "scientific_readiness": {"state": "ready", "reason": ""}})),
             "smi": (0, smi_text()), "health": 200, "metrics": "vllm:num_requests_running{engine=\"0\"} 0.0\n",
             "image_id": "sha256:abc", "container_running": True, "started": "2026-10-30T01:00:00.000000000Z",
@@ -156,6 +170,8 @@ def test_preflight_cli_check_traceback_tail(tmp_path):
 
 
 def test_parse_npu_smi_real_sample():
+    if not SAMPLE_SMI.is_file():
+        pytest.skip(f"needs a recorded npu-smi sample at storage.shared_root/work/: {SAMPLE_SMI}")
     cards = pf.parse_npu_smi(SAMPLE_SMI.read_text())
     assert sorted(cards) == list(range(8))
     assert cards[0]["hbm_used_mib"] == 58405 and cards[0]["hbm_total_mib"] == 65536 and cards[0]["aicore_pct"] == 0
@@ -693,7 +709,9 @@ def test_bash_syntax_of_every_script():
 
 
 def test_no_wsl_paths_and_english_only():
-    pattern = re.compile(r"/mnt/[de]/|/home/chao|\\\\wsl|chao_workspace|\.venvs/speechrl|saea-worktrees")
+    # The forbidden spellings are split across adjacent literals so this file does not
+    # itself contain the strings it forbids (check_local_leak.py scans the tree too).
+    pattern = re.compile("/" r"mnt/[de]/|/" r"home/chao|" r"\\\\wsl|chao_workspace|" r"\.venvs/speechrl|saea-worktrees")
     for path in sorted(HERE.iterdir()):
         if path.suffix in (".sh", ".py", ".md") and path.name != Path(__file__).name:
             text = path.read_text(encoding="utf-8")

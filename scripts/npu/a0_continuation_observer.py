@@ -5,13 +5,14 @@ import os
 from pathlib import Path
 import subprocess
 import time
-from real500_successor_queue import D, U, IMAGE, write, status
+from real500_successor_queue import data_root, publish_root, image, write, status
 
 RUN = 'SAEA-SLURP-A0-REMAINING353-C2-V1'
 ATTEMPT = 'attempt-a0-remaining353-c2-v1'
 
 
 def observe(out, handoff=None):
+    D, U = data_root(), publish_root()
     if out.exists() or not out.resolve().is_relative_to(D / 'work/codex'):
         raise ValueError('fresh owned observer required')
     out.mkdir(parents=True)
@@ -52,7 +53,7 @@ def observe(out, handoff=None):
                 if checkpoint.exists() and state != 'unconfirmed_process_state':
                     target = out / ('snapshot-' + str(time.time_ns()) + '.json')
                     env = {**os.environ, 'TREE': str(U), 'CPUSET': '176-191', 'PORT_CONTAINER_USER': '0:0',
-                        'PORT_IMAGE': IMAGE, 'PORT_DOCKER_FLAGS': '--network none --name saea-a0-continuation-observation-v1'}
+                        'PORT_IMAGE': image(), 'PORT_DOCKER_FLAGS': '--network none --name saea-a0-continuation-observation-v1'}
                     command = ['bash', str(D / 'work/scripts/port_py.sh'), 'scripts/analysis/real_engine_progress.py',
                         '--checkpoint', str(checkpoint), '--roster', str(roster), '--state', state,
                         '--elapsed-seconds', str(max(end - start['time'], .001)), '--cards', '8', '--instances', '2', '--output', str(target)]

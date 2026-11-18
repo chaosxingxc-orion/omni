@@ -15,11 +15,19 @@
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
 KIND=$1; shift
-M=/mnt/cephfs/xingchao/omni/models
-LOGS=/mnt/cephfs/xingchao/omni/work/logs
-IMAGE=saea-base:20261027
+# Every path, the image and the bind address come from the local deployment profile
+# (scripts/lib/local_profile.sh, default configs/local/deployment.json). Each keeps its
+# per-call environment override; there is no built-in default.
+SERVE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+. "$SERVE_DIR/../lib/local_profile.sh" || exit 1
+lp_default OMNI_ROOT storage.shared_root || exit 1
+lp_default M roots.model || exit 1
+lp_default IMAGE image.reference || exit 1
+LOGS=${SERVE_LOGS:-$OMNI_ROOT/work/logs}
+BIND_HOST=${BIND_HOST:-$(lp_get services.omni.host)} || exit 1
+SRC=$(lp_get roots.source) || exit 1
+SRC=$SRC/studies/speech-aware-evidence-acquisition/src
 BUSY_MIB=4096
-SRC=/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
 
 devices() {
   local args=(--device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc)
@@ -72,7 +80,7 @@ run() {
     -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi:ro \
     -v /etc/hccn.conf:/etc/hccn.conf:ro -v /etc/ascend_install.info:/etc/ascend_install.info:ro \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro -v /usr/local/dcmi:/usr/local/dcmi:ro \
-    -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
+    -v "$OMNI_ROOT:$OMNI_ROOT" \
     --entrypoint /usr/local/python3.12.13/bin/python3 "$IMAGE" -m vllm.entrypoints.cli.main serve "$@" > /dev/null
   setsid nohup docker logs -f "$name" > "$log" 2>&1 < /dev/null &
   echo "started $name; log $log"
@@ -92,7 +100,7 @@ case $KIND in
       *) echo "refused: MM_CACHE_TYPE must be unset, lru or shm; got '$MM_CACHE_TYPE'" >&2; exit 1 ;;
     esac
     run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
-      --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
+      --served-model-name qwen3-omni-30b-a3b-thinking --host "$BIND_HOST" --port "$PORT" \
       --dtype bfloat16 --tensor-parallel-size "$TP" \
       --max-model-len 24576 --max-num-seqs "${MAX_NUM_SEQS:-4}" \
       --gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}" \
@@ -105,7 +113,7 @@ case $KIND in
     VIEW=$1 CARD=$2 PORT=$3
     refuse_busy "$CARD"
     ARGS=$(PYTHONPATH=$SRC \
-      docker run --rm -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni -e PYTHONPATH \
+      docker run --rm -v "$OMNI_ROOT:$OMNI_ROOT" -e PYTHONPATH \
       --entrypoint /opt/saea-venv/bin/python "$IMAGE" -c '
 import json, sys
 from pathlib import Path
@@ -113,9 +121,9 @@ from speech_aware_evidence_acquisition.core import vllm_serving_view as sv
 view = Path(sys.argv[1])
 receipt = sv.verify_serving_view(view)
 argv = sv.vllm_embedding_serve_args(view, receipt, served_model_name=sys.argv[2], max_model_len=8192,
-                                    host="127.0.0.1", port=int(sys.argv[3]))
+                                    host=sys.argv[4], port=int(sys.argv[3]))
 assert not any("\n" in a for a in argv)
-print("\n".join(argv[2:]))' "$M/serving-views/$VIEW" "$VIEW" "$PORT")
+print("\n".join(argv[2:]))' "$M/serving-views/$VIEW" "$VIEW" "$PORT" "$BIND_HOST")
     mapfile -t SERVE <<< "$ARGS"
     run "saea-serve-embed-$VIEW" "$CARD" "${SERVE[@]}"
     ;;

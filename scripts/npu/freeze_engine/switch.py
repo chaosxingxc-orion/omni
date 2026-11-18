@@ -3,12 +3,38 @@
 Only run on npu2. Keep stopped old containers under archival names, allowing exact
 Docker-config rollback. Never edits scientific serving/session records.
 """
-import argparse,concurrent.futures,fcntl,hashlib,json,os,re,socket,subprocess,time,urllib.request
+import argparse,concurrent.futures,fcntl,hashlib,json,os,re,socket,subprocess,sys,time,urllib.request
 from pathlib import Path
-P=Path(__file__).parent; D=Path('/mnt/cephfs/xingchao/omni')
-RECORDS=D/'work/codex/frozen-engine-deployment'
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'lib'))
+import local_profile  # noqa: E402
+
+P=Path(__file__).parent
+
+# Deployment facts are accessors, not module constants: this file is imported by
+# offline tests that have no deployment profile, so a profile read must happen
+# only when a plan/apply/rollback actually runs.
+def data_root():
+    """storage.shared_root: the shared root holding the frozen deployment records."""
+    return Path(local_profile.get('storage.shared_root'))
+
+def source_root():
+    """roots.source: the checked-out engineering tree the new engines run from."""
+    return Path(local_profile.get('roots.source'))
+
+def image():
+    """image.digest: the frozen image every original and replacement must pin."""
+    return local_profile.get('image.digest')
+
+def service_host():
+    """services.omni.host: the address the instances answer on for this deployment."""
+    return local_profile.get('services.omni.host')
+
+def records():
+    """Where switch plans live, under the shared root."""
+    return data_root()/'work/codex/frozen-engine-deployment'
+
 OLD_PROFILES={f'saea-omni-i{i}':f'qwen3-omni-engine-screen-i{i}-s{seq}-b2048' for i,seq in enumerate((32,48,64,96))}
-IMAGE='sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026'
 LABEL='saea.deployment.profile'
 def call(args):return subprocess.check_output(args,text=True).strip()
 def read(p):return json.loads(Path(p).read_text())
@@ -23,18 +49,18 @@ def inspect(name):
 def validate_original(doc,candidate):
  if not doc or doc['Name']!='/'+candidate['name']:raise ValueError('original name mismatch')
  if doc['Config'].get('Labels',{}).get(LABEL)!=OLD_PROFILES[candidate['name']]:raise ValueError('foreign profile')
- if doc['Image']!=IMAGE:raise ValueError('original image differs')
+ if doc['Image']!=image():raise ValueError('original image differs')
  if not doc['State']['Running']:raise ValueError('original not running')
  if doc['HostConfig']['RestartPolicy']['Name'] not in ('no',''):raise ValueError('automatic restart configured')
 def commands(smi=None):
  nic=next(x['ifname'] for x in json.loads(call(['ip','-j','-4','addr','show','scope','global'])) if x.get('addr_info'))
- env={**os.environ,'TREE':str(D/'publish/omni'),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':IMAGE}
- args=['bash',str(D/'work/scripts/port_py.sh'),str(P/'prepare_commands.py'),'--nic',nic]
+ env={**os.environ,'TREE':str(source_root()),'CPUSET':'32-63','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':image()}
+ args=['bash',str(data_root()/'work/scripts/port_py.sh'),str(P/'prepare_commands.py'),'--nic',nic]
  if smi:args+=['--smi',str(smi)]
  return json.loads(subprocess.check_output(args,env=env,text=True))
 def quiescent(candidates):
  for c in candidates:
-  with urllib.request.urlopen('http://127.0.0.1:%d/metrics'%c['port'],timeout=10) as r:lines=r.read().decode().splitlines()
+  with urllib.request.urlopen('http://%s:%d/metrics'%(service_host(),c['port']),timeout=10) as r:lines=r.read().decode().splitlines()
   for name in ('num_requests_running','num_requests_waiting'):
    values=[float(s.rsplit(' ',1)[1]) for s in lines if s.startswith('vllm:'+name+'{') or s.startswith('vllm:'+name+' ')]
    if not values or any(values):raise ValueError('busy or unreadable endpoint '+c['name'])
@@ -46,8 +72,8 @@ def wait_ready(candidates,timeout=1800):
    doc=inspect(c['name'])
    if not doc or not doc['State']['Running'] or doc['RestartCount']:raise RuntimeError('engine died '+c['name'])
    try:
-    with urllib.request.urlopen('http://127.0.0.1:%d/health'%c['port'],timeout=5) as r:assert r.status==200
-    with urllib.request.urlopen('http://127.0.0.1:%d/v1/models'%c['port'],timeout=5) as r:models=json.load(r)
+    with urllib.request.urlopen('http://%s:%d/health'%(service_host(),c['port']),timeout=5) as r:assert r.status==200
+    with urllib.request.urlopen('http://%s:%d/v1/models'%(service_host(),c['port']),timeout=5) as r:models=json.load(r)
     assert any(m['id']=='qwen3-omni-30b-a3b-thinking' for m in models['data'])
    except Exception:pending.append(c['name'])
   if not pending:return
@@ -58,7 +84,7 @@ def parallel(fn,items):
 def main():
  p=argparse.ArgumentParser();p.add_argument('mode',choices=['plan','apply','rollback']);p.add_argument('--record',type=Path,required=True);a=p.parse_args()
  root=a.record.resolve()
- if not root.is_relative_to(RECORDS.resolve()):raise ValueError('record must stay under owned deployment records')
+ if not root.is_relative_to(records().resolve()):raise ValueError('record must stay under owned deployment records')
  if not re.fullmatch('[A-Za-z0-9_-]+',root.name):raise ValueError('plain record directory name required')
  if a.mode=='plan':
   if root.exists():raise ValueError('fresh plan directory required')
@@ -71,9 +97,9 @@ def main():
   write(root/'original-docker-inspect.json',originals);print(json.dumps({'planned':str(root),'models_called':0}));return
  plan=read(root/'plan.json');cs=plan['candidates']
  if plan['host']!=socket.gethostname():raise ValueError('wrong host')
- with (D/'locks/generation.guard').open('r+') as guard:
+ with (data_root()/'locks/generation.guard').open('r+') as guard:
   fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
-  if (D/'locks/flight.lock').exists():raise ValueError('scientific generation lease exists')
+  if (data_root()/'locks/flight.lock').exists():raise ValueError('scientific generation lease exists')
   if a.mode=='apply':
    if (root/'apply.intent.json').exists():raise ValueError('existing apply; inspect and rollback, never replay')
    if commands()!=cs:raise ValueError('candidate profiles changed after plan')
@@ -99,7 +125,7 @@ def main():
      raise ValueError('original container missing '+c['name'])
     if old['Id']!=plan['original_ids'][c['name']]:raise ValueError('archive identity differs')
     if current:
-     if current['Config'].get('Labels',{}).get(LABEL)!=c['profile_id'] or current['Image']!=IMAGE:raise ValueError('foreign replacement '+c['name'])
+     if current['Config'].get('Labels',{}).get(LABEL)!=c['profile_id'] or current['Image']!=image():raise ValueError('foreign replacement '+c['name'])
      active.append(c)
    if active:quiescent([c for c in active if inspect(c['name'])['State']['Running']])
    write(root/('rollback-attempt-'+str(time.time_ns())+'.json'),{'time':time.time(),'active':[c['name'] for c in active]})

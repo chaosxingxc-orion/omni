@@ -11,18 +11,24 @@
 #
 # Test/override environment (all optional):
 #   OMNI_ROOT, FLIGHT_STEPS_STUDY, FLIGHT_STEPS_STATE, FLIGHT_STEPS_RUNNER (port_py.sh), FLIGHT_STEPS_PREFLIGHT,
-#   FLIGHT_STEPS_LEASE_RUNNER, FLIGHT_STEPS_PYTHON (host python3), CPUSET (default 160-191, the free NUMA node).
+#   FLIGHT_STEPS_LEASE_RUNNER, FLIGHT_STEPS_PYTHON (host python3), CPUSET.
+#
+# Every default comes from the local deployment profile (scripts/lib/local_profile.sh); there is no built-in
+# path, host or image tag. A missing profile stops the step with exit 6 instead of silently using someone's tree.
 
 FS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-OMNI_ROOT=${OMNI_ROOT:-/mnt/cephfs/xingchao/omni}
-STUDY=${FLIGHT_STEPS_STUDY:-$OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition}
+# shellcheck source=../../lib/local_profile.sh
+. "$FS_DIR/../../lib/local_profile.sh" || { echo "cannot load the deployment profile bridge" >&2; exit 6; }
+lp_default OMNI_ROOT storage.shared_root || exit 6
+lp_default SOURCE_ROOT roots.source || exit 6
+STUDY=${FLIGHT_STEPS_STUDY:-$SOURCE_ROOT/studies/speech-aware-evidence-acquisition}
 STATE=${FLIGHT_STEPS_STATE:-$OMNI_ROOT/work/flight_state/fold-b-npu-port}
 RUNNER=${FLIGHT_STEPS_RUNNER:-$OMNI_ROOT/work/scripts/port_py.sh}
 HOST_PY=${FLIGHT_STEPS_PYTHON:-python3}
 PREFLIGHT_CMD=${FLIGHT_STEPS_PREFLIGHT:-"$HOST_PY $FS_DIR/preflight.py"}
-CPUSET=${CPUSET:-160-191}
+CPUSET=${CPUSET:-160-191}   # policy constant (the free NUMA node), not local information
 RUNTIME_ROOT=$OMNI_ROOT/work/scratch/runtime-root
-IMAGE=saea-base:20261027
+IMAGE=${FLIGHT_STEPS_IMAGE:-$(lp_get image.reference)} || exit 6
 
 TRACE_ENV=SAEA_ROLLOUT_TRACE_READ_ID
 TRACE_ID_RE='^[A-Za-z0-9][A-Za-z0-9._-]*$'   # the study's RUN_ID_PATTERN

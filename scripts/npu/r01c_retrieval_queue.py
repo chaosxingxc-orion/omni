@@ -4,14 +4,30 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 
-D = Path('/mnt/cephfs/xingchao/omni')
-IMAGE = 'sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026'
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import local_profile  # noqa: E402
+
+# Deployment facts are FUNCTIONS, not module constants: the profile is read when the queue runs,
+# never when this module is imported, so an offline import needs no profile and a run without one
+# stops naming the key it needs.
 CONFIG_SHA = 'f665688b11f9ff74667b6ed546445e79fa963fa4008e8fb94f6474f5e1ef6c2a'
 
 
+def data_root():
+    """storage.shared_root: the mount every path in the queue is relative to."""
+    return Path(local_profile.get('storage.shared_root'))
+
+
+def image():
+    """image.digest: the frozen image the fixed-container call pins."""
+    return local_profile.get('image.digest')
+
+
 def run(tree, expected_head, out):
+    D = data_root()
     if not out.resolve().is_relative_to(D / 'work/codex'):
         raise ValueError('owned queue directory required')
     out.mkdir(exist_ok=False)
@@ -34,7 +50,7 @@ def run(tree, expected_head, out):
             raise ValueError('derivative source changed')
         status('deriving', source_commit=expected_head)
         env = {**os.environ, 'TREE': str(tree), 'CPUSET': '160-175',
-            'PORT_CONTAINER_USER': '0:0', 'PORT_IMAGE': IMAGE,
+            'PORT_CONTAINER_USER': '0:0', 'PORT_IMAGE': image(),
             'PORT_DOCKER_FLAGS': '--network none --name saea-r01c-retrieval-inputs-v1'}
         args = ['bash', str(D / 'work/scripts/port_py.sh'),
             'scripts/flights/nx/r01c_retrieval_inputs.py',

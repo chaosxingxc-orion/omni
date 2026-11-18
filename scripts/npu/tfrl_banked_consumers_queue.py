@@ -5,7 +5,7 @@ Complete source receipts are revalidated by the formal registered consumer.
 """
 import argparse,hashlib,json,os,subprocess,time
 from pathlib import Path
-from real500_successor_queue import D,IMAGE,write,status
+from real500_successor_queue import data_root, image, write, status
 
 
 def identities(iteration):
@@ -36,6 +36,7 @@ def require_live_upstream(document,kill=os.kill):
 
 
 def run(tree,queue_h1,queue_h2,out,iteration):
+    D=data_root()
     pool,bank,rel=identities(iteration)
     study=tree/'studies/speech-aware-evidence-acquisition';recipe=study/rel
     read=lambda p:json.loads(p.read_bytes()) if p.exists() else None
@@ -78,7 +79,7 @@ def run(tree,queue_h1,queue_h2,out,iteration):
             if any(c.isspace() for c in path):raise ValueError('safe directory with whitespace unsupported by host wrapper')
             flags+=['-e',f'GIT_CONFIG_KEY_{index}=safe.directory','-e',f'GIT_CONFIG_VALUE_{index}={path}']
         env={**os.environ,'TREE':str(tree),'CPUSET':'224-239','PORT_CONTAINER_USER':'0:0',
-            'PORT_IMAGE':IMAGE,'PORT_DOCKER_FLAGS':' '.join(flags)}
+            'PORT_IMAGE':image(),'PORT_DOCKER_FLAGS':' '.join(flags)}
         command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/tfrl_recovered_consumers.py',
             'bank','--repo',str(study),'--data',str(D),'--iteration',str(iteration)]
         with (out/'consumers.log').open('x') as log:
