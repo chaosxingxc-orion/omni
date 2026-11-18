@@ -2,11 +2,11 @@
 
 Numerical calibration remains frozen: 98/98 language boundaries passed, with zero measured token/sequence log-probability difference using reference audio features. Natural-audio integration, optimizer updates and adapter export/reload remain separate acceptance items.
 
-Current runtime observation: the endpoint completed and its original closed-result reader verified 22 files. The original client and fresh parity-capture controller were confirmed running at 11:43 UTC. Accepted optimizer updates remain zero; DEV improvement is unknown. Earlier failures and recovery observations below are retained as history.
+Current runtime observation: the endpoint completed and its original closed-result reader verified 22 files. The original client and fresh parity-capture controller were confirmed running at 11:58 UTC. Accepted optimizer updates remain zero; DEV improvement is unknown. Earlier failures and recovery observations below are retained as history.
 
 ## Latest classification-first repair
 
-The original client, capture controller and inference service were confirmed running at 11:43 UTC. The active release was not replaced. Accepted optimizer updates remain zero; DEV improvement is unknown.
+The original client, capture controller and inference service were confirmed running at 11:58 UTC. The active release was not replaced. Accepted optimizer updates remain zero; DEV improvement is unknown.
 
 The original held-out preparation and dependency-transport audit now passes in the fixed image: zero closure errors, 596 mappings and 178 explicit read-only inputs. Repairs distinguish current authority snapshots from historical cold assets, retain template provenance, reuse the actual policy binder, and package a module genuinely imported by the original hook loader. Missing data views were supplied explicitly, including 128 preparation shards, without changing source data, knowledge or sealed historical evidence. All intermediate failed reports are retained.
 
@@ -15,6 +15,8 @@ A new reusable consumer check runs the original hook loader in independent DEV a
 The comparison contract remains A: direct Instruct, B: frozen training-free-RL system, C: the same system with DEV-selected LoRA. Final evaluation uses the complete 13,078-example TEST population and the same official scorer. The direct arm's full-population binding, actual optimizer/update/export/reload feedback, full DEV and all three TEST scores remain outstanding.
 
 The observed 0.3–0.4 output tokens/s is aggregate generation throughput of one four-device inference instance with one running request. It is not end-to-end system throughput or an accepted production efficiency baseline. Active duplicate control calculations, tensor synchronization and full-vocabulary CPU diagnostics are confirmed; their relative timing and performance after removing redundant diagnostics are not yet measured. Frozen numerical computations must be retained.
+
+A predecessor-lifecycle defect is now reproduced and repaired in a candidate: a stopped program's cursor still named the preceding window although its current window had executed 349 additional known requests. The resolver checks the program, cursor, current plan, execution binding and terminal before selecting the actual latest window. Eleven checks cover the real retained case, unfinished and inconsistent windows, original guard exclusion, a live controller, and cursor drift. Original held-out preparation/transport and eleven configuration checks still pass. Execution placement remains unresolved: predecessor state and Docker custody live on the control host, while the existing target job attempts to run the program remotely. No guard copy or cross-host Docker identity is accepted; this candidate is not deployed.
 
 ## Root causes and systematic checks
 
