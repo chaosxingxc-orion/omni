@@ -35,6 +35,10 @@ def replay(worker, config):
         # Match GPUModelRunner._gather_mm_embeddings: the model combines this
         # mask with CPU token comparisons before scattering the audio rows.
         where = prompt_ids.eq(model.config.audio_token_id)
+        row_audit, row_restore = {}, None
+        if 'audio_row_sites' in config:
+            from retained_audio_row_precision import attach
+            row_audit,row_restore=attach(tower,config['audio_row_sites'],worker.rank)
         inspect_layer = config.get('inspect_layer')
         finish_layer = None
         if inspect_layer is not None:
@@ -56,6 +60,7 @@ def replay(worker, config):
                 capture('merged_prompt',model.embed_input_ids(ids,audio,is_multimodal=where))
         finally:
             for hook in hooks:hook.remove()
+            if row_restore:row_restore()
         assert len(seen)==len(tower.layers)+3 and all(torch.isfinite(x).all() for x in seen.values())
         assert torch.equal(seen['merged_prompt'][where.cpu()],seen['audio_out'])
         out = Path(config['output'])/f'rank-{worker.rank}'
@@ -64,7 +69,8 @@ def replay(worker, config):
         save_file(seen,str(target))
         with target.open('rb') as stream:os.fsync(stream.fileno())
         layer_ref = {'layer_sha256':finish_layer()} if finish_layer else {}
-        return dict(**layer_ref,rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
+        assert all(x==1 for x in row_audit.values())
+        return dict(**layer_ref,audio_row_calls=row_audit,rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
                     merged_shape=list(seen['merged_prompt'].shape), sha256=hashlib.sha256(target.read_bytes()).hexdigest())
 
 
