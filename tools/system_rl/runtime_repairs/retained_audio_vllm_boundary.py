@@ -100,6 +100,8 @@ def main(path):
             raise ValueError('source changed while installing named RPC')
         if source.name=='ascend_fp32_worker.py':
             payload+=b'\nfrom retained_audio_vllm_boundary import replay\nFP32LoRAWorkerExtension.omni_retained_audio_boundary = replay\n'
+        if source.name=='ascend_fp32_worker.py' and 'retained_actions' in cfg:
+            payload+=b'\nfrom retained_action_replay import install_rows,close_rows\nFP32LoRAWorkerExtension.omni_retained_install_rows=install_rows\nFP32LoRAWorkerExtension.omni_retained_close_rows=close_rows\n'
         with (rpc/source.name).open('xb') as f:
             f.write(payload);f.flush();os.fsync(f.fileno())
     search=[str(rpc),overlay,str(acl),str(HERE)]
@@ -111,6 +113,18 @@ def main(path):
     assert sorted(row['rank'] for row in rows)==[0,1,2,3]
     result=dict(ranks=rows, model=cfg['engine']['model'], actual_tp=4, language_layers_executed=0,
                 sampled_actions=0, production_acceptance=False)
+    if 'retained_actions' in cfg:
+        from dispatch_retained_hf_boundary import save
+        save(Path(cfg['output'])/'MODULE-RESULT.json',result)
+        from retained_action_replay import decode
+        installed=engine.collective_rpc('omni_retained_install_rows',args=(cfg['audio_row_sites'],),timeout=240)
+        assert sorted(installed)==list(range(4))
+        try:
+            result['retained_decode']=decode(engine,cfg)
+            result['language_layers_executed']=48
+            result['sampled_actions']=sum(c['generated'] for c in result['retained_decode'])
+        finally:
+            result['decode_row_receipts']=engine.collective_rpc('omni_retained_close_rows',timeout=240)
     with (Path(cfg['output'])/'RESULT.json').open('x') as stream:
         json.dump(result,stream,indent=2);stream.flush();os.fsync(stream.fileno())
     print(json.dumps(result))

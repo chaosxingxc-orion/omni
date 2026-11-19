@@ -30,7 +30,8 @@ def diff(left,right):
 
 def run(root):
     hf=json.loads((root/'hf/RESULT.json').read_bytes());vl=json.loads((root/'vl/RESULT.json').read_bytes())
-    assert hf['layers']==32 and vl['actual_tp']==4 and vl['sampled_actions']==0
+    assert hf['layers']==32 and vl['actual_tp']==4
+    assert vl['sampled_actions']==sum(c['generated'] for c in vl.get('retained_decode',[]))
     assert sorted(x['rank'] for x in vl['ranks'])==[0,1,2,3]
     ref=tensors(root/'hf/HF.safetensors',hf['tensors_sha256'])
     names=['layer.0.in',*[f'layer.{i}.out' for i in range(32)],'audio_out']

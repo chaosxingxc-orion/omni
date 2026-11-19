@@ -60,7 +60,7 @@ def main(spec):
         assert Path(k).name==k and pin(inputs/k)['sha256']==v
     request=origin(s['request_ref'])
     request['retained_boundary_replay']=dict(parent=s['request_ref'],base=act['policy_version'],files=spec['input_files'],
-                                             diagnostic_root=str(root),new_sampling=False)
+                                             diagnostic_root=str(root),new_sampling='retained-actions.json' in spec['input_files'])
     save(root/'REPLAY-REQUEST.json',request);s['request_ref']=pin(root/'REPLAY-REQUEST.json')
     name='retained-tp4-'+s['request_ref']['sha256'][:14]
     pc=read(parent/'service-overlay/PRECISION.json')['specification_ref']
@@ -78,6 +78,8 @@ def main(spec):
         args['inspect_layer']=spec['inspect_layer']
     if 'audio_row_sites' in spec:
         args['audio_row_sites']=spec['audio_row_sites']
+    if 'retained-actions.json' in spec['input_files']:
+        args['retained_actions']=dict(file='retained-actions.json',sha256=spec['input_files']['retained-actions.json'])
     save(root/'REPLAY.json',args)
     def base(argv):
         return [x.replace(str(parent/'hot'),str(hot)) for x in argv]
