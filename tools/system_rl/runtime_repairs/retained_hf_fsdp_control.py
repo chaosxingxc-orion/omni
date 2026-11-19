@@ -117,7 +117,7 @@ def main(spec, inputs_root, out):
             from retained_group_parity import hf_scores
             fresh=spec['fresh_group']
             rs=hf_scores(worker,adapted,read(sealed(fresh['manifest'])),read(sealed(fresh['result']))['fresh_group'],
-                         spec['files'][fresh['manifest']],rank,world)
+                         spec['files'][fresh['manifest']],rank,world,trace_group=fresh.get('trace_group'),origin_indices=fresh.get('origin_indices'))
             commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,
                    down=close_down(),gate=close_candidate(),attention=close_attention()))
             return
