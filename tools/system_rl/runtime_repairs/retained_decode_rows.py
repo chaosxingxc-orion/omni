@@ -3,7 +3,8 @@ import hashlib
 
 
 def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_origin=False,
-          expert_operands=False, prefix_scan=None, origin_layers=2, attention_shape_shadow=False):
+          expert_operands=False, prefix_scan=None, origin_layers=2, attention_shape_shadow=False,
+          moe_sites=None):
     import torch
     from family_precision import ATTR
     model = worker.model_runner.get_model()
@@ -37,6 +38,12 @@ def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_or
         if prefix_origin is None:
             raise ValueError('MoE observation needs a history position')
         close_moe=hook(text,prefix_origin,expert_operands)
+    elif moe_sites:
+        from retained_moe_origin import hook
+        closes = [(f"{s['layer']}:{s['position']}",hook(text,s['position'],
+                    'down' if s.get('down_operands') and worker.rank==0 else False,layer_index=s['layer']))
+                  for s in moe_sites]
+        close_moe=lambda: {key:close() for key,close in closes}
     family=getattr(model,ATTR)['audit']['modules']
     def attn_states():
         return {str(i):dict(family[f'layer.{i}.attention']['states']) for i in range(48)}
@@ -112,7 +119,11 @@ def finish(worker):
             result['prefix_origin']=compare(prefix_first,prefix_rows)
         if close_moe:
             from retained_moe_origin import compare
-            result['moe_origin']=compare(moe_first,moe_rows,worker.rank)
+            if 'capture' in moe_rows:
+                result['moe_origin']=compare(moe_first,moe_rows,worker.rank)
+            else:
+                result['moe_sites']={key:compare(moe_first[key],row,worker.rank)
+                                     for key,row in moe_rows.items()}
         if close_scan:
             from retained_prefix_scan import compare as compare_scan
             result['prefix_scan']=compare_scan(scan_first,scan_rows)

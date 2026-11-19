@@ -8,32 +8,34 @@ def project(input, weight):
     import torch
     import torch_npu
 
-    if (input.ndim != 2 or weight.shape != (2048, 1536) or input.shape[1] != 2048
+    if (input.ndim != 2 or tuple(weight.shape) not in ((2048, 1536), (768, 2048))
+            or input.shape[1] != weight.shape[0]
             or input.dtype != torch.bfloat16 or weight.dtype != input.dtype
             or input.device != weight.device or input.device.type != "npu" or not len(input)):
-        raise ValueError("candidate expects nonempty full-width BF16 gate operands")
+        raise ValueError("candidate expects nonempty full-width BF16 expert operands")
     rows = torch.tensor([len(input)], dtype=torch.int64, device=input.device)
     result, = torch_npu.npu_grouped_matmul(
         x=[input.contiguous()], weight=[weight.contiguous().unsqueeze(0)],
         split_item=2, group_list_type=1, group_type=0, group_list=rows,
     )
-    if result.shape != (len(input), 1536) or result.dtype != input.dtype:
-        raise ValueError("grouped gate result changed shape or dtype")
+    if result.shape != (len(input), weight.shape[1]) or result.dtype != input.dtype:
+        raise ValueError("grouped expert result changed shape or dtype")
     return result
 
 
-def attach_hf(text, layers, unwrap):
+def attach_hf(text, layers, unwrap, *, stage='gate'):
     import torch
     from transformers.integrations import moe
 
     old = moe._grouped_mm
+    shape = {'gate': (2048, 1536), 'down': (768, 2048)}[stage]
     active, handles = [], []
     counts = Counter()
     if not layers or sorted(set(layers)) != layers or any(type(i) is not int or i not in range(len(text.layers)) for i in layers):
         raise ValueError("explicit unique HF gate candidate layers required")
 
     def grouped(input, weight, offs):
-        if not active or tuple(weight.shape[1:]) != (2048, 1536):
+        if not active or tuple(weight.shape[1:]) != shape:
             return old(input, weight, offs)
         if torch.is_grad_enabled():
             raise ValueError("diagnostic only; gate candidate backward has not been validated")
@@ -71,7 +73,7 @@ def attach_hf(text, layers, unwrap):
     return close
 
 
-def attach(model, layers):
+def attach(model, layers, *, stage='gate'):
     import torch
     from torch.overrides import TorchFunctionMode
     from vllm_ascend.ops.fused_moe.routed_experts import AscendUnquantizedFusedMoEMethod as Method
@@ -82,12 +84,13 @@ def attach(model, layers):
     active = []
     counts = Counter()
     handles = []
-    old = Method.apply_gmm1
+    name,shape = {'gate': ('apply_gmm1',(2048,1536)), 'down': ('apply_gmm2',(768,2048))}[stage]
+    old = getattr(Method,name)
 
     class GateProjection(TorchFunctionMode):
         def __torch_function__(self, func, types, args=(), kwargs=None):
             kw = kwargs or {}
-            if func is not torch.mm or len(args) != 2 or args[1].shape != (2048, 1536):
+            if func is not torch.mm or len(args) != 2 or args[1].shape != shape:
                 return func(*args, **kw)
             x, w = args
             out = kw["out"]
@@ -98,12 +101,12 @@ def attach(model, layers):
             counts[active[-1]] += 1
             return out
 
-    def gate(self, m):
+    def gate(self, *args, **kwargs):
         if not active:
-            return old(self, m)
+            return old(self, *args, **kwargs)
         prior = counts[active[-1]]
         with GateProjection():
-            result = old(self, m)
+            result = old(self, *args, **kwargs)
         if counts[active[-1]] == prior:
             raise ValueError("candidate did not replace a live gate projection")
         return result
@@ -119,14 +122,14 @@ def attach(model, layers):
         mlp = known[i].mlp
         handles.extend((mlp.register_forward_pre_hook(lambda m, args, i=i: active.append(i)),
                         mlp.register_forward_hook(post(i), always_call=True)))
-    Method.apply_gmm1 = gate
+    setattr(Method,name,gate)
 
     def close():
         for handle in handles:
             handle.remove()
-        if Method.apply_gmm1 is not gate:
+        if getattr(Method,name) is not gate:
             raise ValueError("gate candidate ownership changed")
-        Method.apply_gmm1 = old
+        setattr(Method,name,old)
         if active or set(counts) != set(layers):
             raise ValueError("incomplete scoped gate candidate execution")
         return dict(arithmetic="full_width_bf16_grouped_matmul", layers=dict(counts))

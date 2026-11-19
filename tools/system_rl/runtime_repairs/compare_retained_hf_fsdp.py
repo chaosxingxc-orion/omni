@@ -17,7 +17,7 @@ def compare(hf, vl, lease):
     rank0 = hf[0]
     keys = ('world_size', 'input_pins', 'asset_sha256', 'internal_format', 'full_vocabulary',
             'argmax', 'scores', 'predictor_position', 'rows', 'updates',
-            'gate_candidate', 'attention_candidate')
+            'gate_candidate', 'attention_candidate', 'down_candidate')
     if any(row['world_size'] != 4 or row['updates'] != 0 or
            any(row.get(k) != rank0.get(k) for k in keys) for row in hf):
         raise ValueError('HF ranks disagree on the same original input')
@@ -30,6 +30,7 @@ def compare(hf, vl, lease):
     if sorted(r['rank'] for r in receipts) != list(range(4)):
         raise ValueError('missing TP4 execution receipt')
     for key, filename in (('gate_candidate','retained_expert_candidate.py'),
+                          ('down_candidate','retained_expert_candidate.py'),
                           ('attention_candidate','retained_attention_candidate.py')):
         candidate = rank0.get(key)
         if any(bool(r.get(key)) != bool(candidate) for r in receipts):
@@ -41,6 +42,18 @@ def compare(hf, vl, lease):
                        for r in receipts)):
             raise ValueError('HF and vLLM candidate identity differs: '+key)
     control = lease.get('audio_control')
+    if lease.get('native_audio') is True and (
+            control or any('intervention' in r for r in receipts)):
+        raise ValueError('native audio comparison requires no audio intervention')
+    audio_layers = {str(i) for i in lease.get('audio_attention_layers', ())}
+    for row in receipts:
+        audio = row.get('audio_attention')
+        if bool(audio) != bool(audio_layers) or (audio and (
+                audio['arithmetic'] != 'hf_full_head_windowed_bf16_sdpa'
+                or set(audio['layers']) != audio_layers
+                or any(type(x['calls']) is not int or x['calls'] <= 0
+                       for x in audio['layers'].values()))):
+            raise ValueError('live audio attention candidate execution differs')
     if control:
         receipts = vl['decode_row_receipts']
         if sorted(r['rank'] for r in receipts) != list(range(4)) or any(
@@ -54,7 +67,10 @@ def compare(hf, vl, lease):
     if len(ref) != len(pref) or len(ref) != p['original_tokens'] or len(decode) != p['same_action_prefix']:
         raise ValueError('same action prefix must be explicit')
     layers = []
-    for row in p['paired_trace']:
+    trace_expected = lease.get('trace_predictor', True)
+    if trace_expected is False and lease.get('native_audio') is not True:
+        raise ValueError('untraced comparison is reserved for native audio replay')
+    for row in p.get('paired_trace', ()):
         if row['predictor_position'] != rank0['predictor_position']:
             raise ValueError('predictor positions differ')
         v = row['boundaries']
@@ -65,7 +81,7 @@ def compare(hf, vl, lease):
             hf_decode_first=next((k for k,x in rank0['rows'].items() if x!=v[k]['decode_sha256']), None),
             vl_prefill_decode_first=row['first_observed_difference'],
             live_vl_attention_operands=row.get('attention_operands')))
-    if sorted(r['rank'] for r in layers) != list(range(4)):
+    if sorted(r['rank'] for r in layers) != (list(range(4)) if trace_expected else []):
         raise ValueError('incomplete TP4 rank evidence')
     def top1(values):
         if not values or any(type(v) is not int or not 0<=v<rank0['full_vocabulary']['shape'][-1] for v in values):

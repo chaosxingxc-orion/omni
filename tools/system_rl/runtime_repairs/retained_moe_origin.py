@@ -31,10 +31,12 @@ class Window:
         self.rows[key] = value.detach().cpu().contiguous().clone()
 
 
-def hook(text, position, expert_operands=False):
+def hook(text, position, expert_operands=False, layer_index=0):
     import torch
     from expert_window_vllm_capture import attach, validate
-    mlp = text.layers[0].mlp
+    if type(layer_index) is not int or not 0 <= layer_index < len(text.layers):
+        raise ValueError('invalid MoE observation layer')
+    mlp = text.layers[layer_index].mlp
     experts = [m for m in mlp.modules() if type(m).__name__=='AscendRoutedExperts']
     if len(experts)!=1:
         raise ValueError('expected a unique routed expert module')
@@ -53,8 +55,8 @@ def hook(text, position, expert_operands=False):
         operands = None
         if expert_operands:
             from retained_expert_operands import ExpertOperands
-            operands = ExpertOperands(window)
-        attach(window,text,layer=0,rows=[row],tokens=len(hidden),stages=True,
+            operands = ExpertOperands(window, ('down',) if expert_operands=='down' else ('gate','down'))
+        attach(window,text,layer=layer_index,rows=[row],tokens=len(hidden),stages=True,
                dispatcher_class=True,operands=operands)
         def route(old):
             def run(hidden_states,router_logits,indices_type,**kw):
@@ -81,7 +83,7 @@ def hook(text, position, expert_operands=False):
             snapshot['operands'] = probe.close()
     # Layer prehook is before any MoE forward hooks. Close after the whole block
     # so the previously registered module hooks have all completed.
-    layer=text.layers[0]
+    layer=text.layers[layer_index]
     pre=layer.register_forward_pre_hook(on_entry)
     post=layer.register_forward_hook(after)
     def close():

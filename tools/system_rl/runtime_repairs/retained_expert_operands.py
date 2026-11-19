@@ -19,15 +19,19 @@ def diff(a, b):
 
 
 class ExpertOperands:
-    def __init__(self, session):
+    def __init__(self, session, stages=('gate', 'down')):
         self.session = session
+        self.wanted = tuple(stages)
         self.stages = {}
 
     def observe(self, stage, m, positions):
         import torch
         from torch.overrides import TorchFunctionMode
+        from contextlib import nullcontext
         from expert_gate_repair import dispatch_order
 
+        if stage not in self.wanted:
+            return nullcontext()
         counts = m.group_list.cpu().long().tolist()
         if m.group_list_type == 0:
             counts = [n - prev for n, prev in zip(counts, [0] + counts[:-1])]
@@ -82,7 +86,7 @@ class ExpertOperands:
                 raise ValueError("expert GEMM coverage changed")
             cap.validate()
             result[stage] = dict(calls=cap.audit["calls"], target=target)
-        if result.keys() != {"gate", "down"}:
+        if result.keys() != set(self.wanted):
             raise ValueError("missing live expert projection")
         return result
 
@@ -137,7 +141,9 @@ def compare(a, b, device, *, controls=False):
     import torch
     aa, bb = a["operands"], b["operands"]
     report = {}
-    for stage in ("gate", "down"):
+    if aa.keys() != bb.keys():
+        raise ValueError("different observed expert stages")
+    for stage in aa:
         ta, tb = aa[stage]["target"], bb[stage]["target"]
         if {e: s for e, (s, _) in ta.items()} != {e: s for e, (s, _) in tb.items()}:
             raise ValueError("expert identities or slot order changed")

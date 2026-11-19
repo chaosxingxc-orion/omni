@@ -39,6 +39,11 @@ def replay(worker, config):
         if 'audio_row_sites' in config:
             from retained_audio_row_precision import attach
             row_audit,row_restore=attach(tower,config['audio_row_sites'],worker.rank)
+        audio_attention_restore = None
+        if 'audio_attention_layers' in config:
+            from retained_audio_attention_precision import attach
+            audio_attention_restore = attach(tower,config['audio_attention_layers'],worker.rank,
+                                             compare_native=True)
         inspect_layer = config.get('inspect_layer')
         finish_layer = None
         if inspect_layer is not None:
@@ -61,6 +66,7 @@ def replay(worker, config):
         finally:
             for hook in hooks:hook.remove()
             if row_restore:row_restore()
+            audio_attention_receipt = audio_attention_restore() if audio_attention_restore else None
         assert len(seen)==len(tower.layers)+3 and all(torch.isfinite(x).all() for x in seen.values())
         assert torch.equal(seen['merged_prompt'][where.cpu()],seen['audio_out'])
         out = Path(config['output'])/f'rank-{worker.rank}'
@@ -70,7 +76,8 @@ def replay(worker, config):
         with target.open('rb') as stream:os.fsync(stream.fileno())
         layer_ref = {'layer_sha256':finish_layer()} if finish_layer else {}
         assert all(x==1 for x in row_audit.values())
-        return dict(**layer_ref,audio_row_calls=row_audit,rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
+        return dict(**layer_ref,audio_row_calls=row_audit,audio_attention=audio_attention_receipt,
+                    rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
                     merged_shape=list(seen['merged_prompt'].shape), sha256=hashlib.sha256(target.read_bytes()).hexdigest())
 
 
@@ -121,7 +128,8 @@ def main(path):
         from retained_action_replay import decode
         installed=engine.collective_rpc('omni_retained_install_rows',
             args=(cfg['audio_row_sites'],cfg.get('audio_control'),cfg.get('gate_candidate_layers'),
-                  cfg.get('attention_candidate_layers')),timeout=240)
+                  cfg.get('attention_candidate_layers'),cfg.get('down_candidate_layers'),
+                  cfg.get('audio_attention_layers')),timeout=240)
         assert sorted(installed)==list(range(4))
         try:
             result['retained_decode']=decode(engine,cfg)

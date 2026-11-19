@@ -16,7 +16,8 @@ def checked(directory, ref):
 
 
 def install_rows(worker, sites, control=None, gate_candidate_layers=None,
-                 attention_candidate_layers=None):
+                 attention_candidate_layers=None, down_candidate_layers=None,
+                 audio_attention_layers=None):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
@@ -45,12 +46,20 @@ def install_rows(worker, sites, control=None, gate_candidate_layers=None,
             return ref.to(output.device)
         worker._retained_audio_control = (receipt, model.audio_tower.register_forward_hook(replace))
     worker._retained_audio_rows = (audit, restore)
+    if audio_attention_layers is not None:
+        if control is not None:
+            raise ValueError('audio attention candidate requires the original tower output')
+        from retained_audio_attention_precision import attach
+        worker._retained_audio_attention = attach(model.audio_tower, audio_attention_layers, worker.rank)
     if gate_candidate_layers is not None:
         from retained_expert_candidate import attach as attach_candidate
         worker._retained_gate_candidate = attach_candidate(model, gate_candidate_layers)
     if attention_candidate_layers is not None:
         from retained_attention_candidate import attach_vllm
         worker._retained_attention_candidate = attach_vllm(model, attention_candidate_layers)
+    if down_candidate_layers is not None:
+        from retained_expert_candidate import attach
+        worker._retained_down_candidate = attach(model, down_candidate_layers, stage='down')
     return worker.rank
 
 
@@ -59,6 +68,12 @@ def close_rows(worker):
     restore()
     del worker._retained_audio_rows
     result = dict(rank=worker.rank, calls=dict(calls))
+    if hasattr(worker, '_retained_audio_attention'):
+        result['audio_attention'] = worker._retained_audio_attention()
+        del worker._retained_audio_attention
+    if hasattr(worker, '_retained_down_candidate'):
+        result['down_candidate'] = worker._retained_down_candidate()
+        del worker._retained_down_candidate
     if hasattr(worker, '_retained_gate_candidate'):
         result['gate_candidate'] = worker._retained_gate_candidate()
         del worker._retained_gate_candidate
@@ -121,7 +136,7 @@ def decode(engine, cfg):
             args=(mode,position,trace.get('attention_layer'),trace.get('prefix_origin'),
                   trace.get('moe_origin',False),trace.get('expert_operands',False),
                   trace.get('prefix_scan'),trace.get('origin_layers',2),
-                  trace.get('attention_shape_shadow',False)),timeout=240)
+                  trace.get('attention_shape_shadow',False),trace.get('moe_sites')),timeout=240)
         if sorted(ranks)!=list(range(4)):raise ValueError('missing trace worker')
         return True
     for case in bundle['cases']:

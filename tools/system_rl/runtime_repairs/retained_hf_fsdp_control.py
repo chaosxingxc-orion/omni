@@ -97,6 +97,11 @@ def main(spec, inputs_root, out):
             sealed('retained_attention_candidate.py')
             from retained_attention_candidate import attach_hf as attach_attention
             close_attention = attach_attention(text, spec['attention_candidate_layers'], inner)
+        close_down = None
+        if 'down_candidate_layers' in spec:
+            sealed('retained_expert_candidate.py')
+            from retained_expert_candidate import attach_hf as attach_expert
+            close_down = attach_expert(text, spec['down_candidate_layers'], inner, stage='down')
         actor.actor_module.eval()
         start = time.monotonic()
         policy = dict(schema='omni-response-logits-v1', vocabulary=spec['vocabulary'], max_bytes=16*1024**2)
@@ -107,6 +112,7 @@ def main(spec, inputs_root, out):
             for h in hooks:
                 h.remove()
         require(len(rows) == 98, 'incomplete actual model trace')
+        down_candidate = close_down() if close_down else None
         candidate = close_candidate() if close_candidate else None
         attn_candidate = close_attention() if close_attention else None
         names = list(rows)
@@ -119,6 +125,7 @@ def main(spec, inputs_root, out):
                       argmax=capture['tensor'].argmax(dim=-1).tolist(), scores=logp[0].float().cpu().tolist(),
                       predictor_position=pos, rows=row_hashes, updates=0,
                       gate_candidate=candidate, attention_candidate=attn_candidate,
+                      down_candidate=down_candidate,
                       elapsed_seconds=time.monotonic()-start)
         commit(out/f'rank-{rank}'/'RESULT.json', result)
     finally:

@@ -138,6 +138,18 @@ def idle_replay(spec):
         if spec.get('moe_origin'):
             assert 'prefix_origin' in spec and {'retained_moe_origin.py','expert_window_vllm_capture.py'}<=spec['input_files'].keys()
             replay['trace_predictor']['moe_origin']=True
+        if 'moe_sites' in spec:
+            sites = spec['moe_sites']
+            assert not spec.get('moe_origin') and isinstance(sites,list) and 1<=len(sites)<=4
+            assert all({'layer','position'}<=s.keys()<={'layer','position','down_operands'}
+                       and type(s['layer']) is int and 0<=s['layer']<48
+                       and type(s['position']) is int and 0<=s['position']<8192
+                       and type(s.get('down_operands',False)) is bool for s in sites)
+            assert len({s['layer'] for s in sites})==len(sites)
+            assert {'retained_moe_origin.py','expert_window_vllm_capture.py'}<=spec['input_files'].keys()
+            if any(s.get('down_operands') for s in sites):
+                assert {'retained_expert_operands.py','expert_down_capture.py'}<=spec['input_files'].keys()
+            replay['trace_predictor']['moe_sites']=sites
         if spec.get('expert_operands'):
             assert spec.get('moe_origin') and {'retained_expert_operands.py','expert_down_capture.py'}<=spec['input_files'].keys()
             replay['trace_predictor']['expert_operands']=True
@@ -147,8 +159,29 @@ def idle_replay(spec):
         if 'attention_candidate_layers' in spec:
             assert 'retained_attention_candidate.py' in spec['input_files'] and not spec.get('attention_shape_shadow')
             replay['attention_candidate_layers']=spec['attention_candidate_layers']
+        if 'down_candidate_layers' in spec:
+            assert 'retained_expert_candidate.py' in spec['input_files']
+            assert not spec.get('expert_operands') and not any(s.get('down_operands') for s in spec.get('moe_sites',()))
+            replay['down_candidate_layers']=spec['down_candidate_layers']
         if spec.get('native_audio'):
             del replay['audio_control']
+        if 'audio_attention_layers' in spec:
+            layers = spec['audio_attention_layers']
+            assert spec.get('native_audio') is True
+            assert layers and all(type(i) is int and i in range(32) for i in layers)
+            assert layers == sorted(set(layers)) and 'retained_audio_attention_precision.py' in spec['input_files']
+            replay['audio_attention_layers'] = layers
+            if 'inspect_audio_layer' in spec:
+                assert spec['inspect_audio_layer'] in layers
+                replay['inspect_layer'] = spec['inspect_audio_layer']
+        if spec.get('trace_predictor', True) is False:
+            # Natural sampling can branch before the retained predictor. Keep
+            # the original-action prefill scores and the true matching prefix.
+            assert spec.get('native_audio') is True and replay['score_retained_prefill'] is True
+            assert not any(k in spec for k in ('prefix_scan', 'attention_layer',
+                           'trace_action_ordinal', 'attention_shape_shadow', 'prefix_origin',
+                           'origin_layers', 'moe_origin', 'moe_sites', 'expert_operands'))
+            del replay['trace_predictor']
         save(root/'REPLAY.json',replay)
         execution=read(old/'EXECUTION.json')
         execution.update(root=new,control_root=str(hot/'new-lease'),started=time.time(),
