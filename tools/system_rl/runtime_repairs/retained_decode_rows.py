@@ -2,7 +2,7 @@
 import hashlib
 
 
-def begin(worker, mode, target):
+def begin(worker, mode, target, attention_layer=None):
     import torch
     from family_precision import ATTR
     model = worker.model_runner.get_model()
@@ -13,7 +13,12 @@ def begin(worker, mode, target):
         raise ValueError('previous trace still active')
     if mode=='prefill' and not hasattr(worker,'_retained_decode_first'):
         raise ValueError('missing same-worker natural predictor trace')
-    handles=[]; rows={};state={};device_rows={}
+    handles=[]; rows={};state={'absolute':target};device_rows={}
+    attn_rows={};undo=None
+    if attention_layer is not None:
+        if type(attention_layer)!=int or attention_layer not in range(48):raise ValueError('invalid attention layer')
+        from retained_attention_operands import observe
+        undo=observe(text.layers[attention_layer].self_attn.attn.impl,state,mode,attn_rows)
     family=getattr(model,ATTR)['audit']['modules']
     def attn_states():
         return {str(i):dict(family[f'layer.{i}.attention']['states']) for i in range(48)}
@@ -49,13 +54,14 @@ def begin(worker, mode, target):
             key=f'{n}.{name}'
             handles.append(module.register_forward_hook(lambda m,a,v,k=key:keep(k,v)))
     handles.append(text.norm.register_forward_hook(end_step))
-    worker._retained_predictor_trace=(handles,rows,state,start,attn_states,mode,target)
+    worker._retained_predictor_trace=(handles,rows,state,start,attn_states,mode,target,attention_layer,attn_rows,undo)
     return worker.rank
 
 
 def finish(worker):
     import torch
-    handles,rows,state,start,states,mode,target=worker._retained_predictor_trace
+    handles,rows,state,start,states,mode,target,attention_layer,attn_rows,undo=worker._retained_predictor_trace
+    if undo:undo()
     for h in handles:h.remove()
     del worker._retained_predictor_trace
     if len(rows)!=98:raise ValueError(f'incomplete retained language trace: {len(rows)}/98')
@@ -64,11 +70,15 @@ def finish(worker):
     result=dict(rank=worker.rank,predictor_position=target,forward_rows=state['forward_rows'],
                 corrected_attention_states=counts,mode=mode,observed_boundaries=len(rows))
     if mode=='decode':
-        worker._retained_decode_first=(target,rows)
+        worker._retained_decode_first=(target,rows,attn_rows)
     else:
-        earlier,first=worker._retained_decode_first
+        earlier,first,attn_first=worker._retained_decode_first
         del worker._retained_decode_first
         if target!=earlier or list(rows)!=list(first):raise ValueError('unaligned language signatures')
+        if attention_layer is not None:
+            from retained_attention_operands import compare
+            result['attention_layer']=attention_layer
+            result['attention_operands']=compare(attn_first,attn_rows)
         diff={}
         for k,x in rows.items():
             y=first[k]

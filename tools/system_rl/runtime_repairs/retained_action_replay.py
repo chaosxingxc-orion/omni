@@ -101,7 +101,7 @@ def decode(engine, cfg):
         ordinal=trace['action_ordinal']
         if not 1<=ordinal<=len(record['token_ids']):raise ValueError('invalid target action')
         position=len(record['prompt_token_ids'])+ordinal-2+trace['rope_offset']
-        ranks=engine.collective_rpc('omni_predictor_begin',args=(mode,position),timeout=240)
+        ranks=engine.collective_rpc('omni_predictor_begin',args=(mode,position,trace.get('attention_layer')),timeout=240)
         if sorted(ranks)!=list(range(4)):raise ValueError('missing trace worker')
         return True
     for case in bundle['cases']:
