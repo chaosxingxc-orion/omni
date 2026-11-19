@@ -31,6 +31,17 @@ def analyze(c, device):
             with safe_open(str(model/index[key]), framework='pt', device='cpu') as f:
                 params[param] = f.get_tensor(key)
         weights[name] = params
+    extend = c.get('through_projection', False)
+    if extend:
+        from vllm.config import VllmConfig, set_current_vllm_config
+        from vllm.distributed import init_distributed_environment, initialize_model_parallel
+        with set_current_vllm_config(VllmConfig()):
+            init_distributed_environment(world_size=1, rank=0, local_rank=device, backend='gloo',
+                                         distributed_init_method='file://' + str(root/'singleton-gloo'))
+            initialize_model_parallel(1, 1, backend='gloo')
+        proj_key = 'thinker.audio_tower.conv_out.weight'
+        with safe_open(str(model/index[proj_key]), framework='pt', device='cpu') as f:
+            projection_weight = f.get_tensor(proj_key)
     class StopAtProjection(Exception):
         pass
     def trace(cls, native_format, installed_repair):
@@ -54,6 +65,36 @@ def analyze(c, device):
             seen['projection.in'] = args[0].detach().cpu()
             raise StopAtProjection
         m.conv_out.register_forward_pre_hook(stop)
+        if extend:
+            from importlib import import_module
+            from vllm.model_executor.layers.linear import ReplicatedLinear
+            from vllm.config import VllmConfig, set_current_vllm_config
+            width, inputs = projection_weight.shape
+            if cls is HF:
+                proj = nn.Linear(inputs, width, bias=False, dtype=projection_weight.dtype)
+            else:
+                with set_current_vllm_config(VllmConfig()):
+                    proj = ReplicatedLinear(inputs, width, bias=False, return_bias=False,
+                                            params_dtype=projection_weight.dtype, disable_tp=True)
+            proj.load_state_dict({'weight': projection_weight})
+            m.conv_out = proj.to(feat.device)
+            def projected(_, args, result):
+                seen['projection.in'] = args[0].detach().cpu()
+                seen['projection.out'] = result.detach().cpu()
+                seen['position.operand'] = m.positional_embedding.positional_embedding[:result.shape[1]].bfloat16().detach().cpu()
+            m.conv_out.register_forward_hook(projected)
+            position_cls = import_module(cls.__module__).SinusoidsPositionEmbedding
+            m.positional_embedding = position_cls(cfg['max_source_positions'], width).to(feat.device)
+
+            def encoder_entry(_, args):
+                seen['layer0.in'] = args[0].detach().cpu()
+                seen['layer0.cu_seqlens'] = args[1].detach().cpu()
+                raise StopAtProjection
+            m.layers = nn.ModuleList([nn.Identity()])
+            m.layers[0].register_forward_pre_hook(encoder_entry)
+            if cls is VL:
+                # Eager encoder input only. No attention kernel is executed.
+                m.attn_backend = None
         restore = None
         if installed_repair:
             audit, restore = attach(m)
@@ -61,7 +102,8 @@ def analyze(c, device):
             with torch.no_grad(), torch.inference_mode(cls is VL), torch.autocast('npu', dtype=torch.bfloat16, enabled=cls is HF):
                 fn = inspect.unwrap(cls.forward)
                 if cls is VL:
-                    fn(m, feat, lengths, m._get_cnn_output_lengths(lengths))
+                    from vllm.model_executor.models.qwen3_omni_moe_thinker import _get_feat_extract_output_lengths
+                    fn(m, feat, lengths, _get_feat_extract_output_lengths(lengths))
                 else:
                     fn(m, feat, lengths)
         except StopAtProjection:
@@ -69,13 +111,13 @@ def analyze(c, device):
         finally:
             if restore:
                 restore()
-        assert len(seen) == 7
+        assert len(seen) == (11 if extend else 7)
         return seen
     def metrics(left, right):
         result = {}
         for key, a in left.items():
             b = right[key]
-            assert a.shape == b.shape and a.dtype == b.dtype == torch.bfloat16
+            assert a.shape == b.shape and a.dtype == b.dtype
             result[key] = dict(shape=list(a.shape), unequal=int((a != b).sum()), max_abs=float((a.float()-b.float()).abs().max()))
         return result
     reference = trace(HF, False, False)
