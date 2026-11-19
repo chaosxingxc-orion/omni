@@ -30,8 +30,11 @@ def replay(worker, config):
         buf = base64.b64decode(feat['bf16'], validate=True)
         assert hashlib.sha256(buf).hexdigest() == feat['sha256']
         f = torch.frombuffer(bytearray(buf),dtype=torch.bfloat16).reshape(feat['shape']).to(tower.device)
-        ids = torch.tensor(load('behavior')['records'][config['action_index']]['prompt_token_ids'],device=tower.device)
-        where = ids.eq(model.config.audio_token_id)
+        prompt_ids = torch.tensor(load('behavior')['records'][config['action_index']]['prompt_token_ids'],device='cpu')
+        ids = prompt_ids.to(tower.device)
+        # Match GPUModelRunner._gather_mm_embeddings: the model combines this
+        # mask with CPU token comparisons before scattering the audio rows.
+        where = prompt_ids.eq(model.config.audio_token_id)
         seen = {}
         def capture(key,tensor):
             if key in seen: raise ValueError('multiple calls to '+key)
