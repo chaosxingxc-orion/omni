@@ -15,12 +15,34 @@ def checked(directory, ref):
     return json.loads(data)
 
 
-def install_rows(worker, sites):
+def install_rows(worker, sites, control=None):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
         raise ValueError('Diagnostic worker already owns audio projections')
     audit, restore = attach(model.audio_tower, sites, worker.rank)
+    if control is not None:
+        # Only in a fresh diagnostic engine. The real encoder still executes;
+        # substitute its output before split/merge and normal cache insertion.
+        import torch
+        from safetensors.torch import load_file
+        path = Path(control['path'])
+        if hashlib.sha256(path.read_bytes()).hexdigest() != control['tensor_file_sha256']:
+            raise ValueError('HF audio reference changed')
+        ref = load_file(str(path), device='cpu')['audio_out']
+        if ref.dtype != torch.bfloat16 or ref.ndim != 2 or not torch.isfinite(ref).all():
+            raise ValueError('invalid sealed HF audio output')
+        receipt = dict(reference=control['tensor_file_sha256'], observations=[])
+        def replace(module, args, output):
+            if output.dtype != ref.dtype or output.shape != ref.shape:
+                raise ValueError('audio intervention shape/dtype differs')
+            natural = output.detach().cpu().contiguous()
+            receipt['observations'].append(dict(
+                native_sha256=hashlib.sha256(natural.view(torch.uint8).numpy().tobytes()).hexdigest(),
+                unequal=int(torch.count_nonzero(natural != ref)),
+                max_abs=float((natural.float()-ref.float()).abs().max())))
+            return ref.to(output.device)
+        worker._retained_audio_control = (receipt, model.audio_tower.register_forward_hook(replace))
     worker._retained_audio_rows = (audit, restore)
     return worker.rank
 
@@ -29,7 +51,15 @@ def close_rows(worker):
     calls, restore = worker._retained_audio_rows
     restore()
     del worker._retained_audio_rows
-    return dict(rank=worker.rank, calls=dict(calls))
+    result = dict(rank=worker.rank, calls=dict(calls))
+    if hasattr(worker, '_retained_audio_control'):
+        receipt, hook = worker._retained_audio_control
+        hook.remove()
+        del worker._retained_audio_control
+        if not receipt['observations']:
+            raise ValueError('audio reference never used in decode')
+        result['intervention'] = receipt
+    return result
 
 
 def decode(engine, cfg):
@@ -46,6 +76,10 @@ def decode(engine, cfg):
         wire = packet['wire']
         audio, = [part['input_audio'] for msg in wire['messages'] if isinstance(msg['content'],list)
                   for part in msg['content'] if part['type']=='input_audio']
+        if 'audio_control' in cfg:
+            import base64
+            if hashlib.sha256(base64.b64decode(audio['data'], validate=True)).hexdigest() != cfg['audio_control']['audio_sha256']:
+                raise ValueError('audio source differs from HF control')
         samples, rate = AudioMediaIO().load_base64('audio/'+audio['format'],audio['data'])
         original = behavior['token_ids']
         reference = case['hf_logprobs']

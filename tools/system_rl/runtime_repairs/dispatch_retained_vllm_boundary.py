@@ -80,6 +80,11 @@ def main(spec):
         args['audio_row_sites']=spec['audio_row_sites']
     if 'retained-actions.json' in spec['input_files']:
         args['retained_actions']=dict(file='retained-actions.json',sha256=spec['input_files']['retained-actions.json'])
+    if 'audio_control' in spec:
+        control=spec['audio_control']
+        assert 'retained_actions' in args and control['file']=='HF.safetensors'
+        args['audio_control']=dict(path='/e/HF.safetensors',tensor_file_sha256=spec['input_files'][control['file']],
+                                   audio_sha256=control['audio_sha256'])
     save(root/'REPLAY.json',args)
     def base(argv):
         return [x.replace(str(parent/'hot'),str(hot)) for x in argv]
