@@ -3,9 +3,9 @@ from contextlib import ExitStack
 from functools import wraps
 
 
-def attach(text,layers,*,side,unwrap=lambda m:m):
+def attach(text,layers,*,side,unwrap=lambda m:m,training_vjp=False):
     import torch
-    import torch_npu
+    from retained_expert_candidate import frozen_project
     from torch.overrides import TorchFunctionMode
     if side not in ('hf','vl') or not layers or layers!=sorted(set(layers)) or any(type(i)!=int or i not in range(48) for i in layers):
         raise ValueError('explicit Omni router layers required')
@@ -16,12 +16,15 @@ def attach(text,layers,*,side,unwrap=lambda m:m):
                 if func is not torch.nn.functional.linear:return func(*args,**(kwargs or {}))
                 if len(args)!=2 or kwargs:raise ValueError('unexpected live router linear ABI')
                 x,w=args
+                # The locked vLLM wrapper also executes the original FP32
+                # projection as a shadow before its one consumed BF16 result.
+                if side=='vl' and x.dtype==w.dtype==torch.float32:
+                    return func(*args,**(kwargs or {}))
                 if (x.ndim!=2 or tuple(w.shape)!=(128,2048) or x.shape[1]!=2048 or x.dtype!=torch.bfloat16
-                        or w.dtype!=x.dtype or x.device!=w.device or x.device.type!='npu' or torch.is_grad_enabled()):
+                        or w.dtype!=x.dtype or x.device!=w.device or x.device.type!='npu'
+                        or (torch.is_grad_enabled() and not (side=='hf' and training_vjp))):
                     raise ValueError('expected no-grad full-width BF16 router')
-                y,=torch_npu.npu_grouped_matmul(x=[x.contiguous()],weight=[w.T.contiguous().unsqueeze(0)],
-                    split_item=2,group_list_type=1,group_type=0,
-                    group_list=torch.tensor([len(x)],device=x.device,dtype=torch.int64))
+                y=frozen_project(x,w.T)
                 calls[index]+=1
                 return y
         @wraps(orig)

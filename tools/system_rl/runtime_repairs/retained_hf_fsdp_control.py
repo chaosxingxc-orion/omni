@@ -68,7 +68,7 @@ def main(spec, inputs_root, out):
                 sealed(name)
             from retained_operator_vjp import measure
             probe = spec['operator_vjp']
-            commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed']))
+            commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed'],**({'router_only':True} if probe.get('router_only') else {})))
             return
         worker, adapted, _ = construct(cfg, out)
         actor = worker.actor
@@ -127,6 +127,11 @@ def main(spec, inputs_root, out):
             commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,
                    down=close_down(),gate=close_candidate(),attention=close_attention(),router=router() if router else None))
             return
+        close_router=None
+        if 'router_layers' in spec:
+            sealed('retained_router_candidate.py')
+            from retained_router_candidate import attach as attach_router
+            close_router=attach_router(text,spec['router_layers'],side='hf',unwrap=inner,training_vjp=do_vjp)
         start = time.monotonic()
         policy = dict(schema='omni-response-logits-v1', vocabulary=spec['vocabulary'], max_bytes=16*1024**2)
         try:
@@ -178,6 +183,7 @@ def main(spec, inputs_root, out):
                       predictor_position=pos, rows=row_hashes, updates=0,
                       gate_candidate=candidate, attention_candidate=attn_candidate,
                       down_candidate=down_candidate,
+                      router=close_router() if close_router else None,
                       actor_gradient=gradient,elapsed_seconds=time.monotonic()-start)
         commit(out/f'rank-{rank}'/'RESULT.json', result)
     finally:

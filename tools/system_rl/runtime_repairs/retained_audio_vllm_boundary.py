@@ -109,7 +109,7 @@ def main(path):
             payload+=b'\nfrom retained_audio_vllm_boundary import replay\nFP32LoRAWorkerExtension.omni_retained_audio_boundary = replay\n'
         if source.name=='ascend_fp32_worker.py' and 'retained_actions' in cfg:
             payload+=b'\nfrom retained_action_replay import install_rows,close_rows\nFP32LoRAWorkerExtension.omni_retained_install_rows=install_rows\nFP32LoRAWorkerExtension.omni_retained_close_rows=close_rows\n'
-        if source.name=='ascend_fp32_worker.py' and 'trace_predictor' in cfg:
+        if source.name=='ascend_fp32_worker.py' and ('trace_predictor' in cfg or 'fresh_trace' in cfg):
             payload+=b'\nfrom retained_decode_rows import begin,finish\nFP32LoRAWorkerExtension.omni_predictor_begin=begin\nFP32LoRAWorkerExtension.omni_predictor_finish=finish\n'
         with (rpc/source.name).open('xb') as f:
             f.write(payload);f.flush();os.fsync(f.fileno())

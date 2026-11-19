@@ -8,7 +8,7 @@ def project(input, weight):
     import torch
     import torch_npu
 
-    if (input.ndim != 2 or tuple(weight.shape) not in ((2048, 1536), (768, 2048))
+    if (input.ndim != 2 or tuple(weight.shape) not in ((2048, 1536), (768, 2048), (2048, 128))
             or input.shape[1] != weight.shape[0]
             or input.dtype != torch.bfloat16 or weight.dtype != input.dtype
             or input.device != weight.device or input.device.type != "npu" or not len(input)):

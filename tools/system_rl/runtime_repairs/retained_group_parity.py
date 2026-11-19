@@ -32,12 +32,36 @@ def sample(engine, cfg):
     from vllm.multimodal.media.audio import AudioMediaIO
     from retained_action_replay import checked
     m=checked(Path(cfg['input']),cfg['fresh_group'])
+    trace=cfg.get('fresh_trace')
+    selected=m['rows']
+    traces={}
+    if trace is not None:
+        i=trace['request_index']
+        if not cfg.get('isolate_fresh_paths') or type(i) is not int or not 0<=i<len(selected):
+            raise ValueError('fresh trace needs one valid isolated request')
+        selected=[selected[i]]
+        if trace['source_sha256']!=selected[0]['source_sha256']:
+            raise ValueError('trace bound to different source')
+        n=len(selected[0]['prompt_token_ids'])
+        if not 0<trace['layers']<=8 or trace['prompt_tokens']!=n or not 1<=trace['action_ordinal']<=selected[0]['packet']['wire']['max_tokens']:
+            raise ValueError('invalid trace extent')
+        def begin(mode):
+            pos=n+trace['action_ordinal']-2+trace['rope_offset']
+            args=(mode,pos,trace.get('attention_layer'),None,False,False,
+                  dict(rows=n,layers=trace['layers']),2,False,trace.get('moe_sites'))
+            if sorted(engine.collective_rpc('omni_predictor_begin',args=args,timeout=240))!=list(range(4)):
+                raise ValueError('incomplete fresh trace launch')
+        def finish(mode):
+            result=engine.collective_rpc('omni_predictor_finish',timeout=240)
+            if sorted(r['rank'] for r in result)!=list(range(4)):
+                raise ValueError('incomplete fresh trace result')
+            traces[mode]=result
     tok=engine.get_tokenizer()
     pad=tok.convert_tokens_to_ids('<|audio_pad|>')
     if pad is None or pad==tok.unk_token_id:
         raise ValueError('audio token missing')
     requests,params=[],[]
-    for row in m['rows']:
+    for row in selected:
         wire=row['packet']['wire'];ids=row['prompt_token_ids']
         positions=[i for i,t in enumerate(ids) if t==pad]
         if not positions or positions!=list(range(positions[0],positions[-1]+1)):
@@ -56,14 +80,16 @@ def sample(engine, cfg):
                                      top_k=-1,min_p=0.,max_tokens=wire['max_tokens'],logprobs=1))
     isolate=cfg.get('isolate_fresh_paths',False)
     if isolate:
-        for row,req in zip(m['rows'],requests,strict=True):
+        for row,req in zip(selected,requests,strict=True):
             req['cache_salt']=row['packet']['request_id']
+        if trace:begin("decode")
         outputs=[engine.generate([req],sampling_params=param,use_tqdm=False)[0]
                  for req,param in zip(requests,params,strict=True)]
+        if trace:finish("decode")
     else:
         outputs=engine.generate(requests,sampling_params=params,use_tqdm=False)
     records=[]
-    for row,req in zip(m['rows'],outputs,strict=True):
+    for row,req in zip(selected,outputs,strict=True):
         packet=row['packet']; out,=req.outputs
         if list(req.prompt_token_ids)!=row['prompt_token_ids'] or not out.token_ids or not req.finished:
             raise ValueError('changed multimodal context or incomplete output')
@@ -78,16 +104,23 @@ def sample(engine, cfg):
                             token_ids=list(out.token_ids),behavior_logprobs=scores,raw_top1=top,
                             text=out.text,finish_reason=out.finish_reason,cached_tokens=req.num_cached_tokens))
     if isolate:
-        for row,req,r in zip(m['rows'],requests,records,strict=True):
+        for row,req,r in zip(selected,requests,records,strict=True):
             ids=r['token_ids'];prompt=dict(req,prompt_token_ids=req['prompt_token_ids']+ids)
+            if trace:
+                if len(ids)<trace["action_ordinal"]:raise ValueError("requested action absent")
+                begin("prefill")
             probe,=engine.generate([prompt],sampling_params=SamplingParams(temperature=1.,top_p=1.,top_k=-1,
                            max_tokens=1,prompt_logprobs=1,seed=r['seed']),use_tqdm=False)
             if list(probe.prompt_token_ids)!=row['prompt_token_ids']+ids or r['cached_tokens']!=0:
                 raise ValueError('isolated control not cold or prompt changed')
+            if trace:
+                if probe.num_cached_tokens!=0:raise ValueError('scoring prefill read cache')
+                finish("prefill")
+                r['predictor_trace']=dict(config=trace,**traces)
             per=probe.prompt_logprobs[-len(ids):]
             r['forced_scores']=[lp[t].logprob for lp,t in zip(per,ids,strict=True)]
             r['forced_top1']=[next(k for k,v in lp.items() if v.rank==1) for lp in per]
-    return dict(schema='fresh-train-p-parity-group-v1',records=records,
+    return dict(schema='fresh-train-p-predictor-trace-v1' if trace else 'fresh-train-p-parity-group-v1',records=records,
                 manifest_sha256=cfg['fresh_group']['sha256'],optimizer_steps=0)
 
 

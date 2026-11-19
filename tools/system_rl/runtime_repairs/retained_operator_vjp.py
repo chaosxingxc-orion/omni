@@ -1,7 +1,7 @@
 """Small same-device controls for derivatives needed by the frozen-expert LoRA actor."""
 
 
-def measure(device, rank, lengths, seed):
+def measure(device, rank, lengths, seed, *, router_only=False):
     import torch
     import torch_npu
     from retained_expert_candidate import project, frozen_project
@@ -30,7 +30,7 @@ def measure(device, rank, lengths, seed):
     for n in lengths:
         if not 1 < n <= 256:
             raise ValueError('bounded actual-operator VJP required')
-        for left,right in ((2048,1536),(768,2048)):
+        for left,right in ([(2048,128)] if router_only else [(2048,1536),(768,2048)]):
             x,w,dy = draw((n,left)),draw((left,right)),draw((n,right))
             arg=x.to(device).requires_grad_(); weight=w.to(device)
             # Expert weights are frozen; hidden input is the path to earlier LoRA.
@@ -40,6 +40,7 @@ def measure(device, rank, lengths, seed):
                     repaired=backward(lambda v:frozen_project(v,weight),(arg,),dy,(ref,)),
                     forward_delta=stats(frozen_project(arg,weight),project(arg.detach(),weight)),
                     reference_rounding=stats(ref.bfloat16(),ref)))
+        if router_only: continue
         q,k,v=(draw((n,h,128)) for h in (8,1,1))
         dy=draw(q.shape)
         cq,ck,cv=(x.double().requires_grad_() for x in (q,k,v))
