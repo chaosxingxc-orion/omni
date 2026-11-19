@@ -80,6 +80,9 @@ def main(spec):
         args['audio_row_sites']=spec['audio_row_sites']
     if 'retained-actions.json' in spec['input_files']:
         args['retained_actions']=dict(file='retained-actions.json',sha256=spec['input_files']['retained-actions.json'])
+    if 'score_retained_prefill' in spec:
+        assert spec['score_retained_prefill'] is True and 'retained_actions' in args
+        args['score_retained_prefill']=True
     if 'audio_control' in spec:
         control=spec['audio_control']
         assert 'retained_actions' in args and control['file']=='HF.safetensors'

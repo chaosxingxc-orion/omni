@@ -62,12 +62,39 @@ def close_rows(worker):
     return result
 
 
+def score_retained_prefill(engine, case, record, audio, sampling_params):
+    """Score every original action in one prefill, regardless of sampled tokens."""
+    base, actions = record['prompt_token_ids'], record['token_ids']
+    # Pass token IDs *before* multimodal expansion; the model processor owns
+    # expansion. Appending decoded text could merge tokens across the join.
+    compact = list(engine.get_tokenizer().encode(case['prompt'], add_special_tokens=False))
+    request = {'prompt_token_ids': compact + actions, 'multi_modal_data': {'audio': audio}}
+    params = sampling_params(temperature=1., top_p=1., top_k=-1, min_p=0.,
+                             prompt_logprobs=1, max_tokens=1, seed=record['seed'])
+    out, = engine.generate([request], sampling_params=params, use_tqdm=False)
+    if list(out.prompt_token_ids) != base + actions:
+        raise ValueError('Teacher-forced expanded IDs differ from original context/actions')
+    if len(out.outputs) != 1 or len(out.outputs[0].token_ids) != 1:
+        raise ValueError('Unexpected prefill probe output count')
+    probs = out.prompt_logprobs
+    if probs is None or len(probs) != len(out.prompt_token_ids):
+        raise ValueError('Incomplete prompt scores')
+    scores = [probs[len(base)+i][token].logprob for i,token in enumerate(actions)]
+    if not scores or not all(map(math.isfinite,scores)):
+        raise ValueError('Nonfinite or missing teacher-forced scores')
+    deltas = [a-b for a,b in zip(scores,case['hf_logprobs'],strict=True)]
+    return dict(mode='teacher_forced_prefill', actions_scored=len(scores), extra_generated=1,
+                scores=scores, max_abs=max(map(abs,deltas)), sequence_abs=abs(math.fsum(deltas)),
+                signed_deltas=deltas, prefix_cache_read_skipped_for_prompt_scores=params.skip_reading_prefix_cache)
+
+
 def decode(engine, cfg):
     from vllm import SamplingParams
     from vllm.multimodal.media.audio import AudioMediaIO
     directory = Path(cfg['input'])
     bundle = checked(directory, cfg['retained_actions'])
     result = []
+    pending_prefill = []
     for case in bundle['cases']:
         packet = checked(directory, case['packet'])
         behavior = checked(directory, case['behavior'])['records'][case['index']]
@@ -95,14 +122,22 @@ def decode(engine, cfg):
             raise ValueError('Retained and current prompt token IDs differ')
         out, = req.outputs
         deltas=[]
+        scores=[]
         for index,(expected,chosen,probs) in enumerate(zip(original,out.token_ids,out.logprobs)):
             if expected!=chosen:
                 break
             actual=probs[chosen].logprob
             if not math.isfinite(actual):
                 raise ValueError('Nonfinite selected log probability')
+            scores.append(actual)
             deltas.append(abs(actual-reference[index]))
         result.append(dict(node=case['node'],generated=len(out.token_ids),original_tokens=len(original),
-                           same_action_prefix=len(deltas),deltas=deltas,
+                           same_action_prefix=len(deltas),deltas=deltas, matching_prefix_scores=scores,
                            all_tokens_within_limit=len(deltas)==len(original) and max(deltas)<=case['limit']))
+        if cfg.get('score_retained_prefill'):
+            pending_prefill.append((case, behavior, (samples,rate)))
+    # Run these after all natural decodes so the additional requests cannot
+    # warm an encoder/prefix cache for the paired natural arm.
+    for row, (case, record, audio) in zip(result, pending_prefill):
+        row['forced_prefill'] = score_retained_prefill(engine, case, record, audio, SamplingParams)
     return result
