@@ -80,6 +80,11 @@ def main(spec):
         args['audio_row_sites']=spec['audio_row_sites']
     if 'retained-actions.json' in spec['input_files']:
         args['retained_actions']=dict(file='retained-actions.json',sha256=spec['input_files']['retained-actions.json'])
+    if 'trace_predictor' in spec:
+        trace=spec['trace_predictor']
+        assert spec.get('score_retained_prefill') is True and 'retained_decode_rows.py' in spec['input_files']
+        assert trace['node']=='P' and 1<=trace['action_ordinal']<=10 and trace['rope_offset']==0
+        args['trace_predictor']=trace
     if 'score_retained_prefill' in spec:
         assert spec['score_retained_prefill'] is True and 'retained_actions' in args
         args['score_retained_prefill']=True

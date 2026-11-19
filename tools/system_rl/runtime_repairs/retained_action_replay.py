@@ -95,6 +95,15 @@ def decode(engine, cfg):
     bundle = checked(directory, cfg['retained_actions'])
     result = []
     pending_prefill = []
+    def trace_begin(case, record, mode):
+        trace=cfg.get('trace_predictor')
+        if not trace or trace['node']!=case['node']:return False
+        ordinal=trace['action_ordinal']
+        if not 1<=ordinal<=len(record['token_ids']):raise ValueError('invalid target action')
+        position=len(record['prompt_token_ids'])+ordinal-2+trace['rope_offset']
+        ranks=engine.collective_rpc('omni_predictor_begin',args=(mode,position),timeout=240)
+        if sorted(ranks)!=list(range(4)):raise ValueError('missing trace worker')
+        return True
     for case in bundle['cases']:
         packet = checked(directory, case['packet'])
         behavior = checked(directory, case['behavior'])['records'][case['index']]
@@ -116,6 +125,7 @@ def decode(engine, cfg):
                                 top_k=-1 if wire['top_k']==0 else wire['top_k'],min_p=wire['min_p'],
                                 repetition_penalty=wire['repetition_penalty'],presence_penalty=wire['presence_penalty'],
                                 frequency_penalty=wire['frequency_penalty'],logprobs=0,max_tokens=len(original))
+        tracing=trace_begin(case,behavior,'decode')
         req, = engine.generate([{'prompt':case['prompt'],'multi_modal_data':{'audio':(samples,rate)}}],
                                sampling_params=params,use_tqdm=False)
         if list(req.prompt_token_ids)!=behavior['prompt_token_ids']:
@@ -134,10 +144,17 @@ def decode(engine, cfg):
         result.append(dict(node=case['node'],generated=len(out.token_ids),original_tokens=len(original),
                            same_action_prefix=len(deltas),deltas=deltas, matching_prefix_scores=scores,
                            all_tokens_within_limit=len(deltas)==len(original) and max(deltas)<=case['limit']))
+        if tracing:
+            if len(deltas)<cfg['trace_predictor']['action_ordinal']:
+                raise ValueError('traced action differs from original')
+            result[-1]['natural_trace']=engine.collective_rpc('omni_predictor_finish',timeout=240)
         if cfg.get('score_retained_prefill'):
             pending_prefill.append((case, behavior, (samples,rate)))
     # Run these after all natural decodes so the additional requests cannot
     # warm an encoder/prefix cache for the paired natural arm.
     for row, (case, record, audio) in zip(result, pending_prefill):
+        tracing=trace_begin(case,record,'prefill')
         row['forced_prefill'] = score_retained_prefill(engine, case, record, audio, SamplingParams)
+        if tracing:
+            row['paired_trace']=engine.collective_rpc('omni_predictor_finish',timeout=240)
     return result

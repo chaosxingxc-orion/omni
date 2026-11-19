@@ -1,0 +1,81 @@
+"""Observe one original predictor position during actual cached decode and prefill."""
+import hashlib
+
+
+def begin(worker, mode, target):
+    import torch
+    from family_precision import ATTR
+    model = worker.model_runner.get_model()
+    text = model.language_model.model
+    if len(text.layers)!=48 or type(target)!=int or target<1 or mode not in ('decode','prefill'):
+        raise ValueError('unsupported retained language trace')
+    if hasattr(worker,'_retained_predictor_trace'):
+        raise ValueError('previous trace still active')
+    if mode=='prefill' and not hasattr(worker,'_retained_decode_first'):
+        raise ValueError('missing same-worker natural predictor trace')
+    handles=[]; rows={};state={};device_rows={}
+    family=getattr(model,ATTR)['audit']['modules']
+    def attn_states():
+        return {str(i):dict(family[f'layer.{i}.attention']['states']) for i in range(48)}
+    start=attn_states()
+    def on_entry(module,args):
+        pos, hidden, _ = args
+        if device_rows: raise ValueError('overlapping predictor traces')
+        mask=pos.eq(target)
+        if mask.ndim==2: mask=mask.all(dim=0)
+        ids=torch.where(mask)[0].tolist()
+        if not ids:
+            state.pop('at',None)
+            return
+        if len(ids)!=1 or rows:
+            raise ValueError('target row ambiguous across language forwards')
+        state.update(at=ids[0],forward_rows=hidden.shape[0])
+        keep('decoder.input',hidden)
+    def keep(key, tensor):
+        if 'at' not in state:return
+        tensor=tensor[0] if isinstance(tensor,tuple) else tensor
+        if key in device_rows or tensor.ndim!=2 or tensor.dtype!=torch.bfloat16 or tensor.shape[-1]!=2048:
+            raise ValueError('unexpected language trace boundary '+key)
+        device_rows[key]=tensor[state['at']].detach().clone()
+    def end_step(m,args,value):
+        keep('final_norm',value)
+        if not device_rows:return
+        keys=list(device_rows); stacked=torch.stack(list(device_rows.values())).cpu()
+        rows.update(zip(keys,stacked.unbind(0)))
+        device_rows.clear();state.pop('at',None)
+    handles.append(text.layers[0].register_forward_pre_hook(on_entry))
+    for n,layer in enumerate(text.layers):
+        for name,module in [('input_norm',layer.input_layernorm),('post_norm',layer.post_attention_layernorm)]:
+            key=f'{n}.{name}'
+            handles.append(module.register_forward_hook(lambda m,a,v,k=key:keep(k,v)))
+    handles.append(text.norm.register_forward_hook(end_step))
+    worker._retained_predictor_trace=(handles,rows,state,start,attn_states,mode,target)
+    return worker.rank
+
+
+def finish(worker):
+    import torch
+    handles,rows,state,start,states,mode,target=worker._retained_predictor_trace
+    for h in handles:h.remove()
+    del worker._retained_predictor_trace
+    if len(rows)!=98:raise ValueError(f'incomplete retained language trace: {len(rows)}/98')
+    counts={k:{s:n-start[k].get(s,0) for s,n in v.items() if n!=start[k].get(s,0)}
+            for k,v in states().items()}
+    result=dict(rank=worker.rank,predictor_position=target,forward_rows=state['forward_rows'],
+                corrected_attention_states=counts,mode=mode,observed_boundaries=len(rows))
+    if mode=='decode':
+        worker._retained_decode_first=(target,rows)
+    else:
+        earlier,first=worker._retained_decode_first
+        del worker._retained_decode_first
+        if target!=earlier or list(rows)!=list(first):raise ValueError('unaligned language signatures')
+        diff={}
+        for k,x in rows.items():
+            y=first[k]
+            if not torch.isfinite(x).all() or not torch.isfinite(y).all():raise ValueError('nonfinite language trace')
+            diff[k]=dict(unequal=int(torch.count_nonzero(x!=y)),max_abs=float((x.float()-y.float()).abs().max()),
+                         prefill_sha256=hashlib.sha256(x.view(torch.uint8).numpy()).hexdigest(),
+                         decode_sha256=hashlib.sha256(y.view(torch.uint8).numpy()).hexdigest())
+        result['boundaries']=diff
+        result['first_observed_difference']=next((k for k,v in diff.items() if v['unequal']),None)
+    return result
