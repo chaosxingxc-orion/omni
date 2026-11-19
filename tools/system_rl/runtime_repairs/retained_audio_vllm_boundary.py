@@ -35,6 +35,12 @@ def replay(worker, config):
         # Match GPUModelRunner._gather_mm_embeddings: the model combines this
         # mask with CPU token comparisons before scattering the audio rows.
         where = prompt_ids.eq(model.config.audio_token_id)
+        inspect_layer = config.get('inspect_layer')
+        finish_layer = None
+        if inspect_layer is not None:
+            from retained_audio_layer import observe
+            finish_layer = observe(tower.layers[inspect_layer], 'vl', inspect_layer, worker.rank,
+                                   Path(config['output'])/f'rank-{worker.rank}')
         seen = {}
         def capture(key,tensor):
             if key in seen: raise ValueError('multiple calls to '+key)
@@ -57,7 +63,8 @@ def replay(worker, config):
         target = out/'VL.safetensors'
         save_file(seen,str(target))
         with target.open('rb') as stream:os.fsync(stream.fileno())
-        return dict(rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
+        layer_ref = {'layer_sha256':finish_layer()} if finish_layer else {}
+        return dict(**layer_ref,rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
                     merged_shape=list(seen['merged_prompt'].shape), sha256=hashlib.sha256(target.read_bytes()).hexdigest())
 
 

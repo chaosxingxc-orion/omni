@@ -28,7 +28,7 @@ def store(path, data):
     fd=os.open(path.parent,os.O_DIRECTORY);os.fsync(fd);os.close(fd)
 
 
-def collect(side, config, out):
+def collect(side, config, out, layer=None):
     host=config['host'];root=Path(config['root']);lease=root/'hot/new-lease'
     deadline=time.monotonic()+config['timeout_seconds']
     # The two launchers run independently after their existing owners restore.
@@ -50,6 +50,13 @@ def collect(side, config, out):
         spec=json.loads(get(root/'REPLAY.json'))
         assert spec['behavior']['sha256']==config['behavior_sha256']
         files={f"rank-{r['rank']}/VL.safetensors":r['sha256'] for r in doc['ranks']}
+    if layer is not None:
+        for rank in ([doc] if side=='hf' else doc['ranks']):
+            prefix='' if side=='hf' else f"rank-{rank['rank']}/"
+            meta=get(root/'hot'/(prefix+'LAYER.json'));audit=json.loads(meta)
+            assert audit['layer']==layer and audit['sha256']==rank['layer_sha256']
+            dst=out/side/(prefix+'LAYER.json');dst.parent.mkdir(parents=True,exist_ok=True);store(dst,meta)
+            files[prefix+'LAYER.safetensors']=rank['layer_sha256']
     for name,digest in files.items():
         data=get(root/'hot'/name)
         if hashlib.sha256(data).hexdigest()!=digest:raise ValueError('closed operand digest differs')
@@ -62,7 +69,10 @@ if __name__=='__main__':
     c=json.loads(a.config.read_bytes());out=Path(c['out']);out.mkdir(parents=True,exist_ok=True)
     assert c['hf']['behavior_sha256']==c['vl']['behavior_sha256']
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        jobs=[pool.submit(collect,k,c[k],out) for k in ('hf','vl')]
+        jobs=[pool.submit(collect,k,c[k],out,c.get('inspect_layer')) for k in ('hf','vl')]
         for job in jobs:job.result()
     report=run(out);store(out/'COMPARE.json',json.dumps(report,indent=2).encode())
+    if 'inspect_layer' in c:
+        from compare_retained_layer import compare
+        store(out/'LAYER-COMPARE.json',json.dumps(compare(out,c['inspect_layer']),indent=2).encode())
     print(json.dumps({r['rank']:r['first_difference'] for r in report['ranks']}))

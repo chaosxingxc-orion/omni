@@ -33,7 +33,11 @@ def render(spec,root):
         subprocess.run(['docker','wait',watchdog],check=True,stdout=subprocess.DEVNULL)
         assert state(cid)['ExitCode']==0 and state(watchdog)['ExitCode']==0
         assert json.loads((prev_control/'RESTORED.json').read_bytes())['config_exact']
-        assert json.loads((prev_control/'NPU-EXIT.json').read_bytes())['ExitCode']!=0
+        exit_code=json.loads((prev_control/'NPU-EXIT.json').read_bytes())['ExitCode']
+        if spec.get('previous_succeeded') is True:
+            assert exit_code==0
+        else:
+            assert exit_code!=0
     src=Path(spec['parent_plan']).resolve()
     if hashlib.sha256(src.read_bytes()).hexdigest()!=spec['parent_sha256']:raise ValueError('parent plan changed')
     plan=json.loads(src.read_bytes()); parent=Path(plan['root']); old=parent/'hot/new-lease'

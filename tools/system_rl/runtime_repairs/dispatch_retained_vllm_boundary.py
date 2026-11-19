@@ -25,7 +25,11 @@ def main(spec):
             subprocess.run(['docker','wait',previous],check=True,stdout=subprocess.DEVNULL)
             assert state(previous)['ExitCode']==0
         assert read(prior/'hot/new-lease/RESTORED.json')['config_exact']
-        assert read(prior/'hot/new-lease/NPU-EXIT.json')['ExitCode']!=0
+        exit_code=read(prior/'hot/new-lease/NPU-EXIT.json')['ExitCode']
+        if spec.get('previous_succeeded') is True:
+            assert exit_code==0
+        else:
+            assert exit_code!=0
     parent=Path(spec['parent_plan']).parent
     root=Path(spec['root']).resolve()
     assert pin(parent/'PLAN.json')['sha256']==spec['parent_sha256']
@@ -69,6 +73,9 @@ def main(spec):
     args=dict(input='/e',output=str(hot),named_rpc_overlay=read(parent/'SERVER.json')['named_rpc_overlay'],action_index=spec['action_index'],engine=engine,precision_ref=pc,
               behavior=dict(file='P-BEHAVIOR.json',sha256=spec['input_files']['P-BEHAVIOR.json']),
               features=dict(file='features.json',sha256=spec['input_files']['features.json']))
+    if 'inspect_layer' in spec:
+        assert type(spec['inspect_layer']) is int and 0<=spec['inspect_layer']<32
+        args['inspect_layer']=spec['inspect_layer']
     save(root/'REPLAY.json',args)
     def base(argv):
         return [x.replace(str(parent/'hot'),str(hot)) for x in argv]

@@ -48,6 +48,11 @@ def run(root, model, out):
     names = list(tower.state_dict())
     tower.load_state_dict({k:tensor('thinker.audio_tower.'+k) for k in names}, strict=True, assign=True)
     tower.eval().requires_grad_(False).to('npu:0')
+    inspect_layer = spec.get('inspect_layer')
+    finish_layer = None
+    if inspect_layer is not None:
+        from retained_audio_layer import observe
+        finish_layer = observe(tower.layers[inspect_layer], 'hf', inspect_layer, 0, out)
     class Stop(Exception): pass
     observations = {}
     def record(name, v):
@@ -93,6 +98,7 @@ def run(root, model, out):
                   placement_count=len(dest), placement_exact=True, peak_bytes=torch.npu.max_memory_allocated(),
                   tensors_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
                   fsdp_worker=False, language_layers_executed=0, prompt_tokens=len(action['prompt_token_ids']))
+    if finish_layer: result['layer_sha256'] = finish_layer()
     with (out/'RESULT.json').open('x') as f:
         json.dump(result,f,indent=2);f.flush();os.fsync(f.fileno())
     fd=os.open(out,os.O_DIRECTORY);os.fsync(fd);os.close(fd)
