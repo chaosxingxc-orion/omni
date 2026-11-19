@@ -1,0 +1,8 @@
+# Instruct TP4 activation
+
+This is the parameterized successor to the sealed single-instance Instruct activation. It is a base checkpoint vLLM service, used to validate host compatibility and reproduce the numerical discrepancies. The RL controller's precision overlay, adapter activation and exact policy admission remain in the original RL pipeline.
+
+1. Resolve `activation.template.json` with `prepare.py --profile PROFILE.local.json --output CODE_DIR`. Put the existing RL release's `client/source` on `PYTHONPATH` to use its `config_profile` resolver. Compile a separate profile per instance. Supply the current boot ID, immutable image, model and artifact roots, physical cards, NIC, and separate API, vLLM and HCCL port ranges. Both profiles on one host use the same local hot parent and launch guard; the hot parent and guard must exist on local persistent storage. Keep the profiles local.
+2. Place each immutable code directory on its host. Run `python3 CODE_DIR/launch.py check --attempt check01` on each profile. This uses the same image and mounts without NPU devices or network.
+3. Run `python3 CODE_DIR/launch.py start --attempt run01 --preflight-attempt check01` for each profile. Startup checks the receipt, ports, existing device mappings, and live device processes. Docker maps only the four physical device nodes; the CANN process sees four logical IDs, 0–3.
+4. Check `launch.py ready --attempt run01`, then submit the actual audio request and collect token IDs, log-probabilities and cache metrics. For a precision verdict, compare the same token IDs at the same positions and use the frozen training reference and existing parity criterion.

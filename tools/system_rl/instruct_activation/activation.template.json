@@ -1,0 +1,30 @@
+{
+  "schema": "omni-instruct-activation-v2",
+  "image": "${INFERENCE_IMAGE}",
+  "name": "${INSTANCE}",
+  "host_boot_id": "${BOOT_ID}",
+  "root": "${HOT_ROOT}/${INSTANCE}",
+  "guard": "${HOT_ROOT}/launch.guard",
+  "readonly_root": "${ARTIFACT_ROOT}",
+  "model": "${MODEL_ROOT}",
+  "served_model_name": "qwen3-omni-30b-a3b-instruct",
+  "cards": "${CARDS}",
+  "host": "127.0.0.1",
+  "port": "${API_PORT}",
+  "vllm_port": "${VLLM_PORT}",
+  "hccl_if_base_port": "${HCCL_PORT}",
+  "hccl_port_reservation": 400,
+  "socket_ifname": "${NPU_SOCKET_IFNAME}",
+  "runtime_budget_bytes": 34359738368,
+  "monitor_seconds": 600,
+  "stop_timeout_seconds": 120,
+  "client_chat_template_kwargs": {"enable_thinking": false},
+  "serve_args": [
+    "--tensor-parallel-size", "4", "--max-num-seqs", "128",
+    "--gpu-memory-utilization", "0.92", "--max-num-batched-tokens", "2048",
+    "--mm-processor-cache-type", "shm", "--max-model-len", "65536",
+    "--dtype", "bfloat16", "--enable-auto-tool-choice", "--tool-call-parser", "hermes",
+    "--limit-mm-per-prompt", "{\"audio\": 1, \"image\": 0, \"video\": 0}",
+    "--seed", "0", "--enable-prefix-caching"
+  ]
+}
