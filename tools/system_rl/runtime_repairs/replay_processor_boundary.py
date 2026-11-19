@@ -36,13 +36,31 @@ def run(config_path, model_path):
     thinker = Qwen3OmniMoeThinkerForConditionalGeneration.__new__(Qwen3OmniMoeThinkerForConditionalGeneration)
     thinker.config = processor.info.get_hf_config()
     rows = []
-    for row in spec['rows']:
-        packet = json.loads(checked(root, row['packet']).read_bytes())
-        behavior = json.loads(checked(root, row['behavior']).read_bytes())
-        action = behavior['records'][row['action_index']]
-        prepared = torch.load(checked(root, row['prepared']), map_location='cpu', weights_only=False)
-        if packet['wire_sha256'] != action['wire_sha256'] or prepared['input_identity'] != action['input_identity']:
-            raise ValueError('packet and retained action differ')
+    if 'fresh_group' in spec:
+        import sys
+        sys.path.insert(0,str(root/'source'))
+        from cohort_capture import prepare_packet
+        hf_processor=processor.info.get_hf_processor()
+        manifest=json.loads(checked(root,spec['fresh_group']).read_bytes())
+        fresh=[]
+        representatives=(r for r in manifest['rows'] if r['replicate']==0)
+        behavior_rows={r['request_id']:r for r in json.loads(checked(root,spec['sampled']).read_bytes())['fresh_group']['records']}
+        for row in representatives:
+            packet=row['packet'];prepared=prepare_packet(hf_processor, packet)
+            action=behavior_rows[packet['request_id']]
+            fresh.append(dict(node='P',packet=packet,prepared=prepared,action=dict(action,prompt_token_ids=row['prompt_token_ids'])))
+    else:
+        fresh=[]
+    for row in spec.get('rows',[]) + fresh:
+        if 'action' in row:
+            packet,prepared,action=row['packet'],row['prepared'],row['action']
+        else:
+            packet = json.loads(checked(root, row['packet']).read_bytes())
+            behavior = json.loads(checked(root, row['behavior']).read_bytes())
+            action = behavior['records'][row['action_index']]
+            prepared = torch.load(checked(root, row['prepared']), map_location='cpu', weights_only=False)
+            if packet['wire_sha256'] != action['wire_sha256'] or prepared['input_identity'] != action['input_identity']:
+                raise ValueError('packet and retained action differ')
         audios = [part['input_audio'] for msg in packet['wire']['messages'] if isinstance(msg['content'], list)
                   for part in msg['content'] if part['type'] == 'input_audio']
         if len(audios) != 1:
@@ -78,7 +96,7 @@ def run(config_path, model_path):
         left = enc['input_features'][0][:, valid]
         right = item['input_audio_features'].data
         rec = dict(node=row['node'], prompt_ids_equal=ids == action['prompt_token_ids'],
-                   wire_sha256=action['wire_sha256'], encoded_identity=prepared['encoded_identity'],
+                   wire_sha256=action['wire_sha256'], encoded_identity=prepared.get('encoded_identity'),
                    audio_length=int(item['audio_feature_lengths'].data.item()), train_frames=int(valid.sum()),
                    waveform=compare(torch.as_tensor(prepared['waves'][0][:len(wave)]), torch.as_tensor(wave)),
                    features=compare(left, right), bf16_features=compare(left.bfloat16(), right.bfloat16()),
