@@ -202,7 +202,8 @@ def build(config,output):
         require(mode=='formal' and spec.get('node_training_task') and
                 spec['node_difficulty']['node']==spec['node_training_task']['node'],
                 'node difficulty must match the formal independent node task')
-        source['sampling']['node_difficulty']=copy.deepcopy(spec['node_difficulty'])
+        from node_difficulty import bind_objective
+        source['sampling']['node_difficulty']=bind_objective(spec['node_difficulty'],learning)
     bind_official_source(source,root,spec.get('official_source_config_ref'))
     require(not source['policy'].get('fixture'),'synthetic input forbidden')
     return read(write(marker,dict(identity=identity,input_ref=write(root/'INPUT.json',source),learning_ref=lr,

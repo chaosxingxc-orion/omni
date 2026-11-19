@@ -1,0 +1,13 @@
+{
+  "runtime_construction": {
+    "node_difficulty": {
+      "node": "P",
+      "cache_root": "${LOCAL_TRAIN_REFERENCE_CACHE_ROOT}",
+      "training_builder": {
+        "module_ref": "${TRAIN_NODE_CONTRIBUTION_BUILDER_REF}",
+        "metrics_pin_ref": "${TRAIN_NODE_METRICS_PIN_REF}"
+      },
+      "metric": "position_reward_v1"
+    }
+  }
+}
