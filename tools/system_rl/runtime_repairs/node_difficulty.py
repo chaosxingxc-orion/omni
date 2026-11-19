@@ -38,12 +38,12 @@ def prepare_selection(sampling, screen_ref, output):
     return dict(prepared, node_difficulty=dict(prepared['node_difficulty'], metric=metric))
 
 
-def position_from_call(part, score):
+def position_from_call(part, score, *, training=True):
     calls = part.get('reward_calls')
     if not isinstance(calls, list) or len(calls)!=1 or not calls[0].get('call_ids'):
         raise ValueError('P rank sampling requires original action and gold evidence')
     c = calls[0]
-    if c['labels']['intent'] not in c['online']['retrieved_candidates']:
+    if training and c['labels']['intent'] not in c['online']['retrieved_candidates']:
         raise ValueError('P sampling population contains unadmitted gold intent')
     actual = score('P', c['online'], c['output'], c['labels'])
     m = actual['metrics']

@@ -314,6 +314,9 @@ def configure(source,output,mode):
             value['training_package'].update(diagnostic_coverage=ds['diagnostic_coverage'],diagnostic_selection=ds['diagnostic_selection'],learning=seed['learning_ref'])
             from prompt_capacity import bind_diagnostic_budget
             bind_diagnostic_budget(c,value['training_package'],ds)
+    if mode=='formal':
+        from business_gate import bind_p_phase
+        bind_p_phase(c['selection'],read(read(c['initial_input'])['learning_config_ref']))
     if not c.get('source_bundle_ref') and c.get('package_source_bundle',True):
         from dependencies import load
         pack=load(HERE/'stage.py','configured_original_bundle').pack
