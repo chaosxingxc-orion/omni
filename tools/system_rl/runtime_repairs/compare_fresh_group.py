@@ -19,6 +19,11 @@ def compare(hot, spec_path, tp_path):
     if tp['actual_tp']!=4 or tp['fresh_group']['manifest_sha256']!=s['files'][s['fresh_group']['manifest']]:
         raise ValueError('wrong rollout topology or TRAIN request manifest')
     def check_arithmetic(rank_record):
+        if 'tiled_layers' in s['fresh_group']:
+            a=rank_record.get('attention_candidate') or rank_record.get('attention') or {}
+            subset=s['fresh_group']['tiled_layers']
+            if a.get('absolute_tile_layers')!=subset or not all(a['layers'].get(str(i),0)>0 for i in subset):
+                raise ValueError('absolute-position FIA tile not executed as configured')
         for field,key,kind in [('router_layers','router','full_width_bf16_router_grouped_matmul'),
                                ('kv_layers','kv_projection','full_width_bf16_base_kv_grouped')]:
             if field not in s['fresh_group']:continue
