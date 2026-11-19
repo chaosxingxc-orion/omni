@@ -1,0 +1,92 @@
+"""Execute the retained audio tower and embedding merge on all real TP ranks."""
+import base64
+import hashlib
+import json
+import os
+from pathlib import Path
+
+
+def replay(worker, config):
+    import torch
+    from safetensors.torch import save_file
+    from vllm.config import set_current_vllm_config
+    from vllm.forward_context import set_forward_context
+    from family_precision import install
+    from run_package import read
+
+    root = Path(config['input'])
+    def load(key):
+        ref = config[key]
+        data = (root/ref['file']).read_bytes()
+        if hashlib.sha256(data).hexdigest() != ref['sha256']:
+            raise ValueError('retained input identity mismatch: '+key)
+        return json.loads(data)
+
+    with set_current_vllm_config(worker.vllm_config):
+        receipt = install(worker, read(config['precision_ref']))
+        model = worker.model_runner.get_model()
+        tower = model.audio_tower
+        feat = load('features')
+        buf = base64.b64decode(feat['bf16'], validate=True)
+        assert hashlib.sha256(buf).hexdigest() == feat['sha256']
+        f = torch.frombuffer(bytearray(buf),dtype=torch.bfloat16).reshape(feat['shape']).to(tower.device)
+        ids = torch.tensor(load('behavior')['records'][config['action_index']]['prompt_token_ids'],device=tower.device)
+        where = ids.eq(model.config.audio_token_id)
+        seen = {}
+        def capture(key,tensor):
+            if key in seen: raise ValueError('multiple calls to '+key)
+            seen[key] = tensor.detach().contiguous().cpu()
+        hooks = [tower.layers[0].register_forward_pre_hook(lambda m,args:capture('layer.0.in',args[0]))]
+        for i,layer in enumerate(tower.layers):
+            hooks.append(layer.register_forward_hook(lambda m,args,out,i=i:capture(f'layer.{i}.out',out)))
+        try:
+            with torch.inference_mode(), set_forward_context(None, worker.vllm_config):
+                audio = model._process_audio_input(dict(input_features=f,audio_feature_lengths=torch.tensor([f.shape[-1]])))
+                assert len(audio)==1 and audio[0].shape[0]==int(where.sum())
+                capture('audio_out',audio[0])
+                capture('merged_prompt',model.embed_input_ids(ids,audio,is_multimodal=where))
+        finally:
+            for hook in hooks:hook.remove()
+        assert len(seen)==len(tower.layers)+3 and all(torch.isfinite(x).all() for x in seen.values())
+        assert torch.equal(seen['merged_prompt'][where.cpu()],seen['audio_out'])
+        out = Path(config['output'])/f'rank-{worker.rank}'
+        out.mkdir()
+        target = out/'VL.safetensors'
+        save_file(seen,str(target))
+        with target.open('rb') as stream:os.fsync(stream.fileno())
+        return dict(rank=worker.rank, precision=receipt, layers=len(tower.layers),audio_shape=list(audio[0].shape),
+                    merged_shape=list(seen['merged_prompt'].shape), sha256=hashlib.sha256(target.read_bytes()).hexdigest())
+
+
+def main(path):
+    import sys
+    from dependencies import HERE, ROOT
+    cfg=json.loads(Path(path).read_bytes())
+    parent=ROOT/'policy-iteration-successor'
+    sys.path.insert(0,str(parent))
+    from dependencies import load
+    bootstrap=load(HERE/'service_bootstrap.py','retained_original_bootstrap')
+    worker_process_environment=bootstrap.worker_process_environment
+    custom_operator_environment=bootstrap.custom_operator_environment
+    worker_process_environment()
+    custom_operator_environment()
+    from sync_overlay import verify
+    overlay=verify(cfg['named_rpc_overlay'])
+    acl=ROOT/'native-recompute-integration/state-repair/acl-runtime-successor'
+    search=[overlay,str(acl),str(HERE)]
+    sys.path[:0]=search
+    os.environ['PYTHONPATH']=':'.join(search+[os.environ.get('PYTHONPATH','')])
+    from engine_api import build_engine
+    engine=build_engine(cfg['engine'])
+    rows=engine.collective_rpc(replay, args=(cfg,),timeout=240)
+    assert sorted(row['rank'] for row in rows)==[0,1,2,3]
+    result=dict(ranks=rows, model=cfg['engine']['model'], actual_tp=4, language_layers_executed=0,
+                sampled_actions=0, production_acceptance=False)
+    with (Path(cfg['output'])/'RESULT.json').open('x') as stream:
+        json.dump(result,stream,indent=2);stream.flush();os.fsync(stream.fileno())
+    print(json.dumps(result))
+
+
+if __name__=='__main__':
+    import sys
+    main(sys.argv[1])
