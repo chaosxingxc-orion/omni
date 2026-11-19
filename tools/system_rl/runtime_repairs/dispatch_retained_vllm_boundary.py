@@ -200,7 +200,7 @@ def idle_replay(spec):
                     assert spec[flag] is True
                     replay[flag]=True
             if 'fresh_trace' in spec:
-                assert replay.get('isolate_fresh_paths') and 'retained_prefix_scan.py' in spec['input_files']
+                assert (replay.get('isolate_fresh_paths') or (spec['fresh_trace'].get('batch') and replay.get('fresh_prefill_control') and replay.get('independent_cache_salts'))) and 'retained_prefix_scan.py' in spec['input_files']
                 replay['fresh_trace']=spec['fresh_trace']
             if spec.get('compare_actor_frame_padding'):
                 assert spec['compare_actor_frame_padding'] is True

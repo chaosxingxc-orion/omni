@@ -4,7 +4,7 @@ import hashlib
 
 def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_origin=False,
           expert_operands=False, prefix_scan=None, origin_layers=2, attention_shape_shadow=False,
-          moe_sites=None):
+          moe_sites=None, request_seed=None):
     import torch
     from family_precision import ATTR
     model = worker.model_runner.get_model()
@@ -54,6 +54,19 @@ def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_or
         mask=pos.eq(target)
         if mask.ndim==2: mask=mask.all(dim=0)
         ids=torch.where(mask)[0].tolist()
+        if request_seed is not None:
+            runner=worker.model_runner
+            slots=[j for j,rid in enumerate(runner.input_batch.req_ids)
+                   if runner.requests[rid].sampling_params.seed==request_seed]
+            if len(slots)>1:raise ValueError('ambiguous scheduler seed')
+            if slots:
+                j,=slots
+                lo,hi=map(int,runner.query_start_loc.np[j:j+2])
+                ids=[i for i in ids if lo<=i<hi]
+                if ids:
+                    state['scheduler']=dict(slot=j,lo=lo,hi=hi,batch=len(runner.input_batch.req_ids),
+                        prior=int(runner.input_batch.num_computed_tokens_cpu[j]),seed=request_seed)
+            else:ids=[]
         if not ids:
             state.pop('at',None)
             return
@@ -97,6 +110,7 @@ def finish(worker):
             for k,v in states().items()}
     result=dict(rank=worker.rank,predictor_position=target,forward_rows=state['forward_rows'],
                 corrected_attention_states=counts,mode=mode,observed_boundaries=len(rows))
+    if 'scheduler' in state:result['scheduler']=state['scheduler']
     if mode=='decode':
         worker._retained_decode_first=(target,rows,attn_rows,prefix_rows,moe_rows,scan_rows)
     else:

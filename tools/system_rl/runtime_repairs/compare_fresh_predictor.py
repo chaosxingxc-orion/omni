@@ -26,7 +26,7 @@ def compare(current, original, spec, hf):
         raise ValueError('HF reuse invalid: different observed arithmetic')
     if now['manifest_sha256'] != old['manifest_sha256'] or now['schema'] != 'fresh-train-p-predictor-trace-v1':
         raise ValueError('unpaired request manifest')
-    row, = now['records']
+    row, = [r for r in now['records'] if 'predictor_trace' in r]
     trace = row['predictor_trace']
     idx = trace['config']['request_index']
     prev = old['records'][idx]
@@ -51,6 +51,17 @@ def compare(current, original, spec, hf):
         if sorted(r['rank'] for r in trace[mode])!=list(range(4)):
             raise ValueError('incomplete rank population')
     for r in sorted(trace['prefill'],key=lambda x:x['rank']):
+        if trace['config'].get('batch'):
+            cold,=[v for v in trace['decode'] if v['rank']==r['rank']]
+            for part in (cold,r):
+                sched=part['scheduler']
+                if sched['seed']!=row['seed'] or not 0<=sched['slot']<sched['batch'] or not sched['lo']<sched['hi']:
+                    raise ValueError('wrong scheduler request')
+                if part['observed_boundaries']!=98:
+                    raise ValueError('incomplete batch trace')
+            layers.append(dict(rank=r['rank'],target_first=r['first_observed_difference'],
+                               natural=cold['scheduler'],forced=r['scheduler']))
+            continue
         scan=r['prefix_scan']
         if r['observed_boundaries']!=98 or len(r['boundaries'])!=98 or scan['rows'][0]!=row['prompt_tokens']:
             raise ValueError('incomplete predictor or prefill coverage')

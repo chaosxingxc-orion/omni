@@ -16,12 +16,19 @@ def observe(impl, shared, mode, rows, *, shape_shadow=False):
         compute=contract.compute
         @wraps(compute)
         def record(q,k,v,ql,kl,**kw):
-            if len(ql)!=1 or len(kl)!=1 or len(k)!=len(v) or len(k)!=kl[0]:
-                raise ValueError('expected single original query and logical KV stream')
-            # Query row in a chunk; keys are logical prefix positions.
-            end=kl[0]-ql[0]+target+1
+            sched=shared.get('scheduler')
+            if sched:
+                idx=sched['slot']
+                if len(ql)!=sched['batch'] or len(ql)!=len(kl) or sum(ql[:idx])!=sched['lo'] or sum(ql[:idx+1])!=sched['hi']:
+                    raise ValueError('scheduler and actual attention endpoints disagree')
+            else:
+                if len(ql)!=1 or len(kl)!=1:raise ValueError('unbound packed attention')
+                idx=0
+            if sum(kl)!=len(k) or len(k)!=len(v) or sum(ql)!=len(q):
+                raise ValueError('logical attention stream lengths differ')
+            base=sum(kl[:idx]); end=kl[idx]-ql[idx]+target-sum(ql[:idx])+1
             if end!=shared['absolute']+1:raise ValueError('cache positions disagree with original prefix')
-            for name,tensor in [('query',q[target]),('key_prefix',k[:end]),('value_prefix',v[:end])]:
+            for name,tensor in [('query',q[target]),('key_prefix',k[base:base+end]),('value_prefix',v[base:base+end])]:
                 if name in rows:raise ValueError('repeated target attention')
                 rows[name]=tensor.detach().cpu().contiguous()
             result=compute(q,k,v,ql,kl,**kw)
