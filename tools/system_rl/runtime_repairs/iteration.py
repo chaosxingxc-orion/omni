@@ -144,7 +144,7 @@ def train(config,root,trajectory,witness,parity,learning,resume,iteration,*,diag
     directory=Path(root)/('step-%06d'%iteration)/('diagnostic' if diagnostic else 'update')
     spec=copy.deepcopy(read(config['training_package_template']))
     spec.update(execution_mode=config.get('execution_mode','formal'),diagnostic_scope=config.get('diagnostic_scope','strict_full'),diagnostic_source_population=config.get('diagnostic_source_population'))
-    for key in ('diagnostic_protocol','diagnostic_target_nodes'):
+    for key in ('diagnostic_protocol','diagnostic_target_nodes','engineering_update_sequence'):
         if key in config:spec[key]=copy.deepcopy(config[key])
     if config.get('diagnostic_scope')=='dataset_profile':spec['dataset_profile']=copy.deepcopy(config['dataset_profile'])
     spec.update(trajectory=trajectory,endpoint_witness=witness,parity=parity,learning=learning,resume=resume,
@@ -344,7 +344,7 @@ def run(config_path):
                 state['phase']='dev' if step==0 or step%config['selection']['dev_every_optimizer_steps']==0 or step>=config['max_optimizer_updates'] else 'capture'
                 if state.get('phase_boundary'):state['phase']='dev'
                 if samples_complete(config,state):state['phase']='dev'
-                if finite:state['phase']='finite_complete' if state['resume_ref'] else 'capture'
+                if finite:state['phase']='finite_complete' if step>=config['max_optimizer_updates'] else 'capture'
                 if bounded:state['phase']='capture'
                 from diagnostic_retention import release_consumers
                 release_consumers(config,state,root)
@@ -481,8 +481,13 @@ def run(config_path):
                     state['capture_input_ref']=bounded_capture_input(config,source_input,state['policy_ref'],state['witness_ref'],
                         state['learning_ref'],root/('inputs-%06d'%state['cohort_sequence']),cohort_sequence=state['cohort_sequence'])
                 elif finite:
-                    require(state['cohort_sequence']==1,'finite mode cannot create successor cohort')
-                    state['capture_input_ref']=source_input
+                    if config.get('engineering_update_sequence'):
+                        from next_input import bounded_capture_input
+                        state['capture_input_ref']=bounded_capture_input(config,source_input,state['policy_ref'],state['witness_ref'],
+                            state['learning_ref'],root/('inputs-%06d'%state['cohort_sequence']),cohort_sequence=state['cohort_sequence'])
+                    else:
+                        require(state['cohort_sequence']==1,'finite mode cannot create successor cohort')
+                        state['capture_input_ref']=source_input
                 else:
                     state['capture_input_ref']=capture_input(source_input,state['screen'],state['policy_ref'],state['witness_ref'],
                         state['learning_ref'],state['resume_ref'],root/('inputs-%06d'%state['cohort_sequence']),root_seed=config['root_seed'],sampling_round=state['sampling_round'],cohort_sequence=state['cohort_sequence'])
@@ -496,7 +501,7 @@ def run(config_path):
                 spec=copy.deepcopy(read(config['training_package_template']))
                 spec.pop('diagnostic_index',None)
                 spec.update(execution_mode=config.get('execution_mode','formal'),diagnostic_scope=config.get('diagnostic_scope','strict_full'),diagnostic_source_population=config.get('diagnostic_source_population'))
-                for key in ('diagnostic_protocol','diagnostic_target_nodes'):
+                for key in ('diagnostic_protocol','diagnostic_target_nodes','engineering_update_sequence'):
                     if key in config:spec[key]=copy.deepcopy(config[key])
                 if config.get('diagnostic_scope')=='dataset_profile':spec['dataset_profile']=copy.deepcopy(config['dataset_profile'])
                 spec.update(action='finalize',pending_capture=state['capture']['pending_capture_ref'],
