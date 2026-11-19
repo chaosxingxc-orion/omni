@@ -63,6 +63,13 @@ def main(spec, inputs_root, out):
         require(int(witness) == world*(world+1)//2, 'first HCCL collective mismatch')
         commit(out/f'rank-{rank}'/'COLLECTIVE-READY.json',
                dict(world_size=world, uid=uid.pw_uid, collective_sum=int(witness)))
+        if 'operator_vjp' in spec:
+            for name in ('retained_operator_vjp.py','retained_expert_candidate.py','retained_attention_candidate.py'):
+                sealed(name)
+            from retained_operator_vjp import measure
+            probe = spec['operator_vjp']
+            commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed']))
+            return
         worker, adapted, _ = construct(cfg, out)
         actor = worker.actor
         sample = inputs_for(prep, tokens, adapted, device)
@@ -88,20 +95,21 @@ def main(spec, inputs_root, out):
                 hooks.append(mod.register_forward_hook(lambda m, a, v, k=f'{i}.{site}': keep(k, v)))
         hooks.append(text.norm.register_forward_hook(lambda m, a, v: keep('final_norm', v)))
         close_candidate = None
+        do_vjp = spec.get('actor_vjp',False)
         if 'gate_candidate_layers' in spec:
             sealed('retained_expert_candidate.py')
             from retained_expert_candidate import attach_hf
-            close_candidate = attach_hf(text, spec['gate_candidate_layers'], inner)
+            close_candidate = attach_hf(text, spec['gate_candidate_layers'], inner, **(dict(frozen_vjp=True) if do_vjp else {}))
         close_attention = None
         if 'attention_candidate_layers' in spec:
             sealed('retained_attention_candidate.py')
             from retained_attention_candidate import attach_hf as attach_attention
-            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner)
+            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner, **(dict(training_vjp=True) if do_vjp else {}))
         close_down = None
         if 'down_candidate_layers' in spec:
             sealed('retained_expert_candidate.py')
             from retained_expert_candidate import attach_hf as attach_expert
-            close_down = attach_expert(text, spec['down_candidate_layers'], inner, stage='down')
+            close_down = attach_expert(text, spec['down_candidate_layers'], inner, stage='down', **(dict(frozen_vjp=True) if do_vjp else {}))
         actor.actor_module.eval()
         start = time.monotonic()
         policy = dict(schema='omni-response-logits-v1', vocabulary=spec['vocabulary'], max_bytes=16*1024**2)
@@ -112,6 +120,34 @@ def main(spec, inputs_root, out):
             for h in hooks:
                 h.remove()
         require(len(rows) == 98, 'incomplete actual model trace')
+        gradient = {}
+        if do_vjp:
+            actor.actor_module.train()
+            with torch.enable_grad():
+                _, training_scores = forward(actor,sample,temperature=1.,feature_dtype=torch.bfloat16)
+                objective = -training_scores.mean()
+                objective.backward()
+            loss=float(objective.detach())
+            total, sq, missing = 0, 0., []
+            for name,p in actor.actor_module.named_parameters():
+                if not p.requires_grad or not p.numel():
+                    continue
+                if p.grad is None:
+                    missing.append(name)
+                    continue
+                g=p.grad.detach().float()
+                require(bool(g.isfinite().all()),'nonfinite adapter gradient: '+name)
+                total += g.numel()
+                sq += float(torch.linalg.vector_norm(g))**2
+            counts=torch.tensor([total,len(missing)],device=device,dtype=torch.int64)
+            dist.all_reduce(counts)
+            sums=torch.tensor([sq],device=device,dtype=torch.float32)
+            dist.all_reduce(sums)
+            require(int(counts[0])==6684672 and bool(sums.isfinite().all()) and float(sums[0])>0 and counts[1]==0,'incomplete adapter gradient coverage')
+            gradient=dict(objective='mean fixed-action negative log probability (diagnostic)',
+                loss=loss,live_scores=training_scores.detach().float().cpu()[0].tolist(),
+                forward_max_abs=float((logp-training_scores.detach()).abs().max()),
+                globally_covered=int(counts[0]),global_norm=float(sums[0])**.5, optimizer_steps=0)
         down_candidate = close_down() if close_down else None
         candidate = close_candidate() if close_candidate else None
         attn_candidate = close_attention() if close_attention else None
@@ -126,7 +162,7 @@ def main(spec, inputs_root, out):
                       predictor_position=pos, rows=row_hashes, updates=0,
                       gate_candidate=candidate, attention_candidate=attn_candidate,
                       down_candidate=down_candidate,
-                      elapsed_seconds=time.monotonic()-start)
+                      actor_gradient=gradient,elapsed_seconds=time.monotonic()-start)
         commit(out/f'rank-{rank}'/'RESULT.json', result)
     finally:
         dist.destroy_process_group()

@@ -3,15 +3,36 @@ from collections import Counter
 from functools import wraps
 
 
-def causal_attention():
+def causal_attention(*, training_vjp=False):
     """One implementation for the live TP4 and full-head FSDP scopes."""
     import torch
     import torch_npu
 
     masks = {}
 
+    class CausalPrefill(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, q, k, v, n, scale):
+            ctx.save_for_backward(q,k,v)
+            ctx.n, ctx.scale = n, scale
+            return compute(q,k,v,[n],[n],scale=scale)
+
+        @staticmethod
+        def backward(ctx, dy):
+            # Compute the derivative of causal grouped-query attention using
+            # the training operator's own softmax state. Never feed it FIA
+            # scratch buffers, which have a different ABI.
+            with torch.enable_grad():
+                q,k,v = (x.detach().contiguous().requires_grad_() for x in ctx.saved_tensors)
+                n=ctx.n
+                output = torch_npu.npu_fusion_attention(q,k,v,8,'TND',atten_mask=masks[q.device],
+                         scale=ctx.scale,actual_seq_qlen=[n],actual_seq_kvlen=[n],
+                         sparse_mode=3,keep_prob=1.)[0]
+                grads = torch.autograd.grad(output,(q,k,v),dy.contiguous())
+            return (*grads, None, None)
+
     def compute(q, k, v, ql, kl, *, scale):
-        if (torch.is_grad_enabled() or q.device.type != 'npu'
+        if ((torch.is_grad_enabled() and not training_vjp) or q.device.type != 'npu'
                 or not (q.device == k.device == v.device)
                 or any(x.dtype != torch.bfloat16 for x in (q, k, v))
                 or q.shape[1:] != (8, 128) or k.shape[1:] != (1, 128)
@@ -23,6 +44,10 @@ def causal_attention():
             raise ValueError('expected no-gradient BF16 causal Omni attention operands')
         if q.device not in masks:
             masks[q.device] = torch.ones((2048, 2048), device=q.device, dtype=torch.bool).triu_(1)
+        if torch.is_grad_enabled():
+            if ql != kl or len(ql) != 1:
+                raise ValueError('training VJP requires a single full causal prefill')
+            return CausalPrefill.apply(q,k,v,ql[0],scale)
         output, qi, ki = [], 0, 0
         for nq, nk in zip(ql, kl):
             query = q[qi:qi+nq].contiguous()
@@ -98,14 +123,14 @@ def attach_vllm(model, layers):
     return close
 
 
-def attach_hf(text, layers, unwrap):
+def attach_hf(text, layers, unwrap, *, training_vjp=False):
     """Intercept the real HF SDPA call inside the selected decoder attention only."""
     import torch
     from torch.nn import functional as F
     from torch.overrides import TorchFunctionMode
 
     _validate(layers, text.layers)
-    compute = causal_attention()
+    compute = causal_attention(training_vjp=training_vjp)
     counts, handles, active = Counter(), [], []
 
     class AttentionMode(TorchFunctionMode):

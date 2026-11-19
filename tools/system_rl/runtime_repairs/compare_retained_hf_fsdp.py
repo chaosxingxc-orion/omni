@@ -1,6 +1,7 @@
 """Compare real HF ranks with a closed TP4 replay; never grant admission."""
 import argparse
 import json
+import math
 from pathlib import Path
 
 from collect_retained_boundaries import store
@@ -40,6 +41,49 @@ def compare_hf_topology(hf4, hf8):
                 raw_top1_flips=sum(x!=y for x,y in zip(a['argmax'],b['argmax'],strict=True)),
                 elapsed_seconds={str(n):[r['elapsed_seconds'] for r in arm]
                                  for n,arm in ((4,hf4),(8,hf8))}, production_acceptance=False)
+
+
+def compare_actor_vjp(reference, live, old_spec, new_spec):
+    """Paired fixed-action diagnostic; permit only the explicitly pinned VJP additions."""
+    old, new = hf_reference(reference, 4), hf_reference(live, 4)
+    ignore = {'name', 'hot', 'source_pins', 'files', 'actor_vjp'}
+    if ({k:v for k,v in old_spec.items() if k not in ignore} !=
+            {k:v for k,v in new_spec.items() if k not in ignore}
+            or old_spec.get('actor_vjp') or new_spec.get('actor_vjp') is not True):
+        raise ValueError('changed model, topology or execution configuration')
+    for key, exceptions in [('source_pins', {'retained_hf_fsdp_control.py'}),
+                            ('files', {'retained_attention_candidate.py','retained_expert_candidate.py'})]:
+        a,b=old_spec[key],new_spec[key]
+        if set(a)!=set(b) or any(a[k]!=b[k] for k in a.keys()-exceptions):
+            raise ValueError('changed sealed inputs or worker source')
+    if old['input_pins']!=old_spec['files'] or new['input_pins']!=new_spec['files']:
+        raise ValueError('result pins do not match execution configuration')
+    for k in ('hardware','asset_sha256','internal_format','predictor_position'):
+        if old[k]!=new[k]:
+            raise ValueError('different reference: '+k)
+    g=new['actor_gradient']
+    if (not g or any(r['actor_gradient']!=g for r in live) or g['optimizer_steps']!=0
+            or g['globally_covered']!=6684672 or not math.isfinite(g['global_norm'])
+            or g['global_norm']<=0 or not math.isfinite(g['loss'])):
+        raise ValueError('incomplete actor gradient evidence')
+    for a in (old['scores'],new['scores'],g['live_scores']):
+        if (not a or len(a)!=len(old['argmax']) or not all(map(math.isfinite,a))):
+            raise ValueError('incomplete finite action scores')
+    if len(old['rows'])!=98 or old['rows'].keys()!=new['rows'].keys():
+        raise ValueError('incomplete paired boundaries')
+    for k in ('gate_candidate','down_candidate','attention_candidate'):
+        if (old[k]['arithmetic']!=new[k]['arithmetic'] or set(new[k]['layers'])!={str(i) for i in range(48)}
+                or set(old[k]['layers'])!=set(new[k]['layers']) or not all(v>0 for v in new[k]['layers'].values())):
+            raise ValueError('candidate scope changed: '+k)
+    changed=[k for k,v in old['rows'].items() if new['rows'][k]!=v]
+    frozen=metrics(old['scores'],new['scores'],.01)
+    train=metrics(old['scores'],g['live_scores'],.01)
+    return dict(reference_vs_frozen=frozen,reference_vs_grad_enabled=train,
+                frozen_logits_digest_equal=old['full_vocabulary']==new['full_vocabulary'],
+                frozen_raw_top1_flips=sum(x!=y for x,y in zip(old['argmax'],new['argmax'],strict=True)),
+                frozen_observed_boundaries=len(old['rows']),frozen_changed_boundaries=changed,
+                gradient_coverage=g['globally_covered'],gradient_norm=g['global_norm'],
+                fixed_action_nll=g['loss'],optimizer_steps=0,production_acceptance=False)
 
 
 def compare(hf, vl, lease):
@@ -112,6 +156,17 @@ def compare(hf, vl, lease):
         return dict(compared=len(values), mismatches=sum(x!=y for x,y in zip(rank0['argmax'],values)))
     prefill_top1 = top1(p['forced_prefill'].get('observed_raw_top1'))
     decode_top1 = top1(p.get('matching_prefix_raw_top1'))
+    extra = {}
+    if lease.get('prefix_cache_pair') == 'P':
+        w = p['cache_pair']
+        scores = w['scores']
+        if (w['cold_cached_tokens'] != 0 or type(w['warm_cached_tokens']) is not int
+                or not 0 < w['warm_cached_tokens'] <= w['prompt_tokens']
+                or len(w['raw_top1']) != len(scores) or len(scores) > len(ref)):
+            raise ValueError('cold miss and warm hit required on the same retained prompt')
+        extra['cache_pair'] = dict(cold_tokens=0, warm_tokens=w['warm_cached_tokens'],
+                prompt_tokens=w['prompt_tokens'], warm_complete=len(scores)==len(ref),
+                warm_vs_hf=metrics(ref[:len(scores)],scores,.01),warm_raw_top1=top1(w['raw_top1']))
     return dict(actions=len(ref), predictor_position=rank0['predictor_position'],
                 hf_scores=ref, vl_prefill_scores=pref, vl_decode_matching_prefix_scores=decode,
                 hf_vs_vl_prefill=metrics(ref,pref,.01), hf_vs_vl_decode=metrics(ref[:len(decode)],decode,.01),
@@ -120,7 +175,7 @@ def compare(hf, vl, lease):
                 vocabulary=rank0['full_vocabulary']['shape'][-1],
                 hf_argmax_observed=True, vl_argmax_compared=bool(prefill_top1 and decode_top1),
                 hf_vs_vl_prefill_top1=prefill_top1, hf_vs_vl_decode_top1=decode_top1,
-                production_acceptance=False)
+                **extra, production_acceptance=False)
 
 
 if __name__=='__main__':
@@ -129,12 +184,21 @@ if __name__=='__main__':
     modes = p.add_mutually_exclusive_group(required=True)
     modes.add_argument('--vl',type=Path)
     modes.add_argument('--hf8',type=Path)
+    modes.add_argument('--actor-vjp',type=Path)
+    p.add_argument('--reference-spec',type=Path)
+    p.add_argument('--actor-spec',type=Path)
     p.add_argument('--lease',type=Path)
     p.add_argument('--output',type=Path,required=True)
     a = p.parse_args()
     h = [read(a.hf/f'rank-{i}'/'RESULT.json') for i in range(4)]
     if bool(a.lease) != bool(a.vl):
         p.error('--lease is required with --vl only')
-    result = (compare_hf_topology(h, [read(a.hf8/f'rank-{i}'/'RESULT.json') for i in range(8)])
+    if a.actor_vjp:
+        if not (a.reference_spec and a.actor_spec):
+            p.error('--actor-vjp requires both immutable run specifications')
+        result=compare_actor_vjp(h,[read(a.actor_vjp/f'rank-{i}'/'RESULT.json') for i in range(4)],
+                                 read(a.reference_spec),read(a.actor_spec))
+    else:
+        result = (compare_hf_topology(h, [read(a.hf8/f'rank-{i}'/'RESULT.json') for i in range(8)])
               if a.hf8 else compare(h,read(a.vl),read(a.lease)))
     store(a.output,json.dumps(result,indent=2).encode())

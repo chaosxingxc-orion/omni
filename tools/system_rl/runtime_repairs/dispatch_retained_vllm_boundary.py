@@ -165,6 +165,10 @@ def idle_replay(spec):
             replay['down_candidate_layers']=spec['down_candidate_layers']
         if spec.get('native_audio'):
             del replay['audio_control']
+        if 'prefix_cache_pair' in spec:
+            assert spec['prefix_cache_pair'] == 'P' and spec.get('native_audio') is True
+            assert spec.get('trace_predictor') is False
+            replay['prefix_cache_pair'] = 'P'
         if 'audio_attention_layers' in spec:
             layers = spec['audio_attention_layers']
             assert spec.get('native_audio') is True

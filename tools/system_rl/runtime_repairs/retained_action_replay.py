@@ -161,7 +161,11 @@ def decode(engine, cfg):
                                 repetition_penalty=wire['repetition_penalty'],presence_penalty=wire['presence_penalty'],
                                 frequency_penalty=wire['frequency_penalty'],logprobs=1,max_tokens=len(original))
         tracing=trace_begin(case,behavior,'decode')
-        req, = engine.generate([{'prompt':case['prompt'],'multi_modal_data':{'audio':(samples,rate)}}],
+        request = {'prompt':case['prompt'],'multi_modal_data':{'audio':(samples,rate)}}
+        cache_pair = cfg.get('prefix_cache_pair') == case['node']
+        if cache_pair:
+            request['cache_salt'] = 'retained-native-parity-' + packet['wire_sha256']
+        req, = engine.generate([request],
                                sampling_params=params,use_tqdm=False)
         if list(req.prompt_token_ids)!=behavior['prompt_token_ids']:
             raise ValueError('Retained and current prompt token IDs differ')
@@ -182,6 +186,23 @@ def decode(engine, cfg):
                            same_action_prefix=len(deltas),deltas=deltas, matching_prefix_scores=scores,
                            matching_prefix_raw_top1=raw_top1,
                            all_tokens_within_limit=len(deltas)==len(original) and max(deltas)<=case['limit']))
+        if cache_pair:
+            warm, = engine.generate([request], sampling_params=params,use_tqdm=False)
+            if list(warm.prompt_token_ids) != behavior['prompt_token_ids']:
+                raise ValueError('warm cache changed the expanded prompt IDs')
+            chosen, = warm.outputs
+            matching, top1 = [], []
+            for expected, actual, lp in zip(original,chosen.token_ids,chosen.logprobs):
+                if expected != actual:
+                    break
+                value = lp[actual].logprob
+                if not math.isfinite(value):
+                    raise ValueError('nonfinite warm action score')
+                matching.append(value)
+                top1.append(next((i for i,v in lp.items() if v.rank==1),None))
+            result[-1]['cache_pair'] = dict(cold_cached_tokens=req.num_cached_tokens,
+                warm_cached_tokens=warm.num_cached_tokens, prompt_tokens=len(req.prompt_token_ids),
+                generated=len(chosen.token_ids), scores=matching, raw_top1=top1)
         if tracing:
             if len(deltas)<cfg['trace_predictor']['action_ordinal']:
                 raise ValueError('traced action differs from original')

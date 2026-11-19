@@ -23,7 +23,29 @@ def project(input, weight):
     return result
 
 
-def attach_hf(text, layers, unwrap, *, stage='gate'):
+def frozen_project(x, weight):
+    """Preserve the validated forward; propagate gradients through a frozen expert."""
+    import torch
+    if weight.requires_grad:
+        raise ValueError("frozen expert weight required")
+    if not torch.is_grad_enabled() or not x.requires_grad:
+        return project(x, weight)
+
+    class FrozenProjection(torch.autograd.Function):
+        @staticmethod
+        def forward(ctx, source, matrix):
+            ctx.save_for_backward(matrix)
+            return project(source, matrix)
+
+        @staticmethod
+        def backward(ctx, upstream):
+            matrix, = ctx.saved_tensors
+            return torch.mm(upstream.contiguous(), matrix.T), None
+
+    return FrozenProjection.apply(x, weight)
+
+
+def attach_hf(text, layers, unwrap, *, stage='gate', frozen_vjp=False):
     import torch
     from transformers.integrations import moe
 
@@ -37,12 +59,13 @@ def attach_hf(text, layers, unwrap, *, stage='gate'):
     def grouped(input, weight, offs):
         if not active or tuple(weight.shape[1:]) != shape:
             return old(input, weight, offs)
-        if torch.is_grad_enabled():
+        if torch.is_grad_enabled() and not frozen_vjp:
             raise ValueError("diagnostic only; gate candidate backward has not been validated")
         ends = offs.cpu().tolist()
         if len(ends) != len(weight) or ends[-1] != len(input) or any(a > b for a, b in zip([0]+ends, ends)):
             raise ValueError("HF expert offsets do not cover complete routes")
-        outputs = [project(input[lo:hi], weight[e])
+        projection = frozen_project if frozen_vjp else project
+        outputs = [projection(input[lo:hi], weight[e])
                    for e, (lo, hi) in enumerate(zip([0]+ends, ends)) if lo < hi]
         counts[active[-1]] += len(outputs)
         return torch.cat(outputs)

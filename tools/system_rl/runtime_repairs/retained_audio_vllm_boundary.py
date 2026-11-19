@@ -134,7 +134,8 @@ def main(path):
         try:
             result['retained_decode']=decode(engine,cfg)
             result['language_layers_executed']=48
-            result['sampled_actions']=sum(c['generated']+c.get('forced_prefill',{}).get('extra_generated',0) for c in result['retained_decode'])
+            result['sampled_actions']=sum(c['generated']+c.get('forced_prefill',{}).get('extra_generated',0)
+                                         +c.get('cache_pair',{}).get('generated',0) for c in result['retained_decode'])
         finally:
             result['decode_row_receipts']=engine.collective_rpc('omni_retained_close_rows',timeout=240)
     with (Path(cfg['output'])/'RESULT.json').open('x') as stream:
