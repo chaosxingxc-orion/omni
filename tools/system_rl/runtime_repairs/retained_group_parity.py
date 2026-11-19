@@ -79,9 +79,10 @@ def sample(engine, cfg):
         params.append(SamplingParams(seed=wire['seed'],temperature=wire['temperature'],top_p=wire['top_p'],
                                      top_k=-1,min_p=0.,max_tokens=wire['max_tokens'],logprobs=1))
     isolate=cfg.get('isolate_fresh_paths',False)
-    if isolate:
+    if isolate or cfg.get('independent_cache_salts'):
         for row,req in zip(selected,requests,strict=True):
             req['cache_salt']=row['packet']['request_id']
+    if isolate:
         if trace:begin("decode")
         outputs=[engine.generate([req],sampling_params=param,use_tqdm=False)[0]
                  for req,param in zip(requests,params,strict=True)]
@@ -93,6 +94,8 @@ def sample(engine, cfg):
         packet=row['packet']; out,=req.outputs
         if list(req.prompt_token_ids)!=row['prompt_token_ids'] or not out.token_ids or not req.finished:
             raise ValueError('changed multimodal context or incomplete output')
+        if cfg.get('independent_cache_salts') and req.num_cached_tokens!=0:
+            raise ValueError('independent cache salt had a shared hit')
         scores=[];top=[]
         for t,lp in zip(out.token_ids,out.logprobs,strict=True):
             scores.append(lp[t].logprob);top.append(next(i for i,v in lp.items() if v.rank==1))
@@ -103,7 +106,7 @@ def sample(engine, cfg):
                             seed=packet['wire']['seed'],prompt_tokens=len(req.prompt_token_ids),
                             token_ids=list(out.token_ids),behavior_logprobs=scores,raw_top1=top,
                             text=out.text,finish_reason=out.finish_reason,cached_tokens=req.num_cached_tokens))
-    if isolate:
+    if isolate or cfg.get('fresh_prefill_control'):
         for row,req,r in zip(selected,requests,records,strict=True):
             ids=r['token_ids'];prompt=dict(req,prompt_token_ids=req['prompt_token_ids']+ids)
             if trace:

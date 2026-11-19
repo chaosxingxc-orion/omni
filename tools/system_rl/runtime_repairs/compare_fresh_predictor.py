@@ -15,6 +15,15 @@ def compare(current, original, spec, hf):
     if hashlib.sha256(original.read_bytes()).hexdigest() != run['files'][cfg['result']]:
         raise ValueError('original rollout not bound to the reference actor')
     now, old = (v['fresh_group'] for v in (cur, ref))
+    def arithmetic(t):
+        receipts=t['decode_row_receipts']
+        if sorted(r['rank'] for r in receipts)!=list(range(4)) or t['actual_tp']!=4:
+            raise ValueError('incomplete four-rank execution')
+        return sorted((r['rank'], k, v['arithmetic'], sorted(v['layers']))
+                      for r in receipts for k,v in r.items()
+                      if isinstance(v,dict) and 'arithmetic' in v)
+    if arithmetic(cur)!=arithmetic(ref):
+        raise ValueError('HF reuse invalid: different observed arithmetic')
     if now['manifest_sha256'] != old['manifest_sha256'] or now['schema'] != 'fresh-train-p-predictor-trace-v1':
         raise ValueError('unpaired request manifest')
     row, = now['records']

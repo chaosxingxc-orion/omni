@@ -195,6 +195,10 @@ def idle_replay(spec):
             if spec.get('isolate_fresh_paths'):
                 assert spec['isolate_fresh_paths'] is True
                 replay['isolate_fresh_paths']=True
+            for flag in ('independent_cache_salts','fresh_prefill_control'):
+                if flag in spec:
+                    assert spec[flag] is True
+                    replay[flag]=True
             if 'fresh_trace' in spec:
                 assert replay.get('isolate_fresh_paths') and 'retained_prefix_scan.py' in spec['input_files']
                 replay['fresh_trace']=spec['fresh_trace']
