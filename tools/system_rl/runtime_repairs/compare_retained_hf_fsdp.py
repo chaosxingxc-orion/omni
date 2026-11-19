@@ -11,16 +11,39 @@ def read(p):
     return json.loads(p.read_bytes())
 
 
-def compare(hf, vl, lease):
-    if len(hf) != 4 or sorted(r['rank'] for r in hf) != list(range(4)):
-        raise ValueError('four HF ranks required')
-    rank0 = hf[0]
+def hf_reference(hf, world):
+    if world not in (4, 8) or sorted(r['rank'] for r in hf) != list(range(world)):
+        raise ValueError(f'{world} distinct HF ranks required')
+    rank0 = min(hf, key=lambda r: r['rank'])
     keys = ('world_size', 'input_pins', 'asset_sha256', 'internal_format', 'full_vocabulary',
             'argmax', 'scores', 'predictor_position', 'rows', 'updates',
             'gate_candidate', 'attention_candidate', 'down_candidate')
-    if any(row['world_size'] != 4 or row['updates'] != 0 or
+    if any(row['world_size'] != world or row['updates'] != 0 or
            any(row.get(k) != rank0.get(k) for k in keys) for row in hf):
         raise ValueError('HF ranks disagree on the same original input')
+    return rank0
+
+
+def compare_hf_topology(hf4, hf8):
+    a, b = hf_reference(hf4, 4), hf_reference(hf8, 8)
+    for key in ('input_pins','asset_sha256','hardware','internal_format','predictor_position',
+                'gate_candidate','attention_candidate','down_candidate'):
+        if a.get(key) != b.get(key):
+            raise ValueError('topology comparison changed '+key)
+    if (not a['scores'] or len(a['scores']) != len(b['scores'])
+            or len(a['argmax']) != len(a['scores']) or len(b['argmax']) != len(b['scores'])
+            or list(a['rows']) != list(b['rows'])):
+        raise ValueError('incomplete paired topology observations')
+    changed = [k for k,v in a['rows'].items() if v != b['rows'][k]]
+    return dict(hf4_vs_hf8=metrics(a['scores'],b['scores'],.01), changed_boundaries=changed,
+                observed_boundaries=len(a['rows']), first=next(iter(changed),None),
+                raw_top1_flips=sum(x!=y for x,y in zip(a['argmax'],b['argmax'],strict=True)),
+                elapsed_seconds={str(n):[r['elapsed_seconds'] for r in arm]
+                                 for n,arm in ((4,hf4),(8,hf8))}, production_acceptance=False)
+
+
+def compare(hf, vl, lease):
+    rank0 = hf_reference(hf, 4)
     if vl['actual_tp'] != 4 or vl['production_acceptance'] or not lease['score_retained_prefill']:
         raise ValueError('closed diagnostic TP4 replay required')
     for name in ('retained-actions.json', 'P-BEHAVIOR.json'):
@@ -103,9 +126,15 @@ def compare(hf, vl, lease):
 if __name__=='__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--hf',type=Path,required=True)
-    p.add_argument('--vl',type=Path,required=True)
-    p.add_argument('--lease',type=Path,required=True)
+    modes = p.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--vl',type=Path)
+    modes.add_argument('--hf8',type=Path)
+    p.add_argument('--lease',type=Path)
     p.add_argument('--output',type=Path,required=True)
     a = p.parse_args()
     h = [read(a.hf/f'rank-{i}'/'RESULT.json') for i in range(4)]
-    store(a.output,json.dumps(compare(h,read(a.vl),read(a.lease)),indent=2).encode())
+    if bool(a.lease) != bool(a.vl):
+        p.error('--lease is required with --vl only')
+    result = (compare_hf_topology(h, [read(a.hf8/f'rank-{i}'/'RESULT.json') for i in range(8)])
+              if a.hf8 else compare(h,read(a.vl),read(a.lease)))
+    store(a.output,json.dumps(result,indent=2).encode())
