@@ -10,6 +10,16 @@ from run_package import read,pin,write
 from policy_identity import digest
 
 
+def model_padding_id(model):
+    # Bind CPU collation to the same tokenizer as the actor; fixtures may use 0.
+    tokenizer=read(Path(model)/'tokenizer_config.json')
+    name=tokenizer['pad_token']
+    if isinstance(name,dict):name=name['content']
+    ids=[int(i) for i,token in tokenizer['added_tokens_decoder'].items() if token['content']==name]
+    require(len(ids)==1 and ids[0]>=0,'ambiguous or missing model padding token')
+    return ids[0]
+
+
 def bind_business_executables(business, root):
     """Derive active code pins from the sealed release; never repin data/history."""
     release_ref=pin(HERE/'SOURCE-PINS.json')
@@ -158,7 +168,7 @@ def build(config,output):
     context_limit=spec.get('context_limit',read(HERE/'runtime.json')['model'].get('context_limit',8192))
     require(type(context_limit) is int and context_limit>0,'positive configured training context limit')
     consumer=dict(source_pins=source_pins,sealed_adapter_ref=pin(ROOT/'training-consumer-adapter/adapter.py'),
-        context_limit=context_limit,pad_token_id=0,
+        context_limit=context_limit,pad_token_id=model_padding_id(read(HERE/'runtime.json')['model']['path']),
         sampling_distribution=read(profile)['sampling'],recording_map_ref=materials['recording_map_ref'],learning_config_ref=lr)
     task=upstream()
     from scorer_extension import install

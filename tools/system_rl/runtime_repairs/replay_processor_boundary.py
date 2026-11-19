@@ -43,6 +43,31 @@ def run(config_path, model_path):
         hf_processor=processor.info.get_hf_processor()
         manifest=json.loads(checked(root,spec['fresh_group']).read_bytes())
         fresh=[]
+        if spec.get('save_training_features'):
+            from transformers.models.qwen3_omni_moe.modeling_qwen3_omni_moe import Qwen3OmniMoeThinkerForConditionalGeneration as HF
+            from types import SimpleNamespace
+            hf=SimpleNamespace(config=thinker.config,spatial_merge_size=thinker.config.vision_config.spatial_merge_size)
+            acts=json.loads(checked(root,spec['sampled']).read_bytes())['fresh_group']
+            if acts['manifest_sha256']!=spec['fresh_group']['sha256'] or manifest['schema']!='bounded-train-natural-requests-v1':
+                raise ValueError('unexpected TRAIN source')
+            cache={};results=[]
+            for row,act in zip(manifest['rows'],acts['records'],strict=True):
+                pkt=row['packet'];rid=pkt['request_id'];g=row['group']
+                if rid!=act['request_id'] or pkt['wire_sha256']!=act['wire_sha256']:raise ValueError('action identity drift')
+                if g not in cache:cache[g]=prepare_packet(hf_processor,pkt)
+                pp=cache[g];e=pp['encoded'];ids=e['input_ids'][0].tolist();ts=act['token_ids']
+                if ids!=row['prompt_token_ids']:raise ValueError('expanded prompt drift')
+                full=torch.tensor([ids+ts]);length=e['feature_attention_mask'].sum(-1)
+                pos,_=HF.get_rope_index(hf,input_ids=full,attention_mask=torch.ones_like(full),audio_seqlens=length,use_audio_in_video=False)
+                decoded=hf_processor.tokenizer.decode(ts,skip_special_tokens=True,clean_up_tokenization_spaces=False)
+                if decoded!=act['text'] or not torch.equal(pos,pos.long()):raise ValueError('action text or position mismatch')
+                results.append(dict(request_id=rid,positions=pos[:,0].long().tolist(),decoded=decoded))
+            v=dict(groups={str(i):dict(prompt=pp['prompt'],features=pp['encoded']['input_features'].tolist(),
+                    mask=pp['encoded']['feature_attention_mask'].long().tolist()) for i,pp in cache.items()},rows=results,
+                    eos=hf_processor.tokenizer.eos_token_id,pad=hf_processor.tokenizer.pad_token_id,vocabulary=len(hf_processor.tokenizer),
+                    audio_id=hf_processor.tokenizer.convert_tokens_to_ids('<|audio_pad|>'),manifest=spec['fresh_group']['sha256'],behavior=spec['sampled']['sha256'])
+            with Path('TRAIN-FEATURES.json').open('x') as f:json.dump(v,f)
+            return dict(rows=len(results),groups=len(cache),used_model_weights=False,features_sha256=hashlib.sha256(Path('TRAIN-FEATURES.json').read_bytes()).hexdigest())
         representatives=(r for r in manifest['rows'] if r['replicate']==0)
         behavior_rows={r['request_id']:r for r in json.loads(checked(root,spec['sampled']).read_bytes())['fresh_group']['records']}
         for row in representatives:

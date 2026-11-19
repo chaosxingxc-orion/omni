@@ -60,6 +60,12 @@ def compare(hot, spec_path, tp_path):
                 td=[a-b for a,b in zip(train,t['behavior_logprobs'],strict=True)]
                 tf=[j for j,(a,b) in enumerate(zip(train_top,t['raw_top1'],strict=True),1) if a!=b]
                 if not all(map(math.isfinite,td)): raise ValueError('invalid live actor scores')
+                if s['fresh_group'].get('frozen_reference'):
+                    ref=r['reference_scores']
+                    if len(ref)!=r['tokens'] or not all(map(math.isfinite,ref)):
+                        raise ValueError('incomplete reference score cache')
+                    if ref!=r['scores']:
+                        raise ValueError('independently scored base reference differs from initial actor')
                 actor_result=dict(train_max_abs=max(map(abs,td)),train_sequence_abs=abs(math.fsum(td)),train_strict_flips=tf)
             delta=[a-b for a,b in zip(r['scores'],t['behavior_logprobs'],strict=True)]
             if not all(map(math.isfinite,delta)) or r['delta']!=delta:raise ValueError('invalid scores')

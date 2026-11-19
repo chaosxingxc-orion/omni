@@ -25,19 +25,27 @@ def stage(config):
             if Path(name).name!=name:raise ValueError('local module required')
             data=(Path(__file__).parent/name).read_bytes()
             ast.parse(data); files_map[name]=hashlib.sha256(data).hexdigest()
+    assets={}
+    for name, ref in p.get('local_assets',{}).items():
+        if Path(name).name!=name or not name.endswith('.json'):raise ValueError('expected named JSON input')
+        asset=Path(ref['path'])
+        if asset.name!=name or hashlib.sha256(asset.read_bytes()).hexdigest()!=ref['sha256']:
+            raise ValueError('staged asset identity differs')
+        assets[name]=asset
     def bundle(src,dest,names,changes,filename,spec,tree=False):
         path=root/filename
         if path.exists():raise ValueError('existing derived spec')
         with path.open('x') as f:json.dump(spec,f,indent=2)
         base='mkdir -m 700 '+q(dest)
-        links=sorted(set(names)-set(changes))
+        links=sorted(set(names)-set(changes)-assets.keys())
         if links:base+=' && cp -l -- '+' '.join(q(src+'/'+n) for n in links)+' '+q(dest+'/')
         if tree:base+=' && cp -al -- '+q(src+'/tree')+' '+q(dest+'/tree')
-        remote(base);subprocess.run(['scp','-q',*(str(Path(__file__).parent/n) for n in changes),str(path),host+':'+dest+'/'],check=True)
+        remote(base);subprocess.run(['scp','-q',*(str(Path(__file__).parent/n) for n in changes),*(str(assets[n]) for n in assets if n in names),str(path),host+':'+dest+'/'],check=True)
     t=read(p['tp_template']);src=t['inputs']
     for k in ('inputs','name','output'):t[k]=derive(t[k])
     for k in p.get('remove',[]):t.pop(k)
     t.update(p.get('tp_options',{}))
+    for n in assets:t['input_files'][n]=p['local_assets'][n]['sha256']
     files(t['input_files'],p['tp_changes'])
     tn='tp4-'+p['tag']+'.local.json'
     bundle(src,t['inputs'],t['input_files'],p['tp_changes'],tn,t)
@@ -45,6 +53,7 @@ def stage(config):
         h=read(p['hf_template']);old=h['hf_bundle'];dst=derive(old);h.update(tp_output=t['output'],hf_bundle=dst)
         s=h['hf_spec'];s['hot']=derive(s['hot']);s['name']=derive(s['name'])
         s['fresh_group'].update(p.get('hf_options',{}))
+        for n in assets:s['files'][n]=p['local_assets'][n]['sha256']
         changes=p['hf_changes'];files(s['source_pins'],[n for n in changes if n in s['source_pins']])
         files(s['files'],[n for n in changes if n not in s['source_pins']])
         hn='handoff-'+p['tag']+'.local.json'

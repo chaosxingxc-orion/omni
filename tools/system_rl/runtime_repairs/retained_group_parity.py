@@ -134,7 +134,7 @@ def sample(engine, cfg):
                 manifest_sha256=cfg['fresh_group']['sha256'],optimizer_steps=0)
 
 
-def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False, actor_forward=False):
+def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False, actor_forward=False, frozen_reference=False):
     """One owned request per rank per FSDP collective; no resampling or weight update."""
     import sys
     import torch
@@ -269,6 +269,12 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
             finally:
                 handle.remove()
                 worker.actor.actor_module.eval()
+        if frozen_reference:
+            if manifest.get('schema')!='bounded-train-natural-requests-v1' or worker.actor.actor_module.training:
+                raise ValueError('reference requires a bound cohort and eval actor')
+            with torch.no_grad(),adapted.disable_adapter():
+                _,ref=forward(worker.actor,sample,temperature=p['wire']['temperature'],feature_dtype=torch.bfloat16)
+            actor_evidence['reference_scores']=ref[0].detach().float().cpu().tolist()
         delta=[a-b for a,b in zip(h,r['behavior_logprobs'],strict=True)]
         top=cap['tensor'].argmax(-1).tolist()
         flips=[j+1 for j,(a,b) in enumerate(zip(top,r['raw_top1'],strict=True)) if a!=b]

@@ -1,0 +1,45 @@
+{
+  "schema": "bounded-train-frozen-P-handoff-v1",
+  "scope": "Same-host TP4/FSDP4 frozen P, deterministic TRAIN prefix, independent base reference; no optimizer update.",
+  "selected_recordings": 2,
+  "eligible_probe_records": 19,
+  "group_size": 4,
+  "episodes": 8,
+  "actor_rows": 8,
+  "action_tokens": 86,
+  "reward_by_group": [
+    [
+      1.0,
+      0.0,
+      1.0,
+      1.0
+    ],
+    [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  ],
+  "mean_pre_update_reward": 0.875,
+  "train_eval_ref_behavior_exact": true,
+  "token_max_abs": 0.0,
+  "sequence_max_abs": 0.0,
+  "strict_argmax_flips": 0,
+  "dataset_training_ready": true,
+  "native_execution_enabled": false,
+  "optimizer_steps": 0,
+  "dev_reward": null,
+  "pins": {
+    "tp4_actions": "b268743ad85719f187689974af7221701b6fdade7263ee82db599f8e471ed302",
+    "tp4_exit": "784883338498261abf4961043b36f55c7c65fe81fdfc1843088c4232646c9ffb",
+    "paired_report": "5d80f94bcf3132c22e54386233b94e884b242fd360542519167b1e086559f77c",
+    "hf4_exit": "e55ca8c5ab3a78d7c033f6d4a804b7aea4f8b96175a8613a0a5c06129fe7cd53",
+    "processor": "73fd37369e069d671c02b9564615fcc881bda77d743be8ea69a38638295afd6e",
+    "reward": "4b530410097cb567d9cb86f86fe13e2d30cebde48deea3bbf4c7b81719d3971d",
+    "dataset": "dbaabb9323150a24e9cc025412eceaec8c5a504708bd4e5c74719f8df6cf6a77",
+    "consumer_report": "e3c1a2b2edef8378bcb8849305df053bcf6a89908f321f97d994dc5fa553835f",
+    "consumer_lineage": "1232df64c3daf93f62d1f8863216d5f1e25742313853ecdb15b0734b9b7ba479",
+    "release": "5b7b4bd77ff29efba9f5ea38e5924801f1e8637912daeffe07d093b9a34b1a8c"
+  }
+}

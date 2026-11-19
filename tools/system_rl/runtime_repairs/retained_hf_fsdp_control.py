@@ -81,7 +81,7 @@ def main(spec, inputs_root, out):
             actor.actor_module.eval()
             rs = hf_scores(worker, adapted, read(sealed(fresh['manifest'])),
                            read(sealed(fresh['result']))['fresh_group'], spec['files'][fresh['manifest']],
-                           rank, world, actor_forward=True)
+                           rank, world, actor_forward=True, frozen_reference=fresh.get('frozen_reference',False))
             commit(out/f'rank-{rank}'/'RESULT.json', dict(rank=rank, records=rs, updates=0,
                    actor_arithmetic_profile=cfg['actor_arithmetic_profile'], **worker.close_actor_arithmetic()))
             return
