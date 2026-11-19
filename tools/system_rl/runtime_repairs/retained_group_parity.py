@@ -134,7 +134,7 @@ def sample(engine, cfg):
                 manifest_sha256=cfg['fresh_group']['sha256'],optimizer_steps=0)
 
 
-def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False):
+def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False, actor_forward=False):
     """One owned request per rank per FSDP collective; no resampling or weight update."""
     import sys
     import torch
@@ -248,6 +248,27 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
         if trace_group is not None and row['group']==trace_group and len([k for k in boundary if not k.startswith('L1.')])!=227:
             raise ValueError('incomplete HF trace '+str(len(boundary)))
         h=scores[0].float().cpu().tolist()
+        actor_evidence = {}
+        if actor_forward:
+            worker.actor.actor_module.train()
+            actual_top = []
+            def capture_top(module, args, output):
+                logits = output.logits.detach()[0,-len(h)-1:-1]
+                if tuple(logits.shape) != (len(h), policy['vocabulary']) or not bool(logits.isfinite().all()):
+                    raise ValueError('invalid training logits')
+                actual_top.extend(logits.argmax(-1).cpu().tolist())
+            handle = worker.actor.actor_module.register_forward_hook(capture_top)
+            try:
+                with torch.enable_grad():
+                    _, live = forward(worker.actor, sample, temperature=p['wire']['temperature'], feature_dtype=torch.bfloat16)
+                    if not live.requires_grad:
+                        raise ValueError('training probability detached from actor')
+                    actual = live[0].detach().float().cpu().tolist()
+                    del live
+                actor_evidence = dict(train_scores=actual, train_top1=actual_top)
+            finally:
+                handle.remove()
+                worker.actor.actor_module.eval()
         delta=[a-b for a,b in zip(h,r['behavior_logprobs'],strict=True)]
         top=cap['tensor'].argmax(-1).tolist()
         flips=[j+1 for j,(a,b) in enumerate(zip(top,r['raw_top1'],strict=True)) if a!=b]
@@ -256,7 +277,7 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
         results.append(dict(boundaries=boundary,inadmissible_top1=inadmissible,index=index,group=r['group'],replicate=r['replicate'],tokens=len(h),
             request_id=r['request_id'],max_abs=max(map(abs,delta)),sequence_abs=abs(math.fsum(delta)),
             above_limit=[j+1 for j,v in enumerate(delta) if abs(v)>.01],top1_flips=flips,
-            scores=h,hf_top1=top,delta=delta))
+            scores=h,hf_top1=top,delta=delta,**actor_evidence))
     return results
 
 

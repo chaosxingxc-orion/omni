@@ -47,6 +47,20 @@ def compare(hot, spec_path, tp_path):
             if (i%n!=rank or r['request_id']!=t['request_id'] or r['tokens']!=len(t['token_ids']) or
                 not r['tokens'] or len(r['hf_top1'])!=r['tokens']):
                 raise ValueError('missing owned actions')
+            if len(r['scores']) != r['tokens'] or len(t['raw_top1']) != r['tokens']:
+                raise ValueError('missing action scores or logits')
+            recomputed_flips=[j for j,(a,b) in enumerate(zip(r['hf_top1'],t['raw_top1'],strict=True),1) if a!=b]
+            if recomputed_flips!=r['top1_flips']:
+                raise ValueError('argmax flip receipt differs from observed decisions')
+            actor_result={}
+            if 'actor_arithmetic_profile' in s['training']:
+                if x.get('actor_arithmetic_profile')!=s['training']['actor_arithmetic_profile']:
+                    raise ValueError('configured actor arithmetic not installed')
+                train=r['train_scores']; train_top=r['train_top1']
+                td=[a-b for a,b in zip(train,t['behavior_logprobs'],strict=True)]
+                tf=[j for j,(a,b) in enumerate(zip(train_top,t['raw_top1'],strict=True),1) if a!=b]
+                if not all(map(math.isfinite,td)): raise ValueError('invalid live actor scores')
+                actor_result=dict(train_max_abs=max(map(abs,td)),train_sequence_abs=abs(math.fsum(td)),train_strict_flips=tf)
             delta=[a-b for a,b in zip(r['scores'],t['behavior_logprobs'],strict=True)]
             if not all(map(math.isfinite,delta)) or r['delta']!=delta:raise ValueError('invalid scores')
             # Early versions only recorded strict flips. With any such flip,
@@ -55,7 +69,9 @@ def compare(hot, spec_path, tp_path):
             m=max(map(abs,delta));seq=abs(math.fsum(delta))
             rows.append(dict(index=i,group=t['group'],replicate=t['replicate'],tokens=len(delta),
                              max_abs=m,sequence_abs=seq,strict_flips=strict,inadmissible_or_unverified=bad,
-                             passed=m<=.01 and seq<=.01 and not bad))
+                             passed=m<=.01 and seq<=.01 and not bad and (not actor_result or
+                                    actor_result['train_max_abs']<=.01 and actor_result['train_sequence_abs']<=.01
+                                    and not actor_result['train_strict_flips']),**actor_result))
     if sorted(r['index'] for r in rows)!=list(range(len(expected))) or not rows:
         raise ValueError('incomplete population')
     return dict(requests=len(rows),tokens=sum(r['tokens'] for r in rows),passed_requests=sum(r['passed'] for r in rows),

@@ -72,6 +72,19 @@ def main(spec, inputs_root, out):
             return
         worker, adapted, _ = construct(cfg, out)
         actor = worker.actor
+        if 'actor_arithmetic_profile' in cfg:
+            fresh = spec['fresh_group']
+            for name in ('retained_group_parity.py', 'actor_arithmetic.py', 'retained_kv_candidate.py',
+                         'retained_router_candidate.py', 'retained_expert_candidate.py', 'retained_attention_candidate.py'):
+                sealed(name)
+            from retained_group_parity import hf_scores
+            actor.actor_module.eval()
+            rs = hf_scores(worker, adapted, read(sealed(fresh['manifest'])),
+                           read(sealed(fresh['result']))['fresh_group'], spec['files'][fresh['manifest']],
+                           rank, world, actor_forward=True)
+            commit(out/f'rank-{rank}'/'RESULT.json', dict(rank=rank, records=rs, updates=0,
+                   actor_arithmetic_profile=cfg['actor_arithmetic_profile'], **worker.close_actor_arithmetic()))
+            return
         sample = inputs_for(prep, tokens, adapted, device)
         body = adapted.get_base_model()
         text = body.model
