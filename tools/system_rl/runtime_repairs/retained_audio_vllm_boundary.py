@@ -73,12 +73,25 @@ def main(path):
     from sync_overlay import verify
     overlay=verify(cfg['named_rpc_overlay'])
     acl=ROOT/'native-recompute-integration/state-repair/acl-runtime-successor'
-    search=[overlay,str(acl),str(HERE)]
+    # Spawn workers use the same explicitly named, JSON-only RPC mechanism as
+    # production. Extend only the scoped worker module in the local run.
+    rpc=Path(cfg['output'])/'boundary-rpc'
+    rpc.mkdir()
+    for src in cfg['named_rpc_overlay']['files'].values():
+        source=Path(src['path'])
+        payload=source.read_bytes()
+        if hashlib.sha256(payload).hexdigest()!=src['sha256']:
+            raise ValueError('source changed while installing named RPC')
+        if source.name=='ascend_fp32_worker.py':
+            payload+=b'\nfrom retained_audio_vllm_boundary import replay\nFP32LoRAWorkerExtension.omni_retained_audio_boundary = replay\n'
+        with (rpc/source.name).open('xb') as f:
+            f.write(payload);f.flush();os.fsync(f.fileno())
+    search=[str(rpc),overlay,str(acl),str(HERE)]
     sys.path[:0]=search
     os.environ['PYTHONPATH']=':'.join(search+[os.environ.get('PYTHONPATH','')])
     from engine_api import build_engine
     engine=build_engine(cfg['engine'])
-    rows=engine.collective_rpc(replay, args=(cfg,),timeout=240)
+    rows=engine.collective_rpc('omni_retained_audio_boundary', args=(cfg,),timeout=240)
     assert sorted(row['rank'] for row in rows)==[0,1,2,3]
     result=dict(ranks=rows, model=cfg['engine']['model'], actual_tp=4, language_layers_executed=0,
                 sampled_actions=0, production_acceptance=False)
