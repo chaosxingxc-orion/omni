@@ -15,7 +15,8 @@ def checked(directory, ref):
     return json.loads(data)
 
 
-def install_rows(worker, sites, control=None, gate_candidate_layers=None):
+def install_rows(worker, sites, control=None, gate_candidate_layers=None,
+                 attention_candidate_layers=None):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
@@ -47,6 +48,9 @@ def install_rows(worker, sites, control=None, gate_candidate_layers=None):
     if gate_candidate_layers is not None:
         from retained_expert_candidate import attach as attach_candidate
         worker._retained_gate_candidate = attach_candidate(model, gate_candidate_layers)
+    if attention_candidate_layers is not None:
+        from retained_attention_candidate import attach_vllm
+        worker._retained_attention_candidate = attach_vllm(model, attention_candidate_layers)
     return worker.rank
 
 
@@ -58,6 +62,9 @@ def close_rows(worker):
     if hasattr(worker, '_retained_gate_candidate'):
         result['gate_candidate'] = worker._retained_gate_candidate()
         del worker._retained_gate_candidate
+    if hasattr(worker, '_retained_attention_candidate'):
+        result['attention_candidate'] = worker._retained_attention_candidate()
+        del worker._retained_attention_candidate
     if hasattr(worker, '_retained_audio_control'):
         receipt, hook = worker._retained_audio_control
         hook.remove()
@@ -113,7 +120,8 @@ def decode(engine, cfg):
         ranks=engine.collective_rpc('omni_predictor_begin',
             args=(mode,position,trace.get('attention_layer'),trace.get('prefix_origin'),
                   trace.get('moe_origin',False),trace.get('expert_operands',False),
-                  trace.get('prefix_scan'),trace.get('origin_layers',2)),timeout=240)
+                  trace.get('prefix_scan'),trace.get('origin_layers',2),
+                  trace.get('attention_shape_shadow',False)),timeout=240)
         if sorted(ranks)!=list(range(4)):raise ValueError('missing trace worker')
         return True
     for case in bundle['cases']:

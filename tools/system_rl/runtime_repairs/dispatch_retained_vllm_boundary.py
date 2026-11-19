@@ -118,6 +118,15 @@ def idle_replay(spec):
             layer = spec['attention_layer']
             assert type(layer) is int and 0<=layer<48
             replay['trace_predictor']['attention_layer']=layer
+        if 'trace_action_ordinal' in spec:
+            ordinal = spec['trace_action_ordinal']
+            assert type(ordinal) is int and ordinal>=1
+            replay['trace_predictor']['action_ordinal']=ordinal
+        if 'attention_shape_shadow' in spec:
+            shadow = spec['attention_shape_shadow']
+            assert (shadow is True or shadow == 'variants') and 'attention_layer' in spec
+            assert 'retained_attention_operands.py' in spec['input_files']
+            replay['trace_predictor']['attention_shape_shadow']=shadow
         if 'prefix_origin' in spec:
             origin=spec['prefix_origin']
             assert type(origin) is int and origin>=0
@@ -135,6 +144,9 @@ def idle_replay(spec):
         if 'gate_candidate_layers' in spec:
             assert 'retained_expert_candidate.py' in spec['input_files'] and not spec.get('expert_operands')
             replay['gate_candidate_layers']=spec['gate_candidate_layers']
+        if 'attention_candidate_layers' in spec:
+            assert 'retained_attention_candidate.py' in spec['input_files'] and not spec.get('attention_shape_shadow')
+            replay['attention_candidate_layers']=spec['attention_candidate_layers']
         if spec.get('native_audio'):
             del replay['audio_control']
         save(root/'REPLAY.json',replay)

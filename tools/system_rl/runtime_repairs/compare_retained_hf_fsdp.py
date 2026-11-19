@@ -16,7 +16,8 @@ def compare(hf, vl, lease):
         raise ValueError('four HF ranks required')
     rank0 = hf[0]
     keys = ('world_size', 'input_pins', 'asset_sha256', 'internal_format', 'full_vocabulary',
-            'argmax', 'scores', 'predictor_position', 'rows', 'updates', 'gate_candidate')
+            'argmax', 'scores', 'predictor_position', 'rows', 'updates',
+            'gate_candidate', 'attention_candidate')
     if any(row['world_size'] != 4 or row['updates'] != 0 or
            any(row.get(k) != rank0.get(k) for k in keys) for row in hf):
         raise ValueError('HF ranks disagree on the same original input')
@@ -25,14 +26,20 @@ def compare(hf, vl, lease):
     for name in ('retained-actions.json', 'P-BEHAVIOR.json'):
         if rank0['input_pins'][name] != lease['input_files'][name]:
             raise ValueError(f'not the same sealed actions: {name}')
-    if rank0.get('gate_candidate'):
-        receipts = vl['decode_row_receipts']
-        candidate = rank0['gate_candidate']
-        if (rank0['input_pins']['retained_expert_candidate.py'] != lease['input_files']['retained_expert_candidate.py']
-                or any(r.get('gate_candidate', {}).get('arithmetic') != candidate['arithmetic']
-                       or r.get('gate_candidate', {}).get('layers', {}).keys() != candidate['layers'].keys()
+    receipts = vl['decode_row_receipts']
+    if sorted(r['rank'] for r in receipts) != list(range(4)):
+        raise ValueError('missing TP4 execution receipt')
+    for key, filename in (('gate_candidate','retained_expert_candidate.py'),
+                          ('attention_candidate','retained_attention_candidate.py')):
+        candidate = rank0.get(key)
+        if any(bool(r.get(key)) != bool(candidate) for r in receipts):
+            raise ValueError('HF and vLLM candidate activation differs: '+key)
+        if candidate and (rank0['input_pins'][filename] != lease['input_files'][filename]
+                or any(r[key]['arithmetic'] != candidate['arithmetic']
+                       or r[key]['layers'].keys() != candidate['layers'].keys()
+                       or not all(type(v) is int and v > 0 for v in r[key]['layers'].values())
                        for r in receipts)):
-            raise ValueError('HF and vLLM candidate identity differs')
+            raise ValueError('HF and vLLM candidate identity differs: '+key)
     control = lease.get('audio_control')
     if control:
         receipts = vl['decode_row_receipts']

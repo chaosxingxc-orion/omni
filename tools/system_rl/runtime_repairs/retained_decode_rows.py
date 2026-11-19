@@ -3,7 +3,7 @@ import hashlib
 
 
 def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_origin=False,
-          expert_operands=False, prefix_scan=None, origin_layers=2):
+          expert_operands=False, prefix_scan=None, origin_layers=2, attention_shape_shadow=False):
     import torch
     from family_precision import ATTR
     model = worker.model_runner.get_model()
@@ -19,7 +19,8 @@ def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_or
     if attention_layer is not None:
         if type(attention_layer)!=int or attention_layer not in range(48):raise ValueError('invalid attention layer')
         from retained_attention_operands import observe
-        undo=observe(text.layers[attention_layer].self_attn.attn.impl,state,mode,attn_rows)
+        undo=observe(text.layers[attention_layer].self_attn.attn.impl,state,mode,attn_rows,
+                     shape_shadow=attention_shape_shadow)
     close_prefix=None
     close_moe=None
     close_scan=None
@@ -96,9 +97,16 @@ def finish(worker):
         del worker._retained_decode_first
         if target!=earlier or list(rows)!=list(first):raise ValueError('unaligned language signatures')
         if attention_layer is not None:
-            from retained_attention_operands import compare
+            from retained_attention_operands import compare, delta
             result['attention_layer']=attention_layer
             result['attention_operands']=compare(attn_first,attn_rows)
+            if attention_layer is not None and 'shape_shadow' in attn_rows:
+                shadow=attn_rows['shape_shadow']
+                shadow['live_operands_equal']=all(result['attention_operands'][k]['unequal']==0
+                                                 for k in ('query','key_prefix','value_prefix'))
+                if shadow['live_operands_equal']:
+                    shadow['actual_cached_vs_shadow']=delta(attn_first['attention_out'],attn_rows['shape_shadow_single_out'])
+                result['attention_shape_shadow']=shadow
         if close_prefix:
             from retained_prefix_origin import compare
             result['prefix_origin']=compare(prefix_first,prefix_rows)

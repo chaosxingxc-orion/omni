@@ -5,6 +5,7 @@ ORDER = ("input_norm", "qkv_proj", "query", "key", "value", "attention",
 
 
 def observe(text, prefix_rows, layers):
+    import torch
     import attention_contract_compute as contract
     if not (0 < prefix_rows <= 8192 and 0 < layers <= 8):
         raise ValueError("bounded prefix scan required")
