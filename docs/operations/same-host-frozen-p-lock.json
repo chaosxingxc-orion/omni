@@ -1,0 +1,127 @@
+{
+  "schema": "same-host-frozen-p-parity-v1",
+  "model": "Qwen3-Omni-30B-A3B-Instruct",
+  "precision": "BF16",
+  "thinking": false,
+  "scope": "P; two authentic TRAIN recordings, four seeds per recording per cache mode; frozen policy",
+  "topology": {
+    "inference": "vLLM TP4",
+    "training_reference": "HF FSDP4",
+    "same_devices": true
+  },
+  "runs": {
+    "cold": {
+      "requests": 8,
+      "tokens": 87,
+      "max_token_delta": 0,
+      "max_sequence_delta": 0,
+      "raw_top1_flips": 0,
+      "cached_tokens": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "report": "0fce709702644232a0cb15bc5970758d147de0625735b1c42c35cb414da870ac",
+      "hf_results": [
+        "91b4e371ed026d1bf66cd026fe5ec8c5d1ab57cbfbc3e581c8b5faf0f111b6d1",
+        "1f318a4a80f5b2dd883a2ab3dcd35640598041fed20441e3d547d0cfd234ab05",
+        "b902112d9f759be4b0024e31dfc4d25e99d881fe07679242e4645206fe97b2dd",
+        "ef63b912d27f1b4172c2d4060732cb7f4f06f664c6a97ec91a04fd4a0190e449"
+      ],
+      "tp_config": "5c1de2bd2fe972d8bd21a9b46600b910b6589d1ca6f5788cf3d190735c1d54cd",
+      "hf_config": "46eba123b175aa3530ff2d19597b950f9b2995647344fa9adfa20e8d282857db",
+      "tp_exit": "cffd03e73cf3be7e297390180b42070bc07e46f86c1431a8867109f485935e36",
+      "hf_exit": "95d7f3234b0e8c6e89e2679661d23949789295838bcd1673baafb12ab0112098"
+    },
+    "shared": {
+      "requests": 8,
+      "tokens": 86,
+      "max_token_delta": 0,
+      "max_sequence_delta": 0,
+      "raw_top1_flips": 0,
+      "cached_tokens": [
+        0,
+        4608,
+        4608,
+        4608,
+        2176,
+        5120,
+        5120,
+        5120
+      ],
+      "report": "9951c9a244db4066f5b5aeecdedc3d0725737748410adfaf78724658b505d248",
+      "hf_results": [
+        "0245dc150763b33adeb8f93ad86f27d10f67dbf53506d642104910e9b83f683a",
+        "1f318a4a80f5b2dd883a2ab3dcd35640598041fed20441e3d547d0cfd234ab05",
+        "b902112d9f759be4b0024e31dfc4d25e99d881fe07679242e4645206fe97b2dd",
+        "ef63b912d27f1b4172c2d4060732cb7f4f06f664c6a97ec91a04fd4a0190e449"
+      ],
+      "tp_config": "efb64fe2aba821713d83282fd5fc3689290455f6530c446d0c604653e35d67e1",
+      "hf_config": "50c617ce176356a73690d15d2bb5f6db0fb81b8f4eb6e5e049bc658525e802f3",
+      "tp_exit": "47b57812611c8f6b80f13ef9d636418cf9ff5e82e77e08c9b14820c9614b2a57",
+      "hf_exit": "4ea2e861ad40ed1c62c7b52458084c25e908f3deda41ab6d3172cebf002e6020"
+    }
+  },
+  "pins": {
+    "tp_source": {
+      "retained_audio_vllm_boundary.py": "9993d147f64d79478686a000344500dce8e6e1b38a6e6c2c586b799de8c3f9a6",
+      "retained_audio_layer.py": "8c84adfb6f8e9a6dc98fbf16f840167553171d2e55250ce9d842d30e485daea0",
+      "dispatch_retained_hf_boundary.py": "d2eb26bb2193b5b34ade02994eeaff26f0a4706aeb31c270a42caea0fc20b8e5",
+      "dispatch_retained_vllm_boundary.py": "d8fb20ebc2c52ebe14fbbc76bbfff0a21f2489b8f604a7d6cb4006fa9a89b452",
+      "retained_audio_row_precision.py": "8bb0e6a1dd5d7b35f787278916162099b2c60495c14258a27cdee5515c7e638a",
+      "retained_action_replay.py": "4c02ed8249740284876dd949e52f73836411d1761b1cd82939c544578aa033f6",
+      "retained_decode_rows.py": "ab36e7399f0bfa3dc9f855673c2a89bde4c9e8530e5d02ea4348ced06d65a379",
+      "retained_attention_operands.py": "166dc8cd24a2e47a2f848c36281f36f6b9d8831bf6a9459d3391d46b854b0c97",
+      "retained_prefix_origin.py": "079a17b51b650446af6826cd57b10d89c2d341ceeff8385da97a449c02554c8e",
+      "retained_moe_origin.py": "a606d1120a7e4d4c9ee709fc66c2854b4b1e80afe3bddcfce92f0661d86348f9",
+      "expert_window_vllm_capture.py": "5164d528c4d08573bfc6187246efeb21b5f5eda0e5d2bbdec194a91616751c50",
+      "retained_expert_candidate.py": "7d3bdb36c2f5f4788b0dc64df24bf4c79f051c7fd773dcd2eb87ecb0fa99ae82",
+      "retained_attention_candidate.py": "e5fdb0594b4b01adb13725b3e0b960d2f410b1663b370859205153ffadfe716f",
+      "retained_prefix_scan.py": "190d90df7dc6d2cdf08dff4095289fb5412a07f798767cf076bdf4d3e014ebdc",
+      "retained_expert_operands.py": "b0dfe46aa15fd5f265db6efb4db4e3bc0277b411ff487ce25b5e1ba2af46c3ab",
+      "expert_down_capture.py": "aebaf662f6246a24f1ada844b1b679a14be682ae9eeb20675a98c1001fdea605",
+      "retained_audio_attention_precision.py": "fcb3ecd7861b64709d9b71378df7f15b6fe84c34449d7354c70b13490c5c99f9",
+      "retained_group_parity.py": "5011ef73219d6287f6e06d74f4f89e3bc7e40231ee2e53e5b678c4202ec38196",
+      "retained_router_candidate.py": "1fb565fa0de6061c5916de76a4ef84417c52c9282dab323434d9cc378bddedb7",
+      "retained_kv_candidate.py": "b36b5f0dba7c5bd1114941c21b143f9df28d0006d552b99d2a0829ae414ded6e"
+    },
+    "hf_source": {
+      "retained_expert_candidate.py": "7d3bdb36c2f5f4788b0dc64df24bf4c79f051c7fd773dcd2eb87ecb0fa99ae82",
+      "retained_attention_candidate.py": "e5fdb0594b4b01adb13725b3e0b960d2f410b1663b370859205153ffadfe716f",
+      "retained_group_parity.py": "dd4192356171e2508d1714fdd78cd82310339d3cdd9f5334f0705398856fbd7c",
+      "retained_router_candidate.py": "1fb565fa0de6061c5916de76a4ef84417c52c9282dab323434d9cc378bddedb7",
+      "retained_kv_candidate.py": "b36b5f0dba7c5bd1114941c21b143f9df28d0006d552b99d2a0829ae414ded6e",
+      "retained_hf_fsdp_control.py": "c1f6558ca23cce781f96f8901f6629364da94558c5178b13e37b3cae972f47d4",
+      "worker_dp8.py": "7239accec8ab96981ded5306d9aea2f5ac1d10e38125b980f15581120b6e636a",
+      "forward.py": "c80030a2a2b3c593b9e2d058f02bcb673aa81fc501b5b17d8fa18e9258d24d12",
+      "validate_npu.py": "747e855b2f6a731bba4406139d90a2464e213ec3b057241b5fdf0f458864221c"
+    },
+    "tp_image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "hf_image": "sha256:52ba94e1b6ba35f09066a92222f013ce9563fdbd83a6a5e7a60d209ac29f756c",
+    "manifest": "1b7b8bfdf9424474e4100406db6e05ef252a1c0356f4cb467877b9dc4a0a165c"
+  },
+  "actor": {
+    "fixed_actions": 10,
+    "covered_lora_parameters": 6684672,
+    "global_gradient_norm": 1.1725660194078604,
+    "optimizer_steps": 0,
+    "config": "718ee3106c0890fbd5991ca8b1d330ea94a1e886cfe2d087974a401c2bf9752f",
+    "rank_receipts": [
+      "1830e98d4486f755d4d6a61f283a896ce6a3f1b1cd8b2877820ab39e586d8f26",
+      "788b41da2b5fa9c8c4ead40e543330f13fd635f95562bbf17216e975a2f12ceb",
+      "7b26a9ab17efa67c590926000de5ff8beaddd2608a503e4bef4a411ecee9857c",
+      "0966d96111b7b88a84636dc351db0507836a86e0e2db0289bfb36e2c5e784068"
+    ]
+  },
+  "excluded": [
+    "updated adapter export/reload",
+    "production throughput",
+    "training reward",
+    "other nodes and populations"
+  ]
+}

@@ -1,7 +1,7 @@
 """Small same-device controls for derivatives needed by the frozen-expert LoRA actor."""
 
 
-def measure(device, rank, lengths, seed, *, router_only=False):
+def measure(device, rank, lengths, seed, *, router_only=False, tiled_kv=False):
     import torch
     import torch_npu
     from retained_expert_candidate import project, frozen_project
@@ -30,7 +30,7 @@ def measure(device, rank, lengths, seed, *, router_only=False):
     for n in lengths:
         if not 1 < n <= 256:
             raise ValueError('bounded actual-operator VJP required')
-        for left,right in ([(2048,128)] if router_only else [(2048,1536),(768,2048)]):
+        for left,right in ([(2048,512)] if tiled_kv else [(2048,128)] if router_only else [(2048,1536),(768,2048)]):
             x,w,dy = draw((n,left)),draw((left,right)),draw((n,right))
             arg=x.to(device).requires_grad_(); weight=w.to(device)
             # Expert weights are frozen; hidden input is the path to earlier LoRA.
@@ -54,9 +54,9 @@ def measure(device, rank, lengths, seed, *, router_only=False):
             return torch_npu.npu_fusion_attention(q,k,v,8,'TND',atten_mask=m,scale=128**-.5,
                        actual_seq_qlen=[n],actual_seq_kvlen=[n],sparse_mode=3,keep_prob=1.)[0]
         with torch.no_grad():
-            inference=causal_attention()(*xs,[n],[n],scale=128**-.5)
+            inference=causal_attention(absolute_tile=128 if tiled_kv else None)(*xs,[n],[n],scale=128**-.5)
             training=train(*xs)
-        reference_forward = causal_attention(training_vjp=True)
+        reference_forward = causal_attention(training_vjp=True,absolute_tile=128 if tiled_kv else None)
         def bridge(q,k,v):
             return reference_forward(q,k,v,[n],[n],scale=128**-.5)
         rows.append(dict(operator='attention',length=n,train_vs_inference=stats(training,inference),

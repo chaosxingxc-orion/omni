@@ -153,8 +153,7 @@ def attach_hf(text, layers, unwrap, *, training_vjp=False, tiled_layers=()):
 
     _validate(layers, text.layers)
     compute = causal_attention(training_vjp=training_vjp)
-    fixed=causal_attention(absolute_tile=128) if tiled_layers else None
-    if tiled_layers and training_vjp:raise ValueError("tile backward not validated")
+    fixed=causal_attention(absolute_tile=128,training_vjp=training_vjp) if tiled_layers else None
     counts, handles, active = Counter(), [], []
 
     class AttentionMode(TorchFunctionMode):

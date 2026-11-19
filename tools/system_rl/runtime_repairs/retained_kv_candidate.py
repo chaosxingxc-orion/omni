@@ -4,10 +4,10 @@ from contextlib import ExitStack
 from functools import wraps
 
 
-def attach(text,layers,*,side,unwrap=lambda m:m):
+def attach(text,layers,*,side,unwrap=lambda m:m,training_vjp=False):
     import torch
     from torch.overrides import TorchFunctionMode
-    from retained_expert_candidate import project
+    from retained_expert_candidate import project, frozen_project
     if side not in ('vl','hf') or not layers or layers!=sorted(set(layers)) or any(type(i)!=int or not 0<=i<48 for i in layers):
         raise ValueError('expected explicit KV projection layers')
     scopes=[];counts=Counter();stack=ExitStack()
@@ -18,10 +18,10 @@ def attach(text,layers,*,side,unwrap=lambda m:m):
                 return func(*args,**(kwargs or {}))
             x,w=args[:2]
             if (kwargs or (len(args)!=2 and (len(args)!=3 or args[2] is not None))
-                    or torch.is_grad_enabled() or x.dtype!=torch.bfloat16 or w.dtype!=x.dtype or x.shape[-1]!=2048):
+                    or (torch.is_grad_enabled() and not (side=="hf" and training_vjp)) or x.dtype!=torch.bfloat16 or w.dtype!=x.dtype or x.shape[-1]!=2048):
                 raise ValueError('invalid frozen full-width K/V base projection')
             n=scopes[-1]
-            y=project(x.reshape(-1,2048),w.T)
+            y=(frozen_project if training_vjp else project)(x.reshape(-1,2048),w.T)
             counts[n]+=1
             return y.reshape(*x.shape[:-1],512)
     def replace(owner,attr,fn):

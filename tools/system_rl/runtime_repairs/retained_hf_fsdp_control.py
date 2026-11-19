@@ -68,7 +68,7 @@ def main(spec, inputs_root, out):
                 sealed(name)
             from retained_operator_vjp import measure
             probe = spec['operator_vjp']
-            commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed'],**({'router_only':True} if probe.get('router_only') else {})))
+            commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed'],**{k:True for k in ('router_only','tiled_kv') if probe.get(k)}))
             return
         worker, adapted, _ = construct(cfg, out)
         actor = worker.actor
@@ -100,11 +100,12 @@ def main(spec, inputs_root, out):
             sealed('retained_expert_candidate.py')
             from retained_expert_candidate import attach_hf
             close_candidate = attach_hf(text, spec['gate_candidate_layers'], inner, **(dict(frozen_vjp=True) if do_vjp else {}))
+        tile_set=spec.get('fresh_group',spec).get('tiled_layers')
         close_attention = None
         if 'attention_candidate_layers' in spec:
             sealed('retained_attention_candidate.py')
             from retained_attention_candidate import attach_hf as attach_attention
-            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner, **(dict(tiled_layers=spec['fresh_group']['tiled_layers']) if spec.get('fresh_group',{}).get('tiled_layers') else {}), **(dict(training_vjp=True) if do_vjp else {}))
+            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner, **(dict(tiled_layers=tile_set) if tile_set else {}), **(dict(training_vjp=True) if do_vjp else {}))
         close_down = None
         if 'down_candidate_layers' in spec:
             sealed('retained_expert_candidate.py')
@@ -132,6 +133,11 @@ def main(spec, inputs_root, out):
             commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,kv_projection=kv() if kv else None,
                    down=close_down(),gate=close_candidate(),attention=close_attention(),router=router() if router else None))
             return
+        close_kv=None
+        if "kv_layers" in spec:
+            sealed("retained_kv_candidate.py")
+            from retained_kv_candidate import attach as attach_kv
+            close_kv=attach_kv(text,spec["kv_layers"],side="hf",unwrap=inner,training_vjp=do_vjp)
         close_router=None
         if 'router_layers' in spec:
             sealed('retained_router_candidate.py')
@@ -188,6 +194,7 @@ def main(spec, inputs_root, out):
                       predictor_position=pos, rows=row_hashes, updates=0,
                       gate_candidate=candidate, attention_candidate=attn_candidate,
                       down_candidate=down_candidate,
+                      kv_projection=close_kv() if close_kv else None,
                       router=close_router() if close_router else None,
                       actor_gradient=gradient,elapsed_seconds=time.monotonic()-start)
         commit(out/f'rank-{rank}'/'RESULT.json', result)
