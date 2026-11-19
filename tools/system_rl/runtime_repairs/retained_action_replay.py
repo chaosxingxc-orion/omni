@@ -15,7 +15,7 @@ def checked(directory, ref):
     return json.loads(data)
 
 
-def install_rows(worker, sites, control=None):
+def install_rows(worker, sites, control=None, gate_candidate_layers=None):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
@@ -44,6 +44,9 @@ def install_rows(worker, sites, control=None):
             return ref.to(output.device)
         worker._retained_audio_control = (receipt, model.audio_tower.register_forward_hook(replace))
     worker._retained_audio_rows = (audit, restore)
+    if gate_candidate_layers is not None:
+        from retained_expert_candidate import attach as attach_candidate
+        worker._retained_gate_candidate = attach_candidate(model, gate_candidate_layers)
     return worker.rank
 
 
@@ -52,6 +55,9 @@ def close_rows(worker):
     restore()
     del worker._retained_audio_rows
     result = dict(rank=worker.rank, calls=dict(calls))
+    if hasattr(worker, '_retained_gate_candidate'):
+        result['gate_candidate'] = worker._retained_gate_candidate()
+        del worker._retained_gate_candidate
     if hasattr(worker, '_retained_audio_control'):
         receipt, hook = worker._retained_audio_control
         hook.remove()
@@ -79,13 +85,16 @@ def score_retained_prefill(engine, case, record, audio, sampling_params):
     probs = out.prompt_logprobs
     if probs is None or len(probs) != len(out.prompt_token_ids):
         raise ValueError('Incomplete prompt scores')
-    scores = [probs[len(base)+i][token].logprob for i,token in enumerate(actions)]
+    per_action = [probs[len(base)+i] for i in range(len(actions))]
+    scores = [p[token].logprob for p,token in zip(per_action,actions,strict=True)]
+    argmax = [next((token for token,v in p.items() if v.rank==1),None) for p in per_action]
     if not scores or not all(map(math.isfinite,scores)):
         raise ValueError('Nonfinite or missing teacher-forced scores')
     deltas = [a-b for a,b in zip(scores,case['hf_logprobs'],strict=True)]
     return dict(mode='teacher_forced_prefill', actions_scored=len(scores), extra_generated=1,
                 scores=scores, max_abs=max(map(abs,deltas)), sequence_abs=abs(math.fsum(deltas)),
-                signed_deltas=deltas, prefix_cache_read_skipped_for_prompt_scores=params.skip_reading_prefix_cache)
+                signed_deltas=deltas, observed_raw_top1=argmax,
+                prefix_cache_read_skipped_for_prompt_scores=params.skip_reading_prefix_cache)
 
 
 def decode(engine, cfg):
@@ -101,7 +110,10 @@ def decode(engine, cfg):
         ordinal=trace['action_ordinal']
         if not 1<=ordinal<=len(record['token_ids']):raise ValueError('invalid target action')
         position=len(record['prompt_token_ids'])+ordinal-2+trace['rope_offset']
-        ranks=engine.collective_rpc('omni_predictor_begin',args=(mode,position,trace.get('attention_layer')),timeout=240)
+        ranks=engine.collective_rpc('omni_predictor_begin',
+            args=(mode,position,trace.get('attention_layer'),trace.get('prefix_origin'),
+                  trace.get('moe_origin',False),trace.get('expert_operands',False),
+                  trace.get('prefix_scan'),trace.get('origin_layers',2)),timeout=240)
         if sorted(ranks)!=list(range(4)):raise ValueError('missing trace worker')
         return True
     for case in bundle['cases']:
@@ -124,7 +136,7 @@ def decode(engine, cfg):
         params = SamplingParams(seed=behavior['seed'],temperature=wire['temperature'],top_p=wire['top_p'],
                                 top_k=-1 if wire['top_k']==0 else wire['top_k'],min_p=wire['min_p'],
                                 repetition_penalty=wire['repetition_penalty'],presence_penalty=wire['presence_penalty'],
-                                frequency_penalty=wire['frequency_penalty'],logprobs=0,max_tokens=len(original))
+                                frequency_penalty=wire['frequency_penalty'],logprobs=1,max_tokens=len(original))
         tracing=trace_begin(case,behavior,'decode')
         req, = engine.generate([{'prompt':case['prompt'],'multi_modal_data':{'audio':(samples,rate)}}],
                                sampling_params=params,use_tqdm=False)
@@ -133,6 +145,7 @@ def decode(engine, cfg):
         out, = req.outputs
         deltas=[]
         scores=[]
+        raw_top1=[]
         for index,(expected,chosen,probs) in enumerate(zip(original,out.token_ids,out.logprobs)):
             if expected!=chosen:
                 break
@@ -140,9 +153,11 @@ def decode(engine, cfg):
             if not math.isfinite(actual):
                 raise ValueError('Nonfinite selected log probability')
             scores.append(actual)
+            raw_top1.append(next((token for token,v in probs.items() if v.rank==1),None))
             deltas.append(abs(actual-reference[index]))
         result.append(dict(node=case['node'],generated=len(out.token_ids),original_tokens=len(original),
                            same_action_prefix=len(deltas),deltas=deltas, matching_prefix_scores=scores,
+                           matching_prefix_raw_top1=raw_top1,
                            all_tokens_within_limit=len(deltas)==len(original) and max(deltas)<=case['limit']))
         if tracing:
             if len(deltas)<cfg['trace_predictor']['action_ordinal']:

@@ -119,7 +119,8 @@ def main(path):
         from dispatch_retained_hf_boundary import save
         save(Path(cfg['output'])/'MODULE-RESULT.json',result)
         from retained_action_replay import decode
-        installed=engine.collective_rpc('omni_retained_install_rows',args=(cfg['audio_row_sites'],cfg.get('audio_control')),timeout=240)
+        installed=engine.collective_rpc('omni_retained_install_rows',
+            args=(cfg['audio_row_sites'],cfg.get('audio_control'),cfg.get('gate_candidate_layers')),timeout=240)
         assert sorted(installed)==list(range(4))
         try:
             result['retained_decode']=decode(engine,cfg)

@@ -1,5 +1,6 @@
 """Use the existing rollout owner for a single frozen TP4 boundary replay."""
 import argparse
+import fcntl
 import hashlib
 import json
 from pathlib import Path
@@ -14,6 +15,146 @@ def read(p):return json.loads(p.read_bytes())
 def pin(p):
     b=p.read_bytes()
     return dict(path=str(p),bytes=len(b),sha256=hashlib.sha256(b).hexdigest())
+
+
+def idle_replay(spec):
+    """Run the same sealed diagnostic phase after intentional service release."""
+    parent_plan=Path(spec['prepared_plan']).resolve()
+    assert pin(parent_plan)['sha256']==spec['prepared_plan_sha256']
+    plan=read(parent_plan)
+    old=parent_plan.parent
+    assert old==Path(plan['root']) and old.parent==Path(spec['output']).resolve().parent
+    root=Path(spec['output']).resolve()
+    assert root!=old and not root.exists()
+    original=read(old/'CONTROLLER.json')['container_id']
+    assert state(original)['Status']=='exited' and not (old/'hot/new-lease/NPU-LAUNCH.json').exists()
+    assert plan['source_boot']==Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    assert len(plan['guard_paths'])==1
+    guard_path=Path(plan['guard_paths'][0]).resolve()
+    assert guard_path.is_file()
+    inputs=Path(spec['inputs']).resolve()
+    for name,digest in spec['input_files'].items():
+        assert Path(name).name==name and pin(inputs/name)['sha256']==digest
+    # Check the optional callback ABI before binding devices. A self-consistent
+    # hash list can still accidentally combine two incompatible revisions.
+    if spec.get('moe_origin'):
+        import ast
+        def keywords(filename, function):
+            node, = [n for n in ast.parse((inputs/filename).read_bytes()).body
+                     if isinstance(n, ast.FunctionDef) and n.name==function]
+            return {a.arg for a in node.args.args + node.args.kwonlyargs}
+        if not {'dispatcher_class','operands'}<=keywords('expert_window_vllm_capture.py','attach'):
+            raise ValueError('MoE observer bundle has incompatible expert window ABI')
+        if not {'moe_origin','expert_operands'}<=keywords('retained_decode_rows.py','begin'):
+            raise ValueError('MoE observer bundle has incompatible predictor RPC ABI')
+    for name in ('REPLAY.json','EXECUTION.json'):
+        assert pin(old/name)['sha256']==spec['prepared_files'][name]
+    with guard_path.open('r+') as guard:
+        fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        devices=spec['devices']
+        assert devices==list(range(4))
+        smi=subprocess.check_output(['npu-smi','info'],text=True)
+        assert all(f'No running processes found in NPU {i} ' in smi for i in devices)
+        from pathlib import PurePosixPath
+        hot=root/'hot'
+        new=str(root)
+        def relocate(text):
+            return text.replace(str(old/'REPLAY.json'),new+'/REPLAY.json').replace(str(old/'EXECUTION.json'),new+'/EXECUTION.json')
+        phase=[];oldargv=plan['npu_argv'];i=0;seen_devices=[]
+        while i<len(oldargv):
+            x=oldargv[i];i+=1
+            if x=='--mount':
+                m=oldargv[i];i+=1
+                fields=m.split(',')
+                src=next(k[4:] for k in fields if k.startswith('src='))
+                dst=next(k[4:] for k in fields if k.startswith('dst='))
+                if src=='/var/run/docker.sock' or dst==str(guard_path):
+                    continue
+                source=Path(src)
+                runtime_target=None
+                if dst=='/e':
+                    assert 'readonly' in fields
+                    fields=[f'src={inputs}' if k.startswith('src=') else k for k in fields]
+                if source.is_relative_to(old/'hot'):
+                    runtime_target=hot/source.relative_to(old/'hot')
+                elif source==old:
+                    runtime_target=root
+                if runtime_target is not None:
+                    fields=[f'src={runtime_target}' if k.startswith('src=') else
+                            'dst='+str(PurePosixPath(new)/source.relative_to(old)) if k.startswith('dst=') and dst==src else k for k in fields]
+                elif 'readonly' not in fields:
+                    fields.append('readonly')
+                phase.extend((x,','.join(fields)))
+            elif x=='--device':
+                dev=oldargv[i];i+=1;seen_devices.append(dev);phase.extend((x,dev))
+            elif x=='--name':
+                i+=1;phase.extend((x,spec['name']))
+            else:
+                val=relocate(x).replace(str(old/'hot'),str(hot))
+                phase.append(val)
+        assert sorted(d for d in seen_devices if d.removeprefix('/dev/davinci').isdigit())==[f'/dev/davinci{i}' for i in devices]
+        assert spec['image'] in phase
+        assert subprocess.check_output(['docker','image','inspect','-f','{{.Id}}',spec['image']],text=True).strip()==spec['image']
+        # Check the actual writable filesystem before creating hot state.
+        import os
+        stat=os.statvfs(root.parent)
+        assert stat.f_bavail*stat.f_frsize>=max(20*1024**3,stat.f_blocks*stat.f_frsize*.10)+spec['storage_budget_bytes']
+        assert stat.f_favail>=stat.f_files*.05
+        assert subprocess.check_output(['findmnt','-n','-o','FSTYPE','-T',str(root.parent)],text=True).strip() in ('ext4','xfs','btrfs')
+        root.mkdir(mode=0o700)
+        for d in ('tmp','cache','home/ascend/log','home-ascend-log','ascend-cache','ascend-work','hf','inductor','triton','logs'):
+            (hot/d).mkdir(parents=True,exist_ok=True)
+        # Keep the original computation, source projection and input pins.
+        replay=read(old/'REPLAY.json')
+        assert replay['output']==str(old/'hot') and replay['input']=='/e'
+        replay['output']=str(hot)
+        if 'prefix_scan' in spec:
+            scan = spec['prefix_scan']
+            assert scan.keys()=={'rows','layers'} and type(scan['rows']) is int and 0<scan['rows']<=8192
+            assert type(scan['layers']) is int and 0<scan['layers']<=8
+            assert 'retained_prefix_scan.py' in spec['input_files']
+            replay['trace_predictor']['prefix_scan']=scan
+        if 'attention_layer' in spec:
+            layer = spec['attention_layer']
+            assert type(layer) is int and 0<=layer<48
+            replay['trace_predictor']['attention_layer']=layer
+        if 'prefix_origin' in spec:
+            origin=spec['prefix_origin']
+            assert type(origin) is int and origin>=0
+            assert {'retained_decode_rows.py','retained_action_replay.py','retained_prefix_origin.py'}<=spec['input_files'].keys()
+            replay['trace_predictor']['prefix_origin']=origin
+            if 'origin_layers' in spec:
+                assert type(spec['origin_layers']) is int and 1<=spec['origin_layers']<=8
+                replay['trace_predictor']['origin_layers']=spec['origin_layers']
+        if spec.get('moe_origin'):
+            assert 'prefix_origin' in spec and {'retained_moe_origin.py','expert_window_vllm_capture.py'}<=spec['input_files'].keys()
+            replay['trace_predictor']['moe_origin']=True
+        if spec.get('expert_operands'):
+            assert spec.get('moe_origin') and {'retained_expert_operands.py','expert_down_capture.py'}<=spec['input_files'].keys()
+            replay['trace_predictor']['expert_operands']=True
+        if 'gate_candidate_layers' in spec:
+            assert 'retained_expert_candidate.py' in spec['input_files'] and not spec.get('expert_operands')
+            replay['gate_candidate_layers']=spec['gate_candidate_layers']
+        if spec.get('native_audio'):
+            del replay['audio_control']
+        save(root/'REPLAY.json',replay)
+        execution=read(old/'EXECUTION.json')
+        execution.update(root=new,control_root=str(hot/'new-lease'),started=time.time(),
+                         compute_deadline=time.time()+spec['timeout_seconds'],deadline=time.time()+spec['timeout_seconds']+60)
+        save(root/'EXECUTION.json',execution)
+        save(root/'IDLE-INTENT.json',dict(plan_sha256=spec['prepared_plan_sha256'],boot_id=plan['source_boot'],
+                                         guard_inode=guard_path.stat().st_ino,devices=devices, prior_service_restored=False))
+        cid=subprocess.check_output(phase,text=True).strip()
+        save(root/'CONTAINER.json',dict(container_id=cid))
+        try:
+            code=int(subprocess.check_output(['docker','wait',cid],text=True,timeout=spec['timeout_seconds']))
+        except subprocess.TimeoutExpired:
+            subprocess.run(['docker','stop','-t','30',cid],check=True)
+            code=int(subprocess.check_output(['docker','wait',cid],text=True))
+        save(root/'EXIT.json',dict(container_id=cid,exit_code=code,
+                                   result_exists=(hot/'RESULT.json').is_file()))
+        if code or not (hot/'RESULT.json').is_file():
+            raise SystemExit(1)
 
 
 def main(spec):
@@ -127,4 +268,6 @@ def main(spec):
     cid=subprocess.check_output(ctrl,text=True).strip();save(root/'CONTROLLER.json',dict(container_id=cid));print(cid)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--config',required=True,type=Path);a=p.parse_args();main(read(a.config))
+    p=argparse.ArgumentParser();p.add_argument('--config',required=True,type=Path)
+    p.add_argument('--idle',action='store_true')
+    a=p.parse_args();(idle_replay if a.idle else main)(read(a.config))
