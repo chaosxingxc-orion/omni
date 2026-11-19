@@ -1,0 +1,20 @@
+--- a/implementation/transport.py
++++ b/implementation/transport.py
+@@ -421,6 +421,17 @@
+                         return
+                 if path.suffix=='.json':
+                     document=read(ref)
++                    if (active_stage=='endpoint' and str(path) in
++                            (config['initial_input'],stage_request.get('input_ref',{}).get('path'))):
++                        # provider_session.load and phase_process.worker_context
++                        # consume this projection. A resumed request need not
++                        # use initial_input. Project BEFORE content expansion;
++                        # source provenance is not an endpoint runtime input.
++                        # The complete original bytes were authenticated above.
++                        document={k:v for k,v in document.items() if k in
++                                  ('policy','sampling','execution_registry','authorization','budget','resources','capture')}
++                        document['capture']={k:v for k,v in document['capture'].items()
++                                             if k in ('profile_ref','transport_config_ref')}
+                     if active_stage in ('dev','test') and str(path)==config['program_template_ref']['path']:
+                         # Same retained fields as the original policy binder.
+                         # The raw JSON is still transferred/hash-checked above.
