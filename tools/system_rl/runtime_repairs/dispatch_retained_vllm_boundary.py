@@ -104,6 +104,12 @@ def main(spec):
     ix=phase.index('--entrypoint')
     phase[ix:ix]=['--mount',f'type=bind,src={root},dst={root}','--mount',f'type=bind,src={inputs},dst=/e,readonly']
     phase += [image,'-B','/e/retained_audio_vllm_boundary.py',str(root/'REPLAY.json')]
+    if 'hf_text_image' in spec:
+        pinned=spec['hf_text_image']
+        assert pinned.startswith('sha256:') and subprocess.check_output(['docker','image','inspect','-f','{{.Id}}',pinned],text=True).strip()==pinned
+        assert 'HF-TEXT.json' in spec['input_files'] and 'retained_hf_text_control.py' in spec['input_files']
+        phase[phase.index('--entrypoint')+1]='python3'
+        phase[-4:]=[pinned,'-B','/e/retained_hf_text_control.py','/e/HF-TEXT.json',model,str(hot/'HF-TEXT-RESULT.json')]
     t=time.time();compute=spec['compute_seconds'];reserve=spec['restore_seconds']
     assert 600<compute<=3600 and 600<=reserve<=3600
     s.update(root=str(root),npu_argv=phase,phase_names=[name],lease_started=t,compute_seconds=compute,

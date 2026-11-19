@@ -65,6 +65,9 @@ def render(spec,root):
                  '--mount',f'type=bind,src={hot},dst=/hot','--mount',
                  f"type=bind,src={runtime['model']['path']},dst=/model,readonly",image,
                  'timeout','300','python3','-B','/e/retained_audio_hf_boundary.py'])
+    if spec.get('hf_text_control'):
+        assert 'HF-TEXT.json' in spec['input_files'] and 'retained_hf_text_control.py' in spec['input_files']
+        argv[-5:]=['timeout',str(spec['compute_seconds']-60),'python3','-B','/e/retained_hf_text_control.py','/e/HF-TEXT.json','/model','/hot/HF-TEXT-RESULT.json']
     now=time.time(); t=spec['compute_seconds']; reserve=spec['restore_seconds']
     assert 600<t<=3600 and 600<=reserve<=3600
     plan.update(root=str(root),phase_names=[name],npu_argv=argv,lease_started=now,compute_seconds=t,
