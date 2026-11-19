@@ -3,7 +3,26 @@ from collections import Counter
 from functools import wraps
 
 
-def causal_attention(*, training_vjp=False):
+def tiled(fia, q, k, v, tile):
+    """Use the same absolute-position query tile and KV extent in prefill and decode."""
+    import torch
+    n,m=len(q),len(k);start=m-n
+    if n<=0 or start<0 or len(v)!=m or tile!=128:raise ValueError('invalid absolute query tile')
+    pieces=[]
+    for lo in range(start//tile*tile,m,tile):
+        stop=lo+tile;left=max(lo,start);right=min(stop,m)
+        # Unrequested query rows do not interact. Future padded keys are
+        # masked by the same bottom-right causal mask as real future keys.
+        qq=q.new_zeros((tile,*q.shape[1:]))
+        qq[left-lo:right-lo].copy_(q[left-start:right-start])
+        def prefix(x):
+            if stop<=m:return x[:stop].contiguous()
+            return torch.cat((x,x.new_zeros((stop-m,*x.shape[1:]))))
+        pieces.append(fia(qq,prefix(k),prefix(v))[left-lo:right-lo])
+    return torch.cat(pieces)
+
+
+def causal_attention(*, training_vjp=False, absolute_tile=None):
     """One implementation for the live TP4 and full-head FSDP scopes."""
     import torch
     import torch_npu
@@ -51,11 +70,13 @@ def causal_attention(*, training_vjp=False):
         output, qi, ki = [], 0, 0
         for nq, nk in zip(ql, kl):
             query = q[qi:qi+nq].contiguous()
-            result = torch_npu.npu_fused_infer_attention_score(
-                query=query, key=k[ki:ki+nk].contiguous(), value=v[ki:ki+nk].contiguous(),
-                atten_mask=masks[q.device], input_layout='TND', sparse_mode=3,
-                actual_seq_lengths=[nq], actual_seq_lengths_kv=[nk], num_heads=8,
-                num_key_value_heads=1, scale=scale)[0].reshape_as(query)
+            def fia(qq,kk,vv):
+                return torch_npu.npu_fused_infer_attention_score(
+                    query=qq,key=kk,value=vv,atten_mask=masks[q.device],input_layout='TND',sparse_mode=3,
+                    actual_seq_lengths=[len(qq)],actual_seq_lengths_kv=[len(kk)],num_heads=8,
+                    num_key_value_heads=1,scale=scale)[0].reshape_as(qq)
+            keys=k[ki:ki+nk].contiguous();vals=v[ki:ki+nk].contiguous()
+            result=fia(query,keys,vals) if absolute_tile is None else tiled(fia,query,keys,vals,absolute_tile)
             if result.dtype != q.dtype:
                 raise ValueError('FIA changed the model attention dtype')
             output.append(result)
@@ -73,18 +94,19 @@ def _validate(layers, model_layers):
         raise ValueError('expected explicitly ordered, unique candidate layers')
 
 
-def attach_vllm(model, layers):
+def attach_vllm(model, layers, *, tiled_layers=()):
     import attention_contract_compute as contract
     text = model.language_model.model
     _validate(layers, text.layers)
     compute = causal_attention()
+    fixed=causal_attention(absolute_tile=128) if tiled_layers else None
     restores, counts, active = [], Counter(), []
     baseline = contract.compute
 
     def consume(q, k, v, ql, kl, **opts):
         if not active:
             return baseline(q, k, v, ql, kl, **opts)
-        out = compute(q, k, v, ql, kl, **opts)
+        out = (fixed if active[-1] in tiled_layers else compute)(q, k, v, ql, kl, **opts)
         counts[active[-1]] += 1
         return out
 
@@ -119,11 +141,11 @@ def attach_vllm(model, layers):
         if contract.compute is not consume or active:
             raise ValueError('attention leaf ownership changed')
         contract.compute = baseline
-        return _receipt(layers, counts)
+        return _receipt(layers, counts, tiled_layers)
     return close
 
 
-def attach_hf(text, layers, unwrap, *, training_vjp=False):
+def attach_hf(text, layers, unwrap, *, training_vjp=False, tiled_layers=()):
     """Intercept the real HF SDPA call inside the selected decoder attention only."""
     import torch
     from torch.nn import functional as F
@@ -131,6 +153,8 @@ def attach_hf(text, layers, unwrap, *, training_vjp=False):
 
     _validate(layers, text.layers)
     compute = causal_attention(training_vjp=training_vjp)
+    fixed=causal_attention(absolute_tile=128) if tiled_layers else None
+    if tiled_layers and training_vjp:raise ValueError("tile backward not validated")
     counts, handles, active = Counter(), [], []
 
     class AttentionMode(TorchFunctionMode):
@@ -146,7 +170,8 @@ def attach_hf(text, layers, unwrap, *, training_vjp=False):
                     or kw.get('dropout_p', 0.) != 0. or not kw.get('enable_gqa')):
                 raise ValueError('expected causal unpadded HF single-row batch, 32Q/4KV')
             n = q.shape[2]
-            groups = [compute(q[0, i*8:(i+1)*8].transpose(0, 1),
+            use=fixed if active[-1][0] in tiled_layers else compute
+            groups = [use(q[0, i*8:(i+1)*8].transpose(0, 1),
                               k[0, i:i+1].transpose(0, 1), v[0, i:i+1].transpose(0, 1),
                               [n], [n], scale=kw.get('scale') or 128**-.5)
                       for i in range(4)]
@@ -178,12 +203,12 @@ def attach_hf(text, layers, unwrap, *, training_vjp=False):
             h.remove()
         if active:
             raise ValueError('unfinished HF attention scope')
-        return _receipt(layers, counts)
+        return _receipt(layers, counts, tiled_layers)
     return close
 
 
-def _receipt(layers, counts):
+def _receipt(layers, counts, tiled_layers):
     if set(counts) != set(layers):
         raise ValueError('candidate layers were not consumed by the forward')
-    return dict(arithmetic='causal_bf16_tnd_fia', layers=dict(counts),
+    return dict(arithmetic='causal_bf16_tnd_fia', layers=dict(counts),absolute_tile_layers=list(tiled_layers),
                 training_backward_validated=False)

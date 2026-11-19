@@ -104,7 +104,7 @@ def main(spec, inputs_root, out):
         if 'attention_candidate_layers' in spec:
             sealed('retained_attention_candidate.py')
             from retained_attention_candidate import attach_hf as attach_attention
-            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner, **(dict(training_vjp=True) if do_vjp else {}))
+            close_attention = attach_attention(text, spec['attention_candidate_layers'], inner, **(dict(tiled_layers=spec['fresh_group']['tiled_layers']) if spec.get('fresh_group',{}).get('tiled_layers') else {}), **(dict(training_vjp=True) if do_vjp else {}))
         close_down = None
         if 'down_candidate_layers' in spec:
             sealed('retained_expert_candidate.py')

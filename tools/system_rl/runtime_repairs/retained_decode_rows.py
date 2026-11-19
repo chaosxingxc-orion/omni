@@ -27,7 +27,7 @@ def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_or
     close_scan=None
     if prefix_scan:
         from retained_prefix_scan import observe as scan
-        close_scan=scan(text,prefix_scan['rows'],prefix_scan['layers'])
+        close_scan=scan(text,prefix_scan['rows'],prefix_scan['layers'],*((worker.model_runner,request_seed) if request_seed is not None else ()))
     if prefix_origin is not None:
         from retained_prefix_origin import attach
         if not 0<=prefix_origin<target:

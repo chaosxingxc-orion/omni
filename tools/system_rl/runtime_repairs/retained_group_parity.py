@@ -45,12 +45,12 @@ def sample(engine, cfg):
         if trace['source_sha256']!=target['source_sha256']:
             raise ValueError('trace bound to different source')
         n=len(target['prompt_token_ids'])
-        if not (trace['layers']==0 if batch_trace else 0<trace['layers']<=8) or trace['prompt_tokens']!=n or not 1<=trace['action_ordinal']<=target['packet']['wire']['max_tokens']:
+        if not (0<=trace['layers']<=3 if batch_trace else 0<trace['layers']<=8) or trace['prompt_tokens']!=n or not 1<=trace['action_ordinal']<=target['packet']['wire']['max_tokens']:
             raise ValueError('invalid trace extent')
         def begin(mode):
             pos=n+trace['action_ordinal']-2+trace['rope_offset']
             args=(mode,pos,trace.get('attention_layer'),trace.get('prefix_origin'),False,False,
-                  None if batch_trace else dict(rows=n,layers=trace['layers']),trace.get('origin_layers',2),False,trace.get('moe_sites'))
+                  dict(rows=n,layers=trace['layers']) if trace['layers'] else None,trace.get('origin_layers',2),False,trace.get('moe_sites'))
             if batch_trace:args+=(target['packet']['wire']['seed'],trace.get('shadow_v',False))
             if sorted(engine.collective_rpc('omni_predictor_begin',args=args,timeout=240))!=list(range(4)):
                 raise ValueError('incomplete fresh trace launch')

@@ -189,6 +189,9 @@ def idle_replay(spec):
         if 'fresh_group' in spec:
             assert spec.get('native_audio') and not spec.get('trace_predictor',True)
             assert 'retained_group_parity.py' in spec['input_files']
+            if 'tiled_layers' in spec:
+                assert 'kv_layers' in spec and set(spec['tiled_layers'])<=set(spec['attention_candidate_layers'])
+                replay['tiled_layers']=spec['tiled_layers']
             if 'kv_layers' in spec:
                 assert 'retained_kv_candidate.py' in spec['input_files']
                 replay['kv_layers']=spec['kv_layers']

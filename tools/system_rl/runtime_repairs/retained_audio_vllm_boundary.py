@@ -129,7 +129,7 @@ def main(path):
         installed=engine.collective_rpc('omni_retained_install_rows',
             args=(cfg['audio_row_sites'],cfg.get('audio_control'),cfg.get('gate_candidate_layers'),
                   cfg.get('attention_candidate_layers'),cfg.get('down_candidate_layers'),
-                  cfg.get('audio_attention_layers'),*([cfg.get('router_layers'),cfg['kv_layers']] if 'kv_layers' in cfg else [cfg['router_layers']] if 'router_layers' in cfg else [])),timeout=240)
+                  cfg.get('audio_attention_layers'),*([cfg.get('router_layers'),cfg['kv_layers']] +([cfg['tiled_layers']] if 'tiled_layers' in cfg else []) if 'kv_layers' in cfg else [cfg['router_layers']] if 'router_layers' in cfg else [])),timeout=240)
         assert sorted(installed)==list(range(4))
         try:
             if 'fresh_group' in cfg:

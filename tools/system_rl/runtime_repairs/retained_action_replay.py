@@ -17,7 +17,7 @@ def checked(directory, ref):
 
 def install_rows(worker, sites, control=None, gate_candidate_layers=None,
                  attention_candidate_layers=None, down_candidate_layers=None,
-                 audio_attention_layers=None, router_layers=None, kv_layers=None):
+                 audio_attention_layers=None, router_layers=None, kv_layers=None, tiled_layers=()):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
@@ -56,7 +56,7 @@ def install_rows(worker, sites, control=None, gate_candidate_layers=None,
         worker._retained_gate_candidate = attach_candidate(model, gate_candidate_layers)
     if attention_candidate_layers is not None:
         from retained_attention_candidate import attach_vllm
-        worker._retained_attention_candidate = attach_vllm(model, attention_candidate_layers)
+        worker._retained_attention_candidate = attach_vllm(model, attention_candidate_layers,**(dict(tiled_layers=tiled_layers) if tiled_layers else {}))
     if down_candidate_layers is not None:
         from retained_expert_candidate import attach
         worker._retained_down_candidate = attach(model, down_candidate_layers, stage='down')
