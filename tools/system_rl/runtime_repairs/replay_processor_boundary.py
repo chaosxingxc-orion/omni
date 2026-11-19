@@ -60,6 +60,17 @@ def run(config_path, model_path):
         from types import SimpleNamespace
         hf = SimpleNamespace(config=thinker.config, spatial_merge_size=thinker.config.vision_config.spatial_merge_size)
         full = torch.tensor([action['prompt_token_ids'] + action['token_ids']])
+        # Both installed methods express destinations in prompt coordinates.
+        # Compare those destinations independently of the audio tower values.
+        prompt_ids = full[:, :len(ids)]
+        _, _, hf_mask = HF.get_placeholder_mask(hf, prompt_ids, prompt_ids.unsqueeze(-1))
+        hf_rows = torch.where(hf_mask[0, :, 0])[0].tolist()
+        vl_ranges = place.extract_embeds_range()
+        vl_rows = [row_id for start, end in vl_ranges for row_id in range(start, end + 1)]
+        mapping = dict(equal=hf_rows == vl_rows, hf_count=len(hf_rows),
+                       vllm_count=len(vl_rows), vllm_ranges=vl_ranges)
+        if not hf_rows or len(vl_rows) != place.get_num_embeds():
+            raise ValueError('missing audio placeholder rows or inconsistent range')
         hf_pos, _ = HF.get_rope_index(hf, input_ids=full, attention_mask=torch.ones_like(full),
                          audio_seqlens=prepared['encoded']['feature_attention_mask'].sum(-1), use_audio_in_video=False)
         enc = prepared['encoded']
@@ -73,7 +84,7 @@ def run(config_path, model_path):
                    features=compare(left, right), bf16_features=compare(left.bfloat16(), right.bfloat16()),
                    prompt_positions=compare(hf_pos[:, 0, :len(ids)].long(), pos.long()), position_shape=list(pos.shape), vllm_position_delta=offset,
                    vllm_positions_sha256=hashlib.sha256(pos.long().contiguous().numpy().tobytes()).hexdigest(),
-                   selected_response_tokens=len(action['token_ids']))
+                   audio_placeholder_mapping=mapping, selected_response_tokens=len(action['token_ids']))
         rows.append(rec)
     return dict(schema='retained-audio-cpu-processor-replay-v1', records=rows,
                 used_model_weights=False, original_worker_intermediates_observed=False)
