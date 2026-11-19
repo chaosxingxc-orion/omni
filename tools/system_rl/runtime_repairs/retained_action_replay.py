@@ -17,7 +17,7 @@ def checked(directory, ref):
 
 def install_rows(worker, sites, control=None, gate_candidate_layers=None,
                  attention_candidate_layers=None, down_candidate_layers=None,
-                 audio_attention_layers=None):
+                 audio_attention_layers=None, router_layers=None):
     from retained_audio_row_precision import attach
     model = worker.model_runner.get_model()
     if hasattr(worker, '_retained_audio_rows'):
@@ -60,6 +60,9 @@ def install_rows(worker, sites, control=None, gate_candidate_layers=None,
     if down_candidate_layers is not None:
         from retained_expert_candidate import attach
         worker._retained_down_candidate = attach(model, down_candidate_layers, stage='down')
+    if router_layers:
+        from retained_router_candidate import attach as attach_router
+        worker._retained_router = attach_router(model.language_model.model,router_layers,side="vl")
     return worker.rank
 
 
@@ -71,6 +74,9 @@ def close_rows(worker):
     if hasattr(worker, '_retained_audio_attention'):
         result['audio_attention'] = worker._retained_audio_attention()
         del worker._retained_audio_attention
+    if hasattr(worker, '_retained_router'):
+        result['router']=worker._retained_router()
+        del worker._retained_router
     if hasattr(worker, '_retained_down_candidate'):
         result['down_candidate'] = worker._retained_down_candidate()
         del worker._retained_down_candidate

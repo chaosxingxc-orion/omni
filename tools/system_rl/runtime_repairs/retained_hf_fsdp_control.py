@@ -116,10 +116,16 @@ def main(spec, inputs_root, out):
             sealed('retained_group_parity.py')
             from retained_group_parity import hf_scores
             fresh=spec['fresh_group']
+            router=None
+            if 'router_layers' in fresh:
+                sealed('retained_router_candidate.py')
+                from retained_router_candidate import attach as attach_router
+                router=attach_router(text,fresh['router_layers'],side='hf',unwrap=inner)
             rs=hf_scores(worker,adapted,read(sealed(fresh['manifest'])),read(sealed(fresh['result']))['fresh_group'],
-                         spec['files'][fresh['manifest']],rank,world,trace_group=fresh.get('trace_group'),origin_indices=fresh.get('origin_indices'))
+                         spec['files'][fresh['manifest']],rank,world,trace_group=fresh.get('trace_group'),origin_indices=fresh.get('origin_indices'),
+                         router_shadow=fresh.get('router_shadow',False))
             commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,
-                   down=close_down(),gate=close_candidate(),attention=close_attention()))
+                   down=close_down(),gate=close_candidate(),attention=close_attention(),router=router() if router else None))
             return
         start = time.monotonic()
         policy = dict(schema='omni-response-logits-v1', vocabulary=spec['vocabulary'], max_bytes=16*1024**2)

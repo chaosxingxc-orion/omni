@@ -91,7 +91,7 @@ def sample(engine, cfg):
                 manifest_sha256=cfg['fresh_group']['sha256'],optimizer_steps=0)
 
 
-def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None):
+def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False):
     """One owned request per rank per FSDP collective; no resampling or weight update."""
     import sys
     import torch
@@ -154,6 +154,33 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
                     hooks.append(mod.register_forward_hook(lambda m,a,v,k=f'{i}.{label}':mark(k,v)))
         if origin_indices is not None:
             layer=unwrap(base.model.layers[1])
+            if router_shadow:
+                def shadow_router(m,args,v):
+                    import torch_npu
+                    x=args[0].reshape(-1,2048).contiguous();w=m.weight
+                    if (x.dtype!=torch.bfloat16 or tuple(w.shape)!=(128,2048)
+                            or w.dtype!=x.dtype or m.training or torch.is_grad_enabled()):
+                        raise ValueError('expected frozen BF16 actual router operands')
+                    n=len(row['prompt_token_ids'])
+                    record('L1.actual_router_input',x[:n])
+                    record('L1.actual_router_weight',w)
+                    wt=w.T.contiguous().unsqueeze(0)
+                    def project(y):
+                        return torch_npu.npu_grouped_matmul(x=[y.contiguous()],weight=[wt],
+                            split_item=2,group_list_type=1,group_type=0,
+                            group_list=torch.tensor([len(y)],device=x.device,dtype=torch.int64))[0]
+                    old=torch.nn.functional.linear(x,w)
+                    if not torch.equal(old,v[0]):raise ValueError('same-input native router did not reproduce')
+                    new=project(x)
+                    record('L1.shadow_router_prompt',new[:n])
+                    target=2491
+                    one=project(x[target:target+1])
+                    native_one=torch.nn.functional.linear(x[target:target+1],w)
+                    boundary['L1.router_shadow_target']=dict(grouped_full_single_equal=torch.equal(new[target],one[0]),
+                        native_full_single_equal=torch.equal(old[target],native_one[0]),
+                        native_vs_grouped_unequal=int(torch.count_nonzero(old[target]!=new[target])),
+                        grouped=tensor_hash(new[target]),native=tensor_hash(old[target]))
+                hooks.append(unwrap(layer.mlp.gate).register_forward_hook(shadow_router))
             for name,mod in [('attention',layer.self_attn),('mlp',layer.mlp),('router',layer.mlp.gate),('experts',layer.mlp.experts)]:
                 def observe_op(m,a,v,k=name):
                     values=v if isinstance(v,tuple) else (v,)

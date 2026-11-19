@@ -189,6 +189,9 @@ def idle_replay(spec):
         if 'fresh_group' in spec:
             assert spec.get('native_audio') and not spec.get('trace_predictor',True)
             assert 'retained_group_parity.py' in spec['input_files']
+            if 'router_layers' in spec:
+                assert 'retained_router_candidate.py' in spec['input_files']
+                replay['router_layers']=spec['router_layers']
             if spec.get('isolate_fresh_paths'):
                 assert spec['isolate_fresh_paths'] is True
                 replay['isolate_fresh_paths']=True
