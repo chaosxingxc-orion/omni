@@ -1,0 +1,76 @@
+"""Paired frozen K/V base projection; keep real TP gathers and LoRA math."""
+from collections import Counter
+from contextlib import ExitStack
+from functools import wraps
+
+
+def attach(text,layers,*,side,unwrap=lambda m:m):
+    import torch
+    from torch.overrides import TorchFunctionMode
+    from retained_expert_candidate import project
+    if side not in ('vl','hf') or not layers or layers!=sorted(set(layers)) or any(type(i)!=int or not 0<=i<48 for i in layers):
+        raise ValueError('expected explicit KV projection layers')
+    scopes=[];counts=Counter();stack=ExitStack()
+
+    class BaseKV(TorchFunctionMode):
+        def __torch_function__(self,func,types,args=(),kwargs=None):
+            if func is not torch.nn.functional.linear or len(args)<2 or tuple(args[1].shape)!=(512,2048):
+                return func(*args,**(kwargs or {}))
+            x,w=args[:2]
+            if (kwargs or (len(args)!=2 and (len(args)!=3 or args[2] is not None))
+                    or torch.is_grad_enabled() or x.dtype!=torch.bfloat16 or w.dtype!=x.dtype or x.shape[-1]!=2048):
+                raise ValueError('invalid frozen full-width K/V base projection')
+            n=scopes[-1]
+            y=project(x.reshape(-1,2048),w.T)
+            counts[n]+=1
+            return y.reshape(*x.shape[:-1],512)
+    def replace(owner,attr,fn):
+        before=vars(owner).get(attr)
+        if attr in vars(owner):stack.callback(setattr,owner,attr,before)
+        else:stack.callback(delattr,owner,attr)
+        setattr(owner,attr,fn)
+    try:
+        if side=='vl':
+            # The legacy backend still makes a shadow call. Replace only the
+            # adapter's consumed full-width projection, not the shadow.
+            import projection_family_runtime as runtime
+            original=runtime.qkv
+            @wraps(original)
+            def paired(*args,**kwargs):
+                if not scopes:return original(*args,**kwargs)
+                before=counts[scopes[-1]]
+                with BaseKV():out=original(*args,**kwargs)
+                if counts[scopes[-1]]!=before+2:raise ValueError('expected two consumed K/V projections')
+                return out
+            replace(runtime,'qkv',paired)
+        for i in layers:
+            attn=unwrap(unwrap(text.layers[i]).self_attn)
+            if side=='vl':
+                mod=attn.qkv_proj
+                stack.callback(mod.register_forward_pre_hook(lambda m,a,n=i:scopes.append(n)).remove)
+                stack.callback(mod.register_forward_hook(lambda m,a,v:leave(),always_call=True).remove)
+            else:
+                for name in ('k_proj','v_proj'):
+                    mod=unwrap(getattr(attn,name))
+                    base=unwrap(mod.get_base_layer() if hasattr(mod,'get_base_layer') else mod)
+                    def wrap(old,n):
+                        @wraps(old)
+                        def call(*args,**kwargs):
+                            scopes.append(n);before=counts[n]
+                            try:
+                                with BaseKV():out=old(*args,**kwargs)
+                                if counts[n]!=before+1:raise ValueError('expected one consumed HF base projection')
+                                return out
+                            finally:scopes.pop()
+                        return call
+                    replace(base,'forward',wrap(base.forward,i))
+    except BaseException:
+        stack.close();raise
+    def leave():
+        scopes.pop()
+    def close():
+        stack.close()
+        if scopes or set(counts)!=set(layers) or any(n%2 for n in counts.values()):
+            raise ValueError('incomplete paired K/V execution')
+        return dict(arithmetic='full_width_bf16_base_kv_grouped',layers=dict(counts))
+    return close

@@ -18,22 +18,22 @@ def compare(hot, spec_path, tp_path):
         raise ValueError('HF4 run incomplete')
     if tp['actual_tp']!=4 or tp['fresh_group']['manifest_sha256']!=s['files'][s['fresh_group']['manifest']]:
         raise ValueError('wrong rollout topology or TRAIN request manifest')
-    router_layers=s['fresh_group'].get('router_layers')
-    if router_layers is not None:
-        def check_router(receipt):
-            if (not receipt or receipt['arithmetic']!='full_width_bf16_router_grouped_matmul'
-                    or set(receipt['layers'])!={str(i) for i in router_layers}
-                    or not all(type(v) is int and v>0 for v in receipt['layers'].values())):
-                raise ValueError('missing actual router projection on a selected layer')
-        tp_ranks=tp['decode_row_receipts']
-        if sorted(r['rank'] for r in tp_ranks)!=list(range(n)):
-            raise ValueError('missing TP worker')
-        for r in tp_ranks:check_router(r.get('router'))
+    def check_arithmetic(rank_record):
+        for field,key,kind in [('router_layers','router','full_width_bf16_router_grouped_matmul'),
+                               ('kv_layers','kv_projection','full_width_bf16_base_kv_grouped')]:
+            if field not in s['fresh_group']:continue
+            rr=rank_record.get(key) or {}
+            if (rr.get('arithmetic')!=kind or set(rr.get('layers',{}))!={str(i) for i in s['fresh_group'][field]}
+                    or not all(type(v) is int and v>0 and (key!='kv_projection' or v%2==0) for v in rr['layers'].values())):
+                raise ValueError('missing actual arithmetic for '+field)
+    tp_ranks=tp['decode_row_receipts']
+    if sorted(r['rank'] for r in tp_ranks)!=list(range(n)):raise ValueError('incomplete TP rank receipts')
+    for r in tp_ranks:check_arithmetic(r)
     expected=tp['fresh_group']['records']; rows=[]
     for rank in range(n):
         x=load(hot/f'rank-{rank}'/'RESULT.json')
         if x['rank']!=rank or x['updates']!=0: raise ValueError('rank or model changed')
-        if router_layers is not None:check_router(x.get('router'))
+        check_arithmetic(x)
         for k in ('gate','down','attention'):
             if set(x[k]['layers'])!={str(i) for i in range(48)} or not all(v>0 for v in x[k]['layers'].values()):
                 raise ValueError('missing model layer')

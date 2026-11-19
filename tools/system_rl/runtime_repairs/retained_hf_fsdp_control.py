@@ -121,10 +121,15 @@ def main(spec, inputs_root, out):
                 sealed('retained_router_candidate.py')
                 from retained_router_candidate import attach as attach_router
                 router=attach_router(text,fresh['router_layers'],side='hf',unwrap=inner)
+            kv=None
+            if "kv_layers" in fresh:
+                sealed("retained_kv_candidate.py")
+                from retained_kv_candidate import attach as attach_kv
+                kv=attach_kv(text,fresh["kv_layers"],side="hf",unwrap=inner)
             rs=hf_scores(worker,adapted,read(sealed(fresh['manifest'])),read(sealed(fresh['result']))['fresh_group'],
                          spec['files'][fresh['manifest']],rank,world,trace_group=fresh.get('trace_group'),origin_indices=fresh.get('origin_indices'),
                          router_shadow=fresh.get('router_shadow',False))
-            commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,
+            commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,kv_projection=kv() if kv else None,
                    down=close_down(),gate=close_candidate(),attention=close_attention(),router=router() if router else None))
             return
         close_router=None
