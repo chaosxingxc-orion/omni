@@ -4,7 +4,7 @@ import hashlib
 
 def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_origin=False,
           expert_operands=False, prefix_scan=None, origin_layers=2, attention_shape_shadow=False,
-          moe_sites=None, request_seed=None):
+          moe_sites=None, request_seed=None, shadow_v=False):
     import torch
     from family_precision import ATTR
     model = worker.model_runner.get_model()
@@ -32,7 +32,7 @@ def begin(worker, mode, target, attention_layer=None, prefix_origin=None, moe_or
         from retained_prefix_origin import attach
         if not 0<=prefix_origin<target:
             raise ValueError('invalid history position')
-        close_prefix=attach(text,prefix_origin,target,origin_layers)
+        close_prefix=attach(text,prefix_origin,target,origin_layers,*((worker.model_runner,request_seed) if request_seed is not None else ()),shadow_v=shadow_v)
     if moe_origin:
         from retained_moe_origin import hook
         if prefix_origin is None:

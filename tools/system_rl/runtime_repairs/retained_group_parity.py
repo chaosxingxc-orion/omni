@@ -49,9 +49,9 @@ def sample(engine, cfg):
             raise ValueError('invalid trace extent')
         def begin(mode):
             pos=n+trace['action_ordinal']-2+trace['rope_offset']
-            args=(mode,pos,trace.get('attention_layer'),None,False,False,
-                  None if batch_trace else dict(rows=n,layers=trace['layers']),2,False,trace.get('moe_sites'))
-            if batch_trace:args+=(target['packet']['wire']['seed'],)
+            args=(mode,pos,trace.get('attention_layer'),trace.get('prefix_origin'),False,False,
+                  None if batch_trace else dict(rows=n,layers=trace['layers']),trace.get('origin_layers',2),False,trace.get('moe_sites'))
+            if batch_trace:args+=(target['packet']['wire']['seed'],trace.get('shadow_v',False))
             if sorted(engine.collective_rpc('omni_predictor_begin',args=args,timeout=240))!=list(range(4)):
                 raise ValueError('incomplete fresh trace launch')
         def finish(mode):
