@@ -1056,10 +1056,10 @@ def execute(config,task,directory,host,operation):
         if not (directory/'STAGE-INTENT.json').exists():
             c.step(directory,'STAGE',bootstrap_command(c,directory,plan['job']['image']),lock.fileno(),input=Path(plan['stage_tar_ref']['path']).read_bytes())
         require(stage_result(config,plan,directory,c,lock.fileno())['returncode']==0,'unknown stage: reconcile same identity')
-        if plan['job'].get('cold_assets'):
-            from cold_assets import ensure
-            ensure(config,plan,directory)
         if not (directory/'START-INTENT.json').exists():
+            if plan['job'].get('cold_assets'):
+                from cold_assets import ensure
+                ensure(config,plan,directory)
             require(stage_result(config,plan,directory,c,lock.fileno())['returncode']==0,'unknown stage: reconcile same identity')
             code=remote_agent_source()
             c.step(directory,'START',['python3','-B','-c',code,plan['stage']],lock.fileno())
