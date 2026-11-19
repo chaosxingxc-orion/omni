@@ -323,23 +323,14 @@ def configure(source,output,mode):
             require(pin(root/'source-release/sources.tar')['sha256']==bundle['archive']['sha256'],'source bundle changed on restart')
         else:pack(root/'source-release',seed['path'],source_only=True)
         c['source_bundle_ref']=pin(root/'source-release/BUNDLE.json')
+    if c.get('finite_diagnostic_config_ref'):
+        bind_scoped_diagnostic_sampling(c,value['training_package'])
     from unified_config import bind as bind_unified_workflow
     bind_unified_workflow(value,mode,root)
     bind_service_owner(value,root)
     from prepare_iteration import prepare
     source_ref=write(root/'BOUND-PREPARATION.json',value)
     return prepare(source_ref,root/'entry')
-if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--config');p.add_argument('--template');p.add_argument('--profile');p.add_argument('--output',required=True);p.add_argument('--mode',choices=['formal','finite_engineering'],required=True);a=p.parse_args()
-    require(bool(a.config)!=bool(a.template),'use config or template plus local profile')
-    source=a.config
-    if a.template:
-        require(a.profile,'explicit local profile required')
-        from config_profile import compile_profile
-        resolved=read(compile_profile(a.template,a.profile,Path(a.output)/'resolved-input'))
-        source=resolved['resolved_ref']
-    print(json.dumps(configure(source,a.output,a.mode)))
-
 
 def bind_scoped_diagnostic_sampling(iteration,package):
     """Bind dispatch, observation and budgets to the same selected node roster."""
@@ -364,3 +355,14 @@ def bind_scoped_diagnostic_sampling(iteration,package):
         diagnostic_coverage=copy.deepcopy(spec['diagnostic_coverage']))
     iteration['stage_budgets']['diagnostic']['tokens_upper']=spec['diagnostic_token_upper']
     package['budget']['diagnostic_token_upper']=spec['diagnostic_token_upper']
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('--config');p.add_argument('--template');p.add_argument('--profile');p.add_argument('--output',required=True);p.add_argument('--mode',choices=['formal','finite_engineering'],required=True);a=p.parse_args()
+    require(bool(a.config)!=bool(a.template),'use config or template plus local profile')
+    source=a.config
+    if a.template:
+        require(a.profile,'explicit local profile required')
+        from config_profile import compile_profile
+        resolved=read(compile_profile(a.template,a.profile,Path(a.output)/'resolved-input'))
+        source=resolved['resolved_ref']
+    print(json.dumps(configure(source,a.output,a.mode)))
