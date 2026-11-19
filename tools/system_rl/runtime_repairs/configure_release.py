@@ -339,3 +339,28 @@ if __name__=='__main__':
         resolved=read(compile_profile(a.template,a.profile,Path(a.output)/'resolved-input'))
         source=resolved['resolved_ref']
     print(json.dumps(configure(source,a.output,a.mode)))
+
+
+def bind_scoped_diagnostic_sampling(iteration,package):
+    """Bind dispatch, observation and budgets to the same selected node roster."""
+    spec=read(iteration['finite_diagnostic_config_ref'])
+    selection=spec.get('packet_selection',{})
+    if selection.get('schema')!='diagnostic-packet-selection-v2':return
+    from prompt_capacity import diagnostic_quotas,diagnostic_work
+    quotas=diagnostic_quotas(selection);nodes={n for n,q in quotas.items() if q}
+    from diagnostic_protocol import target_nodes
+    require(set(target_nodes(iteration))<=nodes,'diagnostic sampling omits training targets')
+    calls,tokens=diagnostic_work(spec);bounds=spec['bounds']
+    require(bounds['capture_requests_upper']==calls and bounds['capture_logical_tokens_upper']==tokens and
+            bounds['accounted_capture_tokens_upper']==3*tokens,'scoped capture budget mismatch')
+    capture=iteration['diagnostic_logits_capture'];observed=capture['selection']
+    capture['selection']=dict(observed,schema='omni-logits-input-selection-v2',
+        inputs_per_node={n:observed['inputs_per_node'][n] if n in nodes else 0 for n in quotas})
+    from logits_selection import validate
+    validate(capture['selection'])
+    iteration['diagnostic_capture_budgets']={purpose:dict(tokens_upper=3*tokens,requests_upper=calls)
+        for purpose in ('base_parity','updated_parity')}
+    package.update(diagnostic_selection=copy.deepcopy(spec['diagnostic_selection']),
+        diagnostic_coverage=copy.deepcopy(spec['diagnostic_coverage']))
+    iteration['stage_budgets']['diagnostic']['tokens_upper']=spec['diagnostic_token_upper']
+    package['budget']['diagnostic_token_upper']=spec['diagnostic_token_upper']

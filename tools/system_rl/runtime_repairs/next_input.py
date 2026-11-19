@@ -204,7 +204,7 @@ def derive_seeds(root_seed,sampling_round,cohort_sequence):
 
 
 def diagnostic_input(input_ref,screen,policy,witness,output,*,root_seed,sampling_round,cohort_sequence,sampling=None,evidence_nodes=None):
-    """Independent all-node evidence collection; never a training reservation.
+    """Independent scoped evidence collection; never a training reservation.
 
     A boundary's next training phase deliberately still lacks DEV validation.
     Use a separately identified diagnostic system scope, retaining the exact
@@ -221,9 +221,13 @@ def diagnostic_input(input_ref,screen,policy,witness,output,*,root_seed,sampling
         trainable_mask={n:True for n in ('P','S1','S2','D')},frozen_upstream_release=None,
         required_validations=[])
     if evidence_nodes is not None:
-        require(evidence_nodes==['P','S1','S2','D'],'independent diagnostic retains all-node coverage')
+        require(isinstance(evidence_nodes,list) and evidence_nodes and
+                evidence_nodes==[n for n in ('P','S1','S2','D') if n in evidence_nodes],
+                'nonempty ordered unique diagnostic scope required')
         frozen=pin(nxt['phase_frozen_upstream_ref'])
-        phase.update(rollout_scope='node',target_nodes=list(evidence_nodes),frozen_upstream_release=frozen['sha256'])
+        phase.update(rollout_scope='node',target_nodes=list(evidence_nodes),
+            trainable_mask={n:n in evidence_nodes for n in ('P','S1','S2','D')},
+            frozen_upstream_release=frozen['sha256'])
     # This is a separately identified first phase for evidence generation.
     # The training configuration and its still-pending gates remain immutable.
     learning.update(version=learning['version']+'@updated-parity-evidence',phases=[phase])

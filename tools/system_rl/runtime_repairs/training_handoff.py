@@ -69,7 +69,7 @@ def successor_state(old, training_ref, config_ref, evidence_ref):
 
 def prepare(config_path):
     cfg=read(config_path)
-    if cfg['schema'] in ('undispatched-p-reward-handoff-v1','closed-pre-reservation-capture-handoff-v1'):
+    if cfg['schema'] in ('undispatched-p-reward-handoff-v1','closed-pre-reservation-capture-handoff-v1','closed-scoped-capture-handoff-v1'):
         return prepare_undispatched(config_path)
     if cfg['schema']=='rejected-diagnostic-training-handoff-v1':
         return prepare_rejected(config_path)
@@ -188,12 +188,17 @@ def undispatched_proof(cfg):
             not state.get('consumed_cohorts') and state.get('cohort_sequence',0)==0,
             'only failed undispatched base capture may hand off')
     mailbox=root/'mailbox'/('%04d-capture'%state['sequence'])/'transport'
-    if cfg['schema']=='closed-pre-reservation-capture-handoff-v1':
+    if cfg['schema'] in ('closed-pre-reservation-capture-handoff-v1','closed-scoped-capture-handoff-v1'):
         proof=read(cfg['terminal_proof_ref'])
         require(proof['schema']=='failed-capture-terminal-proof-v1' and
                 proof['all_owners_terminal'] and proof['restored']['config_exact'] and
-                proof['optimizer_updates']==0 and proof['cohort_reserved'] is False and
-                proof['cohort_requests']==0,'pre-reservation terminal proof required')
+                proof['optimizer_updates']==0,'zero-update restored terminal proof required')
+        if cfg['schema']=='closed-pre-reservation-capture-handoff-v1':
+            require(proof['cohort_reserved'] is False and proof['cohort_requests']==0,
+                'pre-reservation terminal proof required')
+        else:
+            require(proof.get('reconfiguration') is True and proof['cohort_reserved'] is True,
+                'explicit sampled capture stop proof required')
         for role in ('controller','actor','watchdog'):
             actual=terminal(proof[role]['id'],'npu')
             require(actual['state']==proof[role]['state'],'capture terminal state changed')
@@ -252,6 +257,8 @@ def prepare_undispatched(config_path):
         c['archive']['checkpoint_cache_root']=c['checkpoint_cache_root']
         package=copy.deepcopy(read(c['training_package_template']))
         package['learning']=revised['learning_ref']
+        from configure_release import bind_scoped_diagnostic_sampling
+        bind_scoped_diagnostic_sampling(c,package)
         if cfg.get('engineering_update_sequence'):
             from checkpoint_budget import calculate
             from dependencies import JEV
@@ -275,6 +282,11 @@ def prepare_undispatched(config_path):
             workflow['checkpoint_budget_ref']=write(root/'BUDGET.json',calculate(budget,HERE/'worker_dp8.py',JEV/'src/multimodal_jev/context_training_checkpoint.py'))
             bind(dict(iteration=c,training_package=package),'finite_engineering',root/'workflow')
             write(root/'DIAGNOSTIC-STORAGE.json',payload)
+        owner_envelope=copy.deepcopy(read(c['resource_owner_config_ref']))
+        owner=copy.deepcopy(read(owner_envelope['config_ref']))
+        owner['diagnostic_logits_capture']=copy.deepcopy(c['diagnostic_logits_capture'])
+        owner_envelope['config_ref']=write(root/'ROLLOUT-OWNER.json',owner)
+        c['resource_owner_config_ref']=write(root/'OWNER.json',owner_envelope)
         c['training_package_template']=write(root/'TRAINING-PACKAGE.json',package)
         bundle=root/'source-release'
         if not (bundle/'BUNDLE.json').exists():pack(bundle,HERE/'runtime.json',source_only=True)
@@ -282,7 +294,8 @@ def prepare_undispatched(config_path):
         ref=write(root/'ITERATION.json',c)
         migrated=copy.deepcopy(state)
         migrated['reservations'][state['pending_stage']['key']].update(
-            status='failed_pre_reservation' if proof.get('remote_dispatched') else 'failed_pre_dispatch',terminal_evidence_ref=evidence)
+            status=('closed_superseded_sampling' if cfg['schema']=='closed-scoped-capture-handoff-v1' else
+                    'failed_pre_reservation' if proof.get('remote_dispatched') else 'failed_pre_dispatch'),terminal_evidence_ref=evidence)
         for key in ('parity_input_ref','witness_ref','parity_capture','closed_diagnostic',
                     'raw_ref','runtime_ref','parity_acceptance'):migrated.pop(key,None)
         migrated.update(config_ref=ref,input_ref=revised['input_ref'],learning_ref=revised['learning_ref'],
@@ -399,7 +412,7 @@ def launch(args):
     profile,_,_=load_profile(args.profile);storage_admission(profile,out.parent)
     old=read(cfg['predecessor_config_ref']);intent=read(cfg['predecessor_launch_intent_ref'])
     terminal(cfg['predecessor_client'])
-    if cfg['schema'] in ('undispatched-p-reward-handoff-v1','closed-pre-reservation-capture-handoff-v1'):undispatched_proof(cfg)
+    if cfg['schema'] in ('undispatched-p-reward-handoff-v1','closed-pre-reservation-capture-handoff-v1','closed-scoped-capture-handoff-v1'):undispatched_proof(cfg)
     else:
         plan=read(Path(old['output_root'])/'step-000000/diagnostic/TRANSPORT.json')
         if cfg['schema']=='rejected-diagnostic-training-handoff-v1':rejected_proof(cfg)
@@ -409,7 +422,7 @@ def launch(args):
     argv[argv.index('--name')+1]=name
     identity=intent['identity']
     previous=Path(identity['build']) if 'build' in identity else Path(identity['release_ref']['path']).parent
-    namespace='/home/xingchao/workspace/omni/delivery/system-rl-transition-v1'
+    namespace='/workspace/omni/delivery/system-rl-transition-v1'
     require(identity.get('mode',old.get('execution_mode'))==args.mode,'handoff execution mode changed')
     for i,item in enumerate(argv):
         if item=='--mount':
