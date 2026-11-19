@@ -111,6 +111,16 @@ def main(spec, inputs_root, out):
             from retained_expert_candidate import attach_hf as attach_expert
             close_down = attach_expert(text, spec['down_candidate_layers'], inner, stage='down', **(dict(frozen_vjp=True) if do_vjp else {}))
         actor.actor_module.eval()
+        if 'fresh_group' in spec:
+            for hook in hooks: hook.remove()
+            sealed('retained_group_parity.py')
+            from retained_group_parity import hf_scores
+            fresh=spec['fresh_group']
+            rs=hf_scores(worker,adapted,read(sealed(fresh['manifest'])),read(sealed(fresh['result']))['fresh_group'],
+                         spec['files'][fresh['manifest']],rank,world)
+            commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,records=rs,updates=0,
+                   down=close_down(),gate=close_candidate(),attention=close_attention()))
+            return
         start = time.monotonic()
         policy = dict(schema='omni-response-logits-v1', vocabulary=spec['vocabulary'], max_bytes=16*1024**2)
         try:

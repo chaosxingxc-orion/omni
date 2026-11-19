@@ -132,10 +132,17 @@ def main(path):
                   cfg.get('audio_attention_layers')),timeout=240)
         assert sorted(installed)==list(range(4))
         try:
-            result['retained_decode']=decode(engine,cfg)
+            if 'fresh_group' in cfg:
+                from retained_group_parity import sample
+                result['fresh_group']=sample(engine,cfg)
+                result['retained_decode']=[]
+            else:
+                result['retained_decode']=decode(engine,cfg)
             result['language_layers_executed']=48
             result['sampled_actions']=sum(c['generated']+c.get('forced_prefill',{}).get('extra_generated',0)
                                          +c.get('cache_pair',{}).get('generated',0) for c in result['retained_decode'])
+            if 'fresh_group' in result:
+                result['sampled_actions']=sum(len(r['token_ids']) for r in result['fresh_group']['records'])
         finally:
             result['decode_row_receipts']=engine.collective_rpc('omni_retained_close_rows',timeout=240)
     with (Path(cfg['output'])/'RESULT.json').open('x') as stream:

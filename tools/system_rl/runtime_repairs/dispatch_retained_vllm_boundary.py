@@ -186,6 +186,17 @@ def idle_replay(spec):
                            'trace_action_ordinal', 'attention_shape_shadow', 'prefix_origin',
                            'origin_layers', 'moe_origin', 'moe_sites', 'expert_operands'))
             del replay['trace_predictor']
+        if 'fresh_group' in spec:
+            assert spec.get('native_audio') and not spec.get('trace_predictor',True)
+            assert 'retained_group_parity.py' in spec['input_files']
+            if spec.get('isolate_fresh_paths'):
+                assert spec['isolate_fresh_paths'] is True
+                replay['isolate_fresh_paths']=True
+            if spec.get('compare_actor_frame_padding'):
+                assert spec['compare_actor_frame_padding'] is True
+                replay['compare_actor_frame_padding']=True
+            filename=spec['fresh_group']
+            replay['fresh_group']=dict(file=filename,sha256=spec['input_files'][filename])
         save(root/'REPLAY.json',replay)
         execution=read(old/'EXECUTION.json')
         execution.update(root=new,control_root=str(hot/'new-lease'),started=time.time(),
