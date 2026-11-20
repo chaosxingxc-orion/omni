@@ -137,14 +137,117 @@ def review(c):
                 stages=specs,limits=limits,checkpoint_sha256=expected)
 
 
+def review_active(c):
+    """Replay a closed two-lane readback and restore check for the active adapter."""
+    from updated_http_parity import prepare
+    from protocol import readback
+    root=Path(c['evidence']);phase=root/'activation-probe01';hf=root/'hf'
+    checkpoint=pinned(c['checkpoint_ref'])
+    policy=pinned(c['policy_ref']);publication=pinned(policy['publication_ref'])
+    version=policy['artifact_version']
+    weights,=[asset for asset in policy['assets'] if Path(asset['path']).name=='adapter_model.safetensors']
+    ranks=range(8)
+    if (checkpoint['world_size']!=8 or sorted(r['rank'] for r in checkpoint['ranks'])!=list(ranks)
+        or checkpoint['step']!=checkpoint['clock']['successful_optimizer_steps']
+        or publication['checkpoint_ref']!=c['checkpoint_ref'] or publication['assets']!=policy['assets']
+        or publication['resident_identity']!=checkpoint['resident_identity']
+        or version!='checkpoint-sha256:'+weights['sha256']
+        or weights['sha256']!=checkpoint['ranks'][0]['files']['lora_adapter/adapter_model.safetensors']
+        or sha(weights['path'])!=weights['sha256']):
+        raise ValueError('checkpoint and policy export differ')
+    tensors=len(checkpoint['resident_identity']['publication']['tensors'])
+    lanes=c['lanes'];names=[lane['name'] for lane in lanes]
+    if (len(lanes)!=2 or len(set(names))!=2 or len({lane['endpoint'] for lane in lanes})!=2
+        or any(not re.fullmatch('[a-z][a-z0-9_-]*',n) for n in names)
+        or sorted(device for lane in lanes for device in lane['devices'])!=list(ranks)
+        or any(len(lane['devices'])!=4 for lane in lanes)):
+        raise ValueError('expected two disjoint TP4 endpoints')
+    drained=read(phase/'DRAINED.json')
+    if (drained['guards_releasable'] is not True or drained['automatic_retry'] is not False
+        or drained['stopped_owners'] or list(phase.rglob('UNKNOWN.json'))):
+        raise ValueError('both live owners must have drained')
+    criterion=pinned(c['criterion_ref'])
+    limits=dict(token=criterion['output']['token_limit'],sequence=criterion['output']['sequence_limit'],
+                max_argmax_flips=0)
+    if criterion['schema']!='omni-parity-criterion-v1' or criterion['result_flip']['required'] is not True:
+        raise ValueError('expected the real-output parity criterion')
+    wire_path=Path(c['wire_ref']['path']);wire=pinned(c['wire_ref'])
+    profile_copy=c.get('profile_copy_ref',c['profile_ref'])
+    if any(profile_copy[k]!=c['profile_ref'][k] for k in ('sha256','bytes')):
+        raise ValueError('transported sampling profile differs')
+    profile=pinned(profile_copy);manifest_path=Path(c['manifest_ref']['path']);pinned(c['manifest_ref'])
+    if (wire['model']!=policy['model'] or wire['chat_template_kwargs']['enable_thinking'] is not False
+        or wire['stream'] is not False or wire['return_token_ids'] is not True
+        or not wire['logprobs'] or wire['top_logprobs']!=0
+        or any(wire.get(k,v)!=v for k,v in profile['sampling'].items())):
+        raise ValueError('request sampling profile differs')
+    rows=prepare(root,wire_path,manifest_path,lanes=names,expected_tensors=tensors)['rows']
+    paired=read(root/'PAIRED.json')
+    if paired['rows']!=rows or paired['training_use'] is not False:
+        raise ValueError('closed HF input differs from actual HTTP evidence')
+    summaries=[]
+    receipts=read(phase/'RESULT.json')['lanes']
+    for lane,row,receipt in zip(lanes,rows,receipts,strict=True):
+        state=root/lane['name']
+        act=read(state/'ACTIVATION.json');cache=read(state/'CACHE-POLICY.json')
+        precision=read(state/'PRECISION.json')
+        response=read(phase/lane['name']/'RESPONSE.json');body=json.loads(response['raw'])
+        service=act['service_identity']
+        intent=read(phase/lane['name']/'INTENT.json')
+        if (act['fixture'] is not False or act['base'] is not False or act['weights_ref']!=weights
+            or act['policy_ref']!=c['policy_ref'] or act['publication_ref']!=policy['publication_ref']
+            or act['profile_ref']!=c['profile_ref'] or act['policy_version']!=version
+            or lane['endpoint']!=act['endpoint'] or service['physical_devices']!=lane['devices']
+            or service['container_name']!=lane['container'] or act['source_boot']!=service['source_boot']
+            or cache['policy_ref']!=act['policy_ref'] or cache['precision_ref']!=precision['specification_ref']
+            or precision['actual_device_execution'] is not True
+            or any(sha(state/filename)!=receipt[key]['sha256'] for filename,key in (
+                ('ACTIVATION.json','activation_ref'),('PRECISION.json','precision_ref'),('CACHE-POLICY.json','cache_ref')))
+            or sha(phase/lane['name']/'RESPONSE.json')!=receipt['receipt_ref']['sha256']
+            or intent['wire_sha256']!=row['packet']['wire_sha256'] or intent['automatic_retry'] is not False
+            or body['model']!=policy['model'] or body['usage']['completion_tokens']!=len(row['tokens'])
+            or not all(type(x) in (int,float) and math.isfinite(x) and -9999!=x<=0 for x in row['logprobs'])):
+            raise ValueError('active policy, precision, or response identity differs')
+        if any(worker.get('q_grouped_layers')!=list(range(48)) or worker.get('o_grouped_layers')!=list(range(48))
+               for worker in precision['workers']):
+            raise ValueError('Q/O precision family differs')
+        readback(act['workers'],act['adapter_id'],weights)
+        summaries.append(dict(name=lane['name'],devices=lane['devices'],actions=len(row['tokens']),
+                              prompt_tokens=len(row['prompt']),seconds=response['elapsed_seconds']))
+    exited=read(hf/'EXIT.json')
+    if exited['exit_code'] or exited['failure'] or exited['complete_ranks']!=8:
+        raise ValueError('FSDP8 comparison not closed')
+    maximum={}
+    for rank in ranks:
+        row=rows[rank%len(rows)];result=read(hf/f'rank-{rank}/RESULT.json')
+        if (result['rank']!=rank or result['restored_step']!=checkpoint['step'] or result['optimizer_updates']!=0
+            or result['checkpoint_sha']!=c['checkpoint_ref']['sha256'] or result['observed_policy_artifact']!=weights['sha256']
+            or result['response_sha']!=row['response'] or result['lane']!=row['lane']
+            or result['tokens']!=len(row['tokens']) or result['passed'] is not True):
+            raise ValueError('FSDP8 comparator scored another action or policy')
+        for mode in ('train','eval'):
+            if result[mode+'_top1_flips']!=[]:raise ValueError('top-1 changed')
+            for suffix,limit in (('max_abs',limits['token']),('sequence_abs',limits['sequence'])):
+                key=f'{mode}_{suffix}';value=result[key]
+                if not math.isfinite(value) or not 0<=value<=limit:raise ValueError('same-action parity failed')
+                maximum[key]=max(maximum.get(key,0),value)
+    return dict(passed=True,step=checkpoint['step'],ranks=8,lanes=summaries,
+                unique_recordings=len({r['packet']['sample_id'] for r in rows}),requests=len(rows),
+                actions=sum(len(r['tokens']) for r in rows),adapter_tensors_per_rank=tensors,
+                checkpoint_sha256=c['checkpoint_ref']['sha256'],kv_cache=True,prefix_cache=True,
+                top1_flips=0,limits=limits,**maximum)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);cmd=parser.add_subparsers(dest='action',required=True)
     compile_=cmd.add_parser('compile')
     for key in ('template','profile','output'):compile_.add_argument('--'+key,type=Path,required=True)
-    for action in ('run','pack','review'):
+    for action in ('run','pack','review','review-active'):
         cmd.add_parser(action).add_argument('--window',type=Path,required=True)
     args=parser.parse_args()
     if args.action=='compile':compile_window(args.template,args.profile,args.output)
+    elif args.action=='review-active':
+        print(json.dumps(review_active(read(args.window/'RESOLVED.json')),indent=2,allow_nan=False))
     else:
         c=read(args.window/'RESOLVED.json');validate(c)
         if args.action=='run':

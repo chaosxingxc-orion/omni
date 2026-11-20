@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "step": 1,
+  "ranks": 8,
+  "unique_recordings": 1,
+  "requests": 2,
+  "actions": 20,
+  "adapter_tensors_per_rank": 384,
+  "kv_cache": true,
+  "prefix_cache": true,
+  "top1_flips": 0,
+  "limits": {
+    "token": 0.01,
+    "sequence": 0.01,
+    "max_argmax_flips": 0
+  },
+  "train_max_abs": 0,
+  "train_sequence_abs": 0,
+  "eval_max_abs": 0,
+  "eval_sequence_abs": 0,
+  "topology": "FSDP8 training host; two TP4 instances on a separate inference host",
+  "optimizer_updates": 0,
+  "diagnostic_seconds": [
+    105.58,
+    107.66
+  ],
+  "diagnostic_scope": "one original recording on both endpoints; includes adapter activation and full-vocabulary capture"
+}

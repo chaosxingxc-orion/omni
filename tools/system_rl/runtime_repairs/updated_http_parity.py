@@ -19,7 +19,7 @@ def file_sha(path):
     return sha(path.read_bytes())
 
 
-def prepare(root, wire_path, original, output, *, lanes=None, expected_tensors=None):
+def prepare(root, wire_path, original, output=None, *, lanes=None, expected_tensors=None):
     """Reduce the original immutable HTTP/worker evidence on CPU."""
     import torch
     wire=read(wire_path)
@@ -82,8 +82,10 @@ def prepare(root, wire_path, original, output, *, lanes=None, expected_tensors=N
             tokens=tokens,logprobs=[x['logprob'] for x in data],raw_top1=all_scores[0],adapter_sha=act['weights_ref']['sha256'],
             publication_sha=act['publication_ref']['sha256'],response=response['response_sha256'],elapsed=response['elapsed_seconds'],
             **(dict(prefix_traces={str(w['rank']):w['prefix_trace'] for w in after['workers']}) if all(traces) else {})))
-    with output.open('x') as f:
-        json.dump(dict(rows=rows,training_use=False),f)
+    result=dict(rows=rows,training_use=False)
+    if output is not None:
+        with output.open('x') as f:json.dump(result,f,allow_nan=False)
+    return result
 
 
 def fail(reason):

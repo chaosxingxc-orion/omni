@@ -1,5 +1,7 @@
 # Omni System RL 合作交接 · P 节点 LoRA 训推校准
 
+两套 TP4 已在独立推理主机部署并启用 KV 和 prefix cache，每个 rank 读回 384 个严格首步 LoRA 张量。两实例对同一条真实录音各完成一次请求，共 20 个实际动作。训练主机从同一 checkpoint 恢复，8/8 rank 正常结束；训练和评估前向的最大单 token 和整段 logprob 差均为 0，top-1 无翻转。两条诊断耗时 105.58 / 107.66 秒，含适配器装载和全词表观测。训练仍为 1/3，尚未测量常规 rollout 吞吐。 [跨机复核回执](cross-host-active-parity.json)。
+
 严格确定性 P 首步的同一份八卡 checkpoint 已完成同机更新态校准。四卡/八卡的 384 个 LoRA 张量、梯度及 Adam 更新逐值一致。两套 TP4 在旧版请求排空后切到新权重，清除旧缓存；两条录音共 6 个新权重请求、70 个动作，HF train/eval 与 vLLM 的单 token 差、整段差和 argmax 翻转均为 0。本次未执行连续训练或 DEV 评测。 [验收回执](updated-lora-parity.json)。 [配置与运行入口](../../../tools/system_rl/instruct_activation/README.md)。
 
 以下为此前的实验记录。
