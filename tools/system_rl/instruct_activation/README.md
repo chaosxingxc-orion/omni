@@ -16,3 +16,5 @@ This is the parameterized successor to the sealed single-instance Instruct activ
 受控回收每个阶段的 activation-probe01（含原始响应和 DRAINED），每条 lane 的 ACTIVATION、PRECISION、CACHE-POLICY、SWITCHED 和 full-logits。控制端以 EVIDENCE/<阶段>/<lane> 定位该 lane 的源证据，以 EVIDENCE/states/<lane> 定位切换回执。`parity_window.py pack --window WINDOW` 逐请求验证原始证据并生成 PAIRED.json；将其作为原八卡评分入口的 updated_http_parity，restore_run 指定同一份 checkpoint。收回 HF 完整退出回执及各 rank 的 RESULT 至 EVIDENCE/hf，执行 `parity_window.py review --window WINDOW`。复核不占用 NPU。
 
 可复制 `parity-window.profile.example.json` 到本地填写；只有实验设计变化时才修改 window 模板。严格四/八卡首步对照在原训练配置使用 JSON 布尔值 `"deterministic_backward": true`，仅在建立新谱系时指定。配置化窗口的 HF 评分直接取 PAIRED 中的 limits；仅复核旧无 limits 封闭包时需要提供 `parity_criterion`。部署包的 checkpoint 子目录由封闭 publication 引用定位。prepare_policy 的本地配置可用 `runtime_sources` 指向运行修复源码目录、`implementation_sources` 指向受控发布的 implementation 目录；现行验收拓扑仍为 TP4。
+
+常驻实例使用本地 inbox 时，原 check_policy.py 通过已封闭的前后 policy 引用和各 lane 的切换回执链查找当前版本。配置沿用 inbox_switch 的 previous、successor、terminal、inbox。切换仍要求原 guard、已对账旧请求和连续 checkpoint。首次静态窗口继续通过 parity_window.py 执行。
