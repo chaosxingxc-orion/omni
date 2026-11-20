@@ -1,0 +1,452 @@
+{
+  "schema": "updated-o-lora-a-grouped-control-v1",
+  "restored_step": 1,
+  "updated": false,
+  "limits": {
+    "token_abs": 0.01,
+    "sequence_abs": 0.01,
+    "top1_flips": 0
+  },
+  "tp": {
+    "prompt_tokens": 5531,
+    "cached_tokens": 2176,
+    "actions_equal": false,
+    "ranks": [
+      {
+        "rank": 0,
+        "sites": 108,
+        "prefix_diff": [],
+        "suffix_diff": [
+          "31.post",
+          "32.in",
+          "32.post",
+          "33.in",
+          "33.post",
+          "34.in",
+          "34.post",
+          "35.in",
+          "35.post",
+          "36.in",
+          "36.post",
+          "37.in",
+          "37.post",
+          "38.in",
+          "38.post",
+          "39.in",
+          "39.post",
+          "40.in",
+          "40.post",
+          "41.in",
+          "41.post",
+          "42.in",
+          "42.post",
+          "43.in",
+          "43.post",
+          "44.in",
+          "44.post",
+          "45.in",
+          "45.post",
+          "46.in",
+          "46.post",
+          "47.in",
+          "47.post"
+        ]
+      },
+      {
+        "rank": 1,
+        "sites": 108,
+        "prefix_diff": [],
+        "suffix_diff": [
+          "31.post",
+          "32.in",
+          "32.post",
+          "33.in",
+          "33.post",
+          "34.in",
+          "34.post",
+          "35.in",
+          "35.post",
+          "36.in",
+          "36.post",
+          "37.in",
+          "37.post",
+          "38.in",
+          "38.post",
+          "39.in",
+          "39.post",
+          "40.in",
+          "40.post",
+          "41.in",
+          "41.post",
+          "42.in",
+          "42.post",
+          "43.in",
+          "43.post",
+          "44.in",
+          "44.post",
+          "45.in",
+          "45.post",
+          "46.in",
+          "46.post",
+          "47.in",
+          "47.post"
+        ]
+      },
+      {
+        "rank": 2,
+        "sites": 108,
+        "prefix_diff": [],
+        "suffix_diff": [
+          "31.post",
+          "32.in",
+          "32.post",
+          "33.in",
+          "33.post",
+          "34.in",
+          "34.post",
+          "35.in",
+          "35.post",
+          "36.in",
+          "36.post",
+          "37.in",
+          "37.post",
+          "38.in",
+          "38.post",
+          "39.in",
+          "39.post",
+          "40.in",
+          "40.post",
+          "41.in",
+          "41.post",
+          "42.in",
+          "42.post",
+          "43.in",
+          "43.post",
+          "44.in",
+          "44.post",
+          "45.in",
+          "45.post",
+          "46.in",
+          "46.post",
+          "47.in",
+          "47.post"
+        ]
+      },
+      {
+        "rank": 3,
+        "sites": 108,
+        "prefix_diff": [],
+        "suffix_diff": [
+          "31.post",
+          "32.in",
+          "32.post",
+          "33.in",
+          "33.post",
+          "34.in",
+          "34.post",
+          "35.in",
+          "35.post",
+          "36.in",
+          "36.post",
+          "37.in",
+          "37.post",
+          "38.in",
+          "38.post",
+          "39.in",
+          "39.post",
+          "40.in",
+          "40.post",
+          "41.in",
+          "41.post",
+          "42.in",
+          "42.post",
+          "43.in",
+          "43.post",
+          "44.in",
+          "44.post",
+          "45.in",
+          "45.post",
+          "46.in",
+          "46.post",
+          "47.in",
+          "47.post"
+        ]
+      }
+    ]
+  },
+  "hf_exit": 0,
+  "hf": [
+    {
+      "rank": 0,
+      "lane": "a",
+      "passed": false,
+      "tokens": 11,
+      "train_max_abs": 0.042679041624069214,
+      "train_sequence_abs": 0.04113553961701655,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.042679041624069214,
+      "eval_sequence_abs": 0.04113553961701655,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 1,
+      "lane": "b",
+      "passed": true,
+      "tokens": 12,
+      "train_max_abs": 0.0,
+      "train_sequence_abs": 0.0,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.0,
+      "eval_sequence_abs": 0.0,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "lane": "a",
+      "passed": false,
+      "tokens": 11,
+      "train_max_abs": 0.042679041624069214,
+      "train_sequence_abs": 0.04113553961701655,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.042679041624069214,
+      "eval_sequence_abs": 0.04113553961701655,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 3,
+      "lane": "b",
+      "passed": true,
+      "tokens": 12,
+      "train_max_abs": 0.0,
+      "train_sequence_abs": 0.0,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.0,
+      "eval_sequence_abs": 0.0,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "lane": "a",
+      "passed": false,
+      "tokens": 11,
+      "train_max_abs": 0.042679041624069214,
+      "train_sequence_abs": 0.04113553961701655,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.042679041624069214,
+      "eval_sequence_abs": 0.04113553961701655,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "lane": "b",
+      "passed": true,
+      "tokens": 12,
+      "train_max_abs": 0.0,
+      "train_sequence_abs": 0.0,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.0,
+      "eval_sequence_abs": 0.0,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "lane": "a",
+      "passed": false,
+      "tokens": 11,
+      "train_max_abs": 0.042679041624069214,
+      "train_sequence_abs": 0.04113553961701655,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.042679041624069214,
+      "eval_sequence_abs": 0.04113553961701655,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "lane": "b",
+      "passed": true,
+      "tokens": 12,
+      "train_max_abs": 0.0,
+      "train_sequence_abs": 0.0,
+      "train_top1_flips": [],
+      "eval_max_abs": 0.0,
+      "eval_sequence_abs": 0.0,
+      "eval_top1_flips": [],
+      "optimizer_updates": 0,
+      "layers": 48,
+      "vjp": {
+        "input": {
+          "elements": 528384,
+          "dtype": "torch.bfloat16",
+          "differences": 0
+        },
+        "fp32_master": {
+          "elements": 32768,
+          "dtype": "torch.float32",
+          "differences": 0
+        }
+      },
+      "operand_modes": [
+        {
+          "input_dtype": "torch.float32",
+          "weight_dtype": "torch.bfloat16",
+          "autocast": true,
+          "calls": 96
+        }
+      ]
+    }
+  ]
+}
