@@ -1,0 +1,17 @@
+{
+  "source_commit": "a5e00146d4f5edb7f0ab20e1fba681a4486efa2b",
+  "roles": {
+    "training": {
+      "bounded_actor_step.py": "tools/system_rl/runtime_repairs/bounded_actor_step.py",
+      "retained_hf_fsdp_control.py": "tools/system_rl/runtime_repairs/retained_hf_fsdp_control.py",
+      "retained_kv_candidate.py": "tools/system_rl/runtime_repairs/retained_kv_candidate.py",
+      "retained_attention_candidate.py": "tools/system_rl/runtime_repairs/retained_attention_candidate.py",
+      "actor_arithmetic.py": "tools/system_rl/runtime_repairs/source/actor_arithmetic.py"
+    },
+    "rollout": {
+      "arithmetic/retained_kv_candidate.py": "tools/system_rl/runtime_repairs/retained_kv_candidate.py",
+      "arithmetic/retained_attention_candidate.py": "tools/system_rl/runtime_repairs/retained_attention_candidate.py",
+      "parents/jev-system-rl/implementation/local_activation.py": "tools/system_rl/runtime_repairs/source/local_activation.py"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "source_commit": "a5e00146d4f5edb7f0ab20e1fba681a4486efa2b",
+  "source_matches": false,
+  "components": [
+    {
+      "role": "training",
+      "component": "bounded_actor_step.py",
+      "expected": "315f8d66c17a9d3c9cf7cfa1d7eed4dbf9977f7bace845788743ba27568d5b80",
+      "observed": "a1cbf0af7c8170234e50a40ad37bb69c6164edd2020e57527b2be1c6b8c259a6",
+      "matched": false
+    },
+    {
+      "role": "training",
+      "component": "retained_hf_fsdp_control.py",
+      "expected": "d1afbed105a707db24a7942e287bb926b32fc19ef5ed494f80c5bab61ada00f6",
+      "observed": "9f0dcda23765eac24964b63aa1ff65242a1ac57ea8217f3c673b5c2cfbef0b99",
+      "matched": false
+    },
+    {
+      "role": "training",
+      "component": "retained_kv_candidate.py",
+      "expected": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "observed": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "retained_attention_candidate.py",
+      "expected": "3a2e4f30f280fa96bd550f9e6ecc426f06fc8ac21bbd426bbf6b7d8074358fe7",
+      "observed": "3a2e4f30f280fa96bd550f9e6ecc426f06fc8ac21bbd426bbf6b7d8074358fe7",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "actor_arithmetic.py",
+      "expected": "a4f46d4e36f623af441197e155aff9beb9d63cdaf7f66a116a02663c17d6e528",
+      "observed": "a4f46d4e36f623af441197e155aff9beb9d63cdaf7f66a116a02663c17d6e528",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "arithmetic/retained_kv_candidate.py",
+      "expected": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "observed": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "arithmetic/retained_attention_candidate.py",
+      "expected": "3a2e4f30f280fa96bd550f9e6ecc426f06fc8ac21bbd426bbf6b7d8074358fe7",
+      "observed": "e5fdb0594b4b01adb13725b3e0b960d2f410b1663b370859205153ffadfe716f",
+      "matched": false
+    },
+    {
+      "role": "rollout",
+      "component": "parents/jev-system-rl/implementation/local_activation.py",
+      "expected": "90003b21d60b9f82ef647df93b79954e5997daffa727f025df1a4cc25870e9bb",
+      "observed": "90003b21d60b9f82ef647df93b79954e5997daffa727f025df1a4cc25870e9bb",
+      "matched": true
+    }
+  ]
+}
