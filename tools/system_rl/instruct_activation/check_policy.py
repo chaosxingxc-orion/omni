@@ -9,7 +9,7 @@ import subprocess
 import time
 from pathlib import Path
 from io_utils import doc, pin, require, save, storage
-from measure_existing_services import contact, idle, metrics
+from measure_existing_services import contact, idle, metrics, work_metrics
 
 
 def receipt(lane,name):
@@ -58,9 +58,10 @@ def check(config):
     require(lanes and len({lane['endpoint'] for lane in lanes})==len(lanes) and len({lane['name'] for lane in lanes})==len(lanes),'independent named lanes required')
     with Path(config['guard']).open('rb') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        before={}
         for lane in lanes:
             require(lane['endpoint'].startswith('http://127.0.0.1:'),'loopback only')
-            idle(metrics(lane['endpoint']))
+            before[lane['name']]=metrics(lane['endpoint']);idle(before[lane['name']])
         if config.get('switch'):
             drained=pin(config['switch']['drained_path'])
             terminal=doc(drained)
@@ -91,7 +92,8 @@ def check(config):
                         all(r['compared_original_keys']==config.get('adapter_tensors',len(r['loaded_tensors']))==len(r['loaded_tensors'])>0 for r in activation['workers']),'incomplete actual worker readback')
                 require(cache['reset_succeeded'] and cache['kv_cache'] and cache['prefix_cache'],'cache receipt required')
                 require({r['rank'] for r in precision['workers']}==set(range(lane.get('world_size',len(activation['service_identity']['physical_devices'])))),'precision workers absent')
-                result.append(dict(activation_ref=act_ref,cache_ref=cache_ref,precision_ref=precision_ref,**reply))
+                result.append(dict(activation_ref=act_ref,cache_ref=cache_ref,precision_ref=precision_ref,
+                                   work=work_metrics(before[lane['name']],metrics(lane['endpoint'])),**reply))
             save(root/'RESULT.json',dict(lanes=result,elapsed_seconds=time.monotonic()-started,training_use=False))
         finally:
             # A timeout may leave engine work unresolved. Keep the original

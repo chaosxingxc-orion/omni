@@ -36,3 +36,7 @@ python tools/system_rl/runtime_repairs/verify_runtime_sources.py \
 **Q/K/V/O LoRA A 配对修复。** 第 31 层的两路残差、归一化输入和 Q/K/V 基座一致，四个 rank 最先观测到的局部分歧均是 Q/K/V LoRA A。只有 rank 3 的最终 Q 出现差异；O 汇聚四卡的 attention 输出，故在其他卡同样可见。两套服务的适配器切片已按各自的切分方向逐值验证。保留这些布局，将 48 层 Q/K/V/O 的 LoRA A 在两端统一为分组 BF16 矩阵乘。对同一录音分别命中 2176/5531 和 0/5531 个前缀 token 后，各 rank 的 148 个已观测边界在共同前缀及后缀全相等。train 和 eval 对各自实际采样动作复算：热 11、冷 12 个动作的最大单 token 差和整段差均为 0，两个宽度的输入和可训练主参数梯度在独立 VJP 对照中相等。冷、热各自采样的 token 可以不同。此验收没有 optimizer 更新。
 
 [第 31 层分支定位](p-rollout-lora-branch-localization.json) · [修复后算子回执](p-rollout-qkvo-windows.json) · [整模回执](p-rollout-qkvo-parity.json)
+
+原失败批的 8 个请求产生 98 个动作，历史对照的 6 个请求产生 70 个动作。前者覆盖冷缓存和同录音重复，后者覆盖跨录音命中 2176 个前缀 token 和同录音命中 4608 个 token。连同定点对照共 16 次请求、191 个动作。在同一严格 step 1 checkpoint 下，HF train 和 eval 对每个实际动作的评分和 TP4 逐项相同，整段差和全词表 top-1 翻转均为 0。两端启用相同的 48 层 Q/K/V/O LoRA A 算法。发布锁分别记录训练和推理使用的 attention 文件，11 项源码核对通过，训练端比对对象是准备好的续训源码。正式训练仍为 step 1。原批 8 条在相同 wire 和输出 token 下含观测的 HTTP 耗时均值从 82.80 秒升到 86.58 秒（+4.6%，每种配置一次），并发生产吞吐待测。
+
+[逐请求验收](p-rollout-qkvo-regression.json) · [两端源码清单](p-rollout-source-lock.json) · [部署准备核验](p-rollout-qkvo-prepared-source-audit.json)

@@ -1,0 +1,83 @@
+{
+  "source_commit": "04859514a421c5741f37a5779747987dfe7507e8",
+  "source_matches": true,
+  "components": [
+    {
+      "role": "training",
+      "component": "bounded_actor_step.py",
+      "expected": "5db872345ff024d4ea1bb9b615efd1775d5798b88ba72f9d0f40932ec74abde7",
+      "observed": "5db872345ff024d4ea1bb9b615efd1775d5798b88ba72f9d0f40932ec74abde7",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "retained_hf_fsdp_control.py",
+      "expected": "d462a8aabca1c6de00ebd2b3153362c3536b32570b5af59f8162cd4a56d4ce73",
+      "observed": "d462a8aabca1c6de00ebd2b3153362c3536b32570b5af59f8162cd4a56d4ce73",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "retained_kv_candidate.py",
+      "expected": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "observed": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "retained_attention_candidate.py",
+      "expected": "3a2e4f30f280fa96bd550f9e6ecc426f06fc8ac21bbd426bbf6b7d8074358fe7",
+      "observed": "3a2e4f30f280fa96bd550f9e6ecc426f06fc8ac21bbd426bbf6b7d8074358fe7",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "actor_arithmetic.py",
+      "expected": "a4f46d4e36f623af441197e155aff9beb9d63cdaf7f66a116a02663c17d6e528",
+      "observed": "a4f46d4e36f623af441197e155aff9beb9d63cdaf7f66a116a02663c17d6e528",
+      "matched": true
+    },
+    {
+      "role": "training",
+      "component": "lora_row_precision.py",
+      "expected": "20a80475f0d2f6a27b22f432b94c3f174cebdc44caf9f1de757e29f60cd63aae",
+      "observed": "20a80475f0d2f6a27b22f432b94c3f174cebdc44caf9f1de757e29f60cd63aae",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "arithmetic/retained_kv_candidate.py",
+      "expected": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "observed": "1258a33e442d4f680153754ccec9687cb8c4ca02bee7b2d26a1f991a4a0801ed",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "arithmetic/retained_attention_candidate.py",
+      "expected": "e5fdb0594b4b01adb13725b3e0b960d2f410b1663b370859205153ffadfe716f",
+      "observed": "e5fdb0594b4b01adb13725b3e0b960d2f410b1663b370859205153ffadfe716f",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "parents/jev-system-rl/implementation/local_activation.py",
+      "expected": "677221156486d326e40237ba095b1aa184cd3a9953d639ce94bed3f637337d3c",
+      "observed": "677221156486d326e40237ba095b1aa184cd3a9953d639ce94bed3f637337d3c",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "parents/jev-system-rl/production-family93/projection_family_runtime.py",
+      "expected": "6c73a0f347b164d79fb2776a379ce609188a6bcf0ccf1ae2ac0d48c25526c245",
+      "observed": "6c73a0f347b164d79fb2776a379ce609188a6bcf0ccf1ae2ac0d48c25526c245",
+      "matched": true
+    },
+    {
+      "role": "rollout",
+      "component": "parents/jev-system-rl/implementation/lora_row_precision.py",
+      "expected": "20a80475f0d2f6a27b22f432b94c3f174cebdc44caf9f1de757e29f60cd63aae",
+      "observed": "20a80475f0d2f6a27b22f432b94c3f174cebdc44caf9f1de757e29f60cd63aae",
+      "matched": true
+    }
+  ]
+}

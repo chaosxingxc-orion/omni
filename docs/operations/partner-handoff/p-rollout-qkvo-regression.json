@@ -1,0 +1,360 @@
+{
+  "scope": "Updated step 1; same-host FSDP8 vs two TP4 lanes; diagnostic requests only",
+  "requests": 16,
+  "actions": 191,
+  "cohorts": {
+    "failure_control": {
+      "requests": 2,
+      "actions": 23,
+      "limits": {
+        "token": 0.01,
+        "sequence": 0.01,
+        "max_argmax_flips": 0
+      },
+      "all_passed": true,
+      "sites_per_rank": 192,
+      "gradient_widths": [
+        "2048",
+        "4096"
+      ],
+      "checkpoint_sha256": "3b725105a86382cd2faa6204ae31b9d6098886f5f4b767eb64476b7b9e9a984d",
+      "optimizer_updates": 0,
+      "results": [
+        {
+          "lane": "a",
+          "tokens": 11,
+          "ranks": [
+            0,
+            2,
+            4,
+            6
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 12,
+          "ranks": [
+            1,
+            3,
+            5,
+            7
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        }
+      ]
+    },
+    "original_batch": {
+      "requests": 8,
+      "actions": 98,
+      "limits": {
+        "token": 0.01,
+        "sequence": 0.01,
+        "max_argmax_flips": 0
+      },
+      "all_passed": true,
+      "sites_per_rank": 192,
+      "gradient_widths": [
+        "2048",
+        "4096"
+      ],
+      "checkpoint_sha256": "3b725105a86382cd2faa6204ae31b9d6098886f5f4b767eb64476b7b9e9a984d",
+      "optimizer_updates": 0,
+      "results": [
+        {
+          "lane": "a",
+          "tokens": 12,
+          "ranks": [
+            0
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "a",
+          "tokens": 16,
+          "ranks": [
+            1
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "a",
+          "tokens": 12,
+          "ranks": [
+            2
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "a",
+          "tokens": 12,
+          "ranks": [
+            3
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 10,
+          "ranks": [
+            4
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 12,
+          "ranks": [
+            5
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 12,
+          "ranks": [
+            6
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 12,
+          "ranks": [
+            7
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        }
+      ]
+    },
+    "historical_controls": {
+      "requests": 6,
+      "actions": 70,
+      "limits": {
+        "token": 0.01,
+        "sequence": 0.01,
+        "max_argmax_flips": 0
+      },
+      "all_passed": true,
+      "sites_per_rank": 192,
+      "gradient_widths": [
+        "2048",
+        "4096"
+      ],
+      "checkpoint_sha256": "3b725105a86382cd2faa6204ae31b9d6098886f5f4b767eb64476b7b9e9a984d",
+      "optimizer_updates": 0,
+      "results": [
+        {
+          "lane": "a",
+          "tokens": 10,
+          "ranks": [
+            0,
+            6
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 10,
+          "ranks": [
+            1,
+            7
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "a",
+          "tokens": 11,
+          "ranks": [
+            2
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 11,
+          "ranks": [
+            3
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "a",
+          "tokens": 14,
+          "ranks": [
+            4
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        },
+        {
+          "lane": "b",
+          "tokens": 14,
+          "ranks": [
+            5
+          ],
+          "passed": true,
+          "train": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          },
+          "eval": {
+            "max_abs": 0.0,
+            "sequence_abs": 0.0,
+            "top1_flips": []
+          }
+        }
+      ]
+    }
+  }
+}

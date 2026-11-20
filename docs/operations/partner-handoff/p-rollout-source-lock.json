@@ -1,18 +1,20 @@
 {
-  "source_commit": "ffb08d3e48f3f4209667ccbb3db1adc0a4aa1b10",
+  "source_commit": "04859514a421c5741f37a5779747987dfe7507e8",
   "roles": {
     "training": {
       "bounded_actor_step.py": "tools/system_rl/runtime_repairs/bounded_actor_step.py",
       "retained_hf_fsdp_control.py": "tools/system_rl/runtime_repairs/retained_hf_fsdp_control.py",
       "retained_kv_candidate.py": "tools/system_rl/runtime_repairs/retained_kv_candidate.py",
       "retained_attention_candidate.py": "tools/system_rl/runtime_repairs/retained_attention_candidate.py",
-      "actor_arithmetic.py": "tools/system_rl/runtime_repairs/source/actor_arithmetic.py"
+      "actor_arithmetic.py": "tools/system_rl/runtime_repairs/source/actor_arithmetic.py",
+      "lora_row_precision.py": "tools/system_rl/runtime_repairs/source/lora_row_precision.py"
     },
     "rollout": {
       "arithmetic/retained_kv_candidate.py": "tools/system_rl/runtime_repairs/retained_kv_candidate.py",
-      "arithmetic/retained_attention_candidate.py": "tools/system_rl/runtime_repairs/retained_attention_candidate.py",
+      "arithmetic/retained_attention_candidate.py": "tools/system_rl/runtime_repairs/rollout/retained_attention_candidate.py",
       "parents/jev-system-rl/implementation/local_activation.py": "tools/system_rl/runtime_repairs/source/local_activation.py",
-      "parents/jev-system-rl/production-family93/projection_family_runtime.py": "tools/system_rl/runtime_repairs/source/projection_family_runtime.py"
+      "parents/jev-system-rl/production-family93/projection_family_runtime.py": "tools/system_rl/runtime_repairs/source/projection_family_runtime.py",
+      "parents/jev-system-rl/implementation/lora_row_precision.py": "tools/system_rl/runtime_repairs/source/lora_row_precision.py"
     }
   }
 }
