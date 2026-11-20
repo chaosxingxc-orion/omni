@@ -95,4 +95,4 @@ The configured FSDP4 actor now executes the same arithmetic in train and eval. O
 
 The first bounded TRAIN cohort now passes the original consumer: two recordings, four new samples each, 86 action tokens. Both actor modes and an independently evaluated frozen base reference exactly match TP4. Pre-update reward was 0.875; one protocol failure and one constant-reward group remain in the denominator. The data release is ready; optimizer updates remain zero. The scope excludes updated weights, DEV gains, and throughput. [Cohort receipt](bounded-p-train-handoff.json).
 
-The first complete P optimizer step used 8 TP4 trajectories and 86 actions. Four FSDP ranks report global loss 0.68749869, gradient norm 8.51158, and the same updated BF16 adapter identity (384 tensors). This bounded step does not measure DEV improvement or verify inference reload.
+The first complete P optimizer step used 8 TP4 trajectories and 86 actions. Four FSDP ranks report global loss 0.68749869, gradient norm 8.51780, and the same updated BF16 adapter identity (384 tensors). This bounded step does not measure DEV improvement or verify inference reload.
