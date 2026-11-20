@@ -1,0 +1,133 @@
+{
+  "schema": "o-lora-a-bf16-row-replay-v1",
+  "layer_zero_based": 30,
+  "step": 1,
+  "shard_check": {
+    "schema": "checkpoint-to-activation-stacked-buffers-v1",
+    "adapter_sha256": "fb01b899f9220319093e6282f0deb49cff4860fb92c6c0da4cd6c7d314a5f4e2",
+    "ranks_per_lane": 4,
+    "lanes": 2,
+    "layers": 48,
+    "counts": {
+      "o.A": 384,
+      "o.B": 384,
+      "q.A": 384,
+      "q.B": 384,
+      "k.A": 384,
+      "k.B": 384,
+      "v.A": 384,
+      "v.B": 384
+    },
+    "mismatches": 0
+  },
+  "live": {
+    "cached": 2176,
+    "input_shape": [
+      3355,
+      4096
+    ],
+    "output_elements": 26840,
+    "weight_matches_checkpoint": true,
+    "local_channel_order_matches": true,
+    "same_logical_input": true,
+    "output_differences": 9,
+    "distinct_rows": 9,
+    "first_difference": {
+      "position": 2236,
+      "channel": 5,
+      "cold_bits": 15385,
+      "warm_bits": 15386
+    },
+    "scheduler": {
+      "cold": [
+        {
+          "prior": 0,
+          "rows": 2048,
+          "stride": [
+            4096,
+            1
+          ]
+        },
+        {
+          "prior": 2048,
+          "rows": 2048,
+          "stride": [
+            4096,
+            1
+          ]
+        },
+        {
+          "prior": 4096,
+          "rows": 1435,
+          "stride": [
+            4096,
+            1
+          ]
+        }
+      ],
+      "warm": [
+        {
+          "prior": 2176,
+          "rows": 2048,
+          "stride": [
+            4096,
+            1
+          ]
+        },
+        {
+          "prior": 4224,
+          "rows": 1307,
+          "stride": [
+            4096,
+            1
+          ]
+        }
+      ]
+    },
+    "reference_on_differences": {
+      "cold_closer": 6,
+      "warm_closer": 3,
+      "tied": 0,
+      "max_absolute_output_delta": 6.103515625e-05
+    }
+  },
+  "single_device": {
+    "results": {
+      "linear": {
+        "cold_to_actual": 0,
+        "warm_to_actual": 0,
+        "cold_to_warm": 9,
+        "cold_to_full_linear": 17,
+        "warm_to_full_linear": 13
+      },
+      "output_width_16": {
+        "cold_to_actual": 8,
+        "warm_to_actual": 2,
+        "cold_to_warm": 6,
+        "cold_to_full_linear": 17,
+        "warm_to_full_linear": 14
+      },
+      "output_width_128": {
+        "cold_to_actual": 16,
+        "warm_to_actual": 10,
+        "cold_to_warm": 13,
+        "cold_to_full_linear": 18,
+        "warm_to_full_linear": 12
+      },
+      "grouped": {
+        "cold_to_actual": 17,
+        "warm_to_actual": 9,
+        "cold_to_warm": 0,
+        "cold_to_full_linear": 16,
+        "warm_to_full_linear": 11
+      }
+    },
+    "reference": "single full-prompt BF16 linear on the same NPU",
+    "shift": 128,
+    "rows": 2048,
+    "permutation_differences": 3,
+    "repeated_call_differences": 0
+  },
+  "optimizer_updates": 0,
+  "training_admission": false
+}
