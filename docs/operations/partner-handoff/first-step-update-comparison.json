@@ -1,0 +1,228 @@
+{
+  "scope": "isolated-first-step-four-vs-eight",
+  "tensor_comparison": {
+    "rows": 8,
+    "tokens": 86,
+    "loss": 0.6874986886978149,
+    "left": "four",
+    "right": "eight",
+    "comparison": {
+      "A": {
+        "initial": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "grad": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "delta": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "m": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "v": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "updated": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        }
+      },
+      "B": {
+        "initial": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "grad": {
+          "elements": 2752512,
+          "different": 2425128,
+          "max_abs": 0.00701904296875,
+          "worst": "base_model.model.model.layers.3.self_attn.k_proj.lora_B.default.weight",
+          "relative_l2": 0.008949225238002189
+        },
+        "delta": {
+          "elements": 2752512,
+          "different": 2397924,
+          "max_abs": 1.999702817556681e-05,
+          "worst": "base_model.model.model.layers.3.self_attn.k_proj.lora_B.default.weight",
+          "relative_l2": 0.09640557796615282
+        },
+        "m": {
+          "elements": 2752512,
+          "different": 2752457,
+          "max_abs": 8.010794408619404e-05,
+          "worst": "base_model.model.model.layers.3.self_attn.k_proj.lora_B.default.weight",
+          "relative_l2": 0.008930948023189722
+        },
+        "v": {
+          "elements": 2752512,
+          "different": 2752458,
+          "max_abs": 6.346147074509645e-08,
+          "worst": "base_model.model.model.layers.3.self_attn.k_proj.lora_B.default.weight",
+          "relative_l2": 0.019143049463116873
+        },
+        "updated": {
+          "elements": 2752512,
+          "different": 2397924,
+          "max_abs": 1.999702817556681e-05,
+          "worst": "base_model.model.model.layers.3.self_attn.k_proj.lora_B.default.weight",
+          "relative_l2": 0.09640557796615282
+        }
+      }
+    }
+  },
+  "adam_replay": {
+    "four": {
+      "grad_norm": 8.516892433166504,
+      "largest_m_error": 5.78475138450496e-10,
+      "largest_v_error": 3.497510637921389e-13,
+      "largest_parameter_error": 3.073915032358724e-12
+    },
+    "eight": {
+      "grad_norm": 8.511672019958496,
+      "largest_m_error": 2.8249665193907925e-10,
+      "largest_v_error": 2.728011338537956e-13,
+      "largest_parameter_error": 3.1319176818764196e-12
+    }
+  },
+  "strict": {
+    "rows": 8,
+    "tokens": 86,
+    "loss": 0.6874986886978149,
+    "left": "four",
+    "right": "eight",
+    "comparison": {
+      "A": {
+        "initial": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "grad": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "delta": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "m": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "v": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "updated": {
+          "elements": 3932160,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        }
+      },
+      "B": {
+        "initial": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": null
+        },
+        "grad": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "delta": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "m": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "v": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        },
+        "updated": {
+          "elements": 2752512,
+          "different": 0,
+          "max_abs": 0.0,
+          "worst": null,
+          "relative_l2": 0.0
+        }
+      }
+    }
+  },
+  "strict_publication_ids": [
+    "58850aa1cababa5a22278c0660321c5d70b7bf70ecaf4b5a9e3d29063b1758c5",
+    "58850aa1cababa5a22278c0660321c5d70b7bf70ecaf4b5a9e3d29063b1758c5"
+  ],
+  "updated_forward": {
+    "unique_audio": 1,
+    "http_requests": 2,
+    "actions_per_request": [
+      10,
+      10
+    ],
+    "hf_ranks": 8,
+    "max_token_difference": 0,
+    "max_sequence_difference": 0,
+    "argmax_flips": 0,
+    "uses_original_step1": true
+  }
+}
