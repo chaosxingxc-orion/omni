@@ -12,17 +12,39 @@ from io_utils import doc, pin, require, save, storage
 from measure_existing_services import contact, idle, metrics, work_metrics
 
 
-def receipt(lane,name):
-    path=Path(lane['policy_state'])/name
+def receipt(lane,name,depth=None):
+    depth=int(bool(lane.get('successor'))) if depth is None else depth
+    relative=Path(*(['successor']*depth),name)
+    # Legacy configs already include the first successor in the host path.
+    state=Path(lane['policy_state'])
+    if lane.get('successor') and state.name=='successor':
+        state=state.parent
+    path=state/relative
     if 'container' not in lane:
         ref=pin(path)
         return doc(ref),ref
     container=lane['container']
     require(re.fullmatch('[a-z0-9][a-z0-9-]+',container),'invalid local container name')
-    prefix='successor/' if lane.get('successor') else ''
-    raw=subprocess.check_output(['docker','exec',container,'cat','/runtime/state/policy/'+prefix+name],timeout=15)
+    raw=subprocess.check_output(['docker','exec',container,'cat',str(Path('/runtime/state/policy')/relative)],timeout=15)
     return json.loads(raw),dict(container=container,path=str(path),sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw))
 
+
+def predecessor_depth(lane,previous,step):
+    older=None
+    for depth in range(step):
+        active,ref=receipt(lane,'ACTIVATION.json',depth)
+        if older is not None:
+            switched,_=receipt(lane,'SWITCHED.json',depth)
+            require(switched['previous_policy_ref']==older['policy_ref']
+                    and switched['old_id']==older['adapter_id']
+                    and switched['new_id']==active['adapter_id']
+                    and switched['activation_ref']['sha256']==ref['sha256']
+                    and switched['old_removed_from_engine'] and switched['cache_reset'],
+                    'broken activation receipt chain')
+        if active['policy_ref']==previous:
+            return depth
+        older=active
+    raise ValueError('wrong active predecessor')
 
 
 def stopped_terminal(lane, root):
@@ -58,7 +80,7 @@ def check(config):
     require(lanes and len({lane['endpoint'] for lane in lanes})==len(lanes) and len({lane['name'] for lane in lanes})==len(lanes),'independent named lanes required')
     with Path(config['guard']).open('rb') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        before={}
+        before={};successor_depths={}
         for lane in lanes:
             require(lane['endpoint'].startswith('http://127.0.0.1:'),'loopback only')
             before[lane['name']]=metrics(lane['endpoint']);idle(before[lane['name']])
@@ -74,17 +96,17 @@ def check(config):
             previous_step=doc(successor)['step']-1
             require(previous_step>0,'direct next checkpoint required')
             for lane in lanes:
-                active,_=receipt(dict(lane,successor=False),'ACTIVATION.json')
-                require(active['policy_ref']==previous,'wrong active predecessor')
                 raw=subprocess.check_output(['docker','exec',lane['container'],'cat',previous['path']],timeout=15)
                 require(hashlib.sha256(raw).hexdigest()==previous['sha256']
                         and json.loads(raw)['step']==previous_step,'wrong predecessor checkpoint step')
-            root.mkdir(mode=0o700)
-            save(root/'SWITCH-INTENT.json',dict(previous=previous,successor=successor,
-                 terminal=change['terminal'],automatic_retry=False))
+                successor_depths[lane['name']]=predecessor_depth(lane,previous,previous_step)+1
+            require(len(set(successor_depths.values()))==1,'lane activation depth differs')
             marker=Path(change['inbox'])/f'after-step-{previous_step}.json'
             require(not marker.exists() and Path(successor['path']).is_relative_to(marker.parent),
                     'invalid or prior inbox marker')
+            root.mkdir(mode=0o700)
+            save(root/'SWITCH-INTENT.json',dict(previous=previous,successor=successor,
+                 terminal=change['terminal'],automatic_retry=False))
             save(marker,dict(previous=previous,successor=successor))
         if config.get('switch'):
             drained=pin(config['switch']['drained_path'])
@@ -105,9 +127,10 @@ def check(config):
                 replies=[job.result() for job in jobs]
             result=[]
             for lane,reply in zip(lanes,replies,strict=True):
-                activation,act_ref=receipt(lane,'ACTIVATION.json')
-                cache,cache_ref=receipt(lane,'CACHE-POLICY.json')
-                precision,precision_ref=receipt(lane,'PRECISION.json')
+                depth=successor_depths.get(lane['name'])
+                activation,act_ref=receipt(lane,'ACTIVATION.json',depth)
+                cache,cache_ref=receipt(lane,'CACHE-POLICY.json',depth)
+                precision,precision_ref=receipt(lane,'PRECISION.json',depth)
                 if 'container' in lane:
                     require(activation['service_identity']['container_name']==lane['container'],'wrong service container')
                 require(activation['endpoint']==lane['endpoint']+'/v1/chat/completions' and
@@ -117,9 +140,10 @@ def check(config):
                 require(cache['reset_succeeded'] and cache['kv_cache'] and cache['prefix_cache'],'cache receipt required')
                 require({r['rank'] for r in precision['workers']}==set(range(lane.get('world_size',len(activation['service_identity']['physical_devices'])))),'precision workers absent')
                 if config.get('inbox_switch'):
-                    switched,_=receipt(lane,'SWITCHED.json')
+                    switched,_=receipt(lane,'SWITCHED.json',depth)
                     require(switched['old_removed_from_engine'] and switched['cache_reset']
                             and switched['previous_policy_ref']==config['inbox_switch']['previous']
+                            and activation['policy_ref']==config['inbox_switch']['successor']
                             and switched['activation_ref']['sha256']==act_ref['sha256']
                             and switched['old_id']!=switched['new_id']==activation['adapter_id'],
                             'incomplete dynamic switch receipt')
