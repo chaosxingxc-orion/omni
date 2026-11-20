@@ -38,6 +38,8 @@ def main(config):
         ).get(Path(name).stem,bundle/name)
         if hashlib.sha256(path.read_bytes()).hexdigest()!=cfg['source_pins'][name]:
             raise ValueError('changed diagnostic source: '+name)
+    if 'SOURCE-PINS.json' in cfg['source_pins'] and hashlib.sha256((impl/'SOURCE-PINS.json').read_bytes()).hexdigest()!=cfg['source_pins']['SOURCE-PINS.json']:
+        raise ValueError('changed checkpoint source manifest')
     with Path(cfg['existing_guard']).open('r+') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
         smi = subprocess.check_output(['npu-smi','info'],text=True)
@@ -53,6 +55,12 @@ def main(config):
                            ('/etc/passwd','/etc/passwd',True),('/etc/group','/etc/group',True),
                            (bundle,'/sealed',True),(hot,'/omni-hot',False)]:
             args += ['--mount',f'type=bind,src={src},dst={dst}'+(',readonly' if ro else '')]
+        if 'restore_checkpoint' in cfg:
+            cp=Path(cfg['restore_checkpoint']['directory'])
+            if (cp.resolve()!=cp or cp.parents[2]!=bundle.parent or
+                    hashlib.sha256((cp/'COMMITTED.json').read_bytes()).hexdigest()!=cfg['restore_checkpoint']['sha256']):
+                raise ValueError('closed checkpoint differs from the staged restore source')
+            args += ['--mount',f'type=bind,src={cp},dst=/prior-checkpoint,readonly']
         for device in [*(f'davinci{i}' for i in devices),'davinci_manager','devmm_svm','hisi_hdc']:
             args += ['--device','/dev/'+device]
         for key,value in os.environ.items():

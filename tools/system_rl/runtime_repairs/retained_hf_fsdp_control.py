@@ -70,11 +70,17 @@ def main(spec, inputs_root, out):
             probe = spec['operator_vjp']
             commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed'],**{k:True for k in ('router_only','tiled_kv') if probe.get(k)}))
             return
-        worker, adapted, _ = construct(cfg, out)
         if 'accepted_fields' in spec:
-            sealed('bounded_actor_step.py')
-            from bounded_actor_step import run
-            return run(worker,adapted,spec,out,sealed,rank,world)
+            for name in ('bounded_actor_step.py', 'actor_arithmetic.py', 'retained_kv_candidate.py',
+                         'retained_router_candidate.py', 'retained_expert_candidate.py',
+                         'retained_attention_candidate.py', 'policy_identity.py'):
+                sealed(name)
+            from bounded_actor_step import prepare, run
+            # Preserve the original verl-before-task-adapter import order.
+            worker, adapted, _ = construct(cfg, out)
+            batch = prepare(spec, sealed, world)
+            return run(worker, spec, out, rank, world, batch)
+        worker, adapted, _ = construct(cfg, out)
         actor = worker.actor
         if 'actor_arithmetic_profile' in cfg:
             fresh = spec['fresh_group']

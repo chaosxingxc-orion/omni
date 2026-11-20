@@ -19,14 +19,14 @@ def compact_scores(actor,inputs):
     return torch.nn.functional.pad(scores,(0,width-length))
 
 
-def run(worker,adapted,spec,out,sealed,rank,world):
+def prepare(spec,sealed,world):
     import torch
     import torch.distributed as dist
     import numpy as np
     from dependencies import ROOT,require,upstream
     from run_package import pin
-    from storage import commit,check_running
     from loss_kernel import VerlKernel
+    from actor_arithmetic import PROFILES
     sealed('events.py')
     from events import run_existing_actor
     import inspect
@@ -42,12 +42,55 @@ def run(worker,adapted,spec,out,sealed,rank,world):
     require(not packet['meta']['synthetic'] and report['required_fields_validated'] and not packet['clock']['successful_optimizer_steps']
             and not any(g['consumed'] for g in packet['clock']['groups'].values()) and spec['dataset_sha256']==packet['dataset']['sha256'],
             'expected reserved initial TRAIN batch')
-    require(spec['image']==runtime['image_id'] and spec['training']['actor_arithmetic_profile']=='omni-bf16-tp4-fsdp4-v1','unverified actor image/profile')
+    require(spec['image']==runtime['image_id'] and spec['training']['actor_arithmetic_profile']==PROFILES[world],
+            'unexpected actor image/profile')
     kernel=task.bridge.SourceKernel({n:pin(ROOT/'system-objective-cpu'/n) for n in ('objective.py','runtime.py')})
     base=task.bridge.PreparedBatch(fields,report,VerlKernel(kernel,core_sha256=runtime['core_sha256'],clip_ratio=packet['clip']))
     online={tuple(item['identity'][n] for n in ('group_id','episode_id','call_id','node')):item['online_input'] for item in packet['online']}
     plan=task.prepare(base,packet['sidecar'],online)
     require(not any(plan.coefficients.values()),'bounded policy-only step requires zero auxiliary coefficients')
+    clock=None
+    if spec['training'].get('checkpoint_storage_mode')=='lora_training_state':
+        import copy
+        from scorer_extension import install
+        install(task)
+        consumer=copy.deepcopy(packet['consumer'])
+        for name,ref in consumer['source_pins'].items():
+            folder='system-objective-cpu' if name in ('objective.py','runtime.py') else 'unified-learning'
+            ref['path']=str(ROOT/folder/name)  # Same digest, sealed container namespace.
+        clock=task.create_clock(packet['learning'],packet['clock'],consumer_config=consumer)
+        require(set(clock.state['groups'])==set(packet['selected_groups']),'Clock group roster differs')
+        require(all(clock.reserve(g)==base.snapshot for g in packet['selected_groups']),'Clock snapshot differs')
+    return packet,fields,plan,runtime,clock
+
+
+def run(worker,spec,out,rank,world,batch):
+    from dependencies import require
+    from storage import commit,check_running
+    from events import run_existing_actor
+    packet,fields,plan,runtime,clock=batch
+    recoverable=clock is not None
+    contract=dict(schema='omni-bounded-checkpoint-v1',lineage=spec.get('lineage',spec['name']),
+                  training=spec['training'],devices=spec['devices'],image=spec['image'],
+                  sources={**spec['source_pins'],**{name:spec['files'][name] for name in (
+                      'actor_arithmetic.py','bounded_actor_step.py','events.py','policy_identity.py',
+                      'retained_attention_candidate.py','retained_expert_candidate.py',
+                      'retained_router_candidate.py','retained_kv_candidate.py','BASE-ASSETS.json')}},
+                  accepted_fields_sha256=spec['files'][spec['accepted_fields']],dataset_sha256=spec['dataset_sha256'])
+    if spec.get('restore_checkpoint'):
+        from checkpoint import restore
+        from run_package import pin
+        checkpoint=Path('/prior-checkpoint')
+        ref=pin(checkpoint/'COMMITTED.json')
+        require(ref['sha256']==spec['restore_checkpoint']['sha256'],'restore checkpoint identity differs')
+        restored,exact=restore(worker,checkpoint,contract)
+        require(restored['step']==1 and restored['clock']['successful_optimizer_steps']==1
+                and set(restored['clock']['groups'])==set(packet['selected_groups'])
+                and all(g['consumed'] for g in restored['clock']['groups'].values()),'restored Clock differs')
+        worker.audit_master_optimizer(1)
+        commit(out/f'rank-{rank}/RESULT.json',dict(rank=rank,step=1,restored=True,optimizer_updates=0,
+            checkpoint_sha256=ref['sha256'],publication_sha256=restored['resident_identity']['publication']['identity_sha256']))
+        return
     heard=[]; worker.actor.actor_module.train()
     def evaluate(inputs):
         scores=compact_scores(worker.actor,inputs); mask=inputs['response_mask'].bool()
@@ -66,10 +109,21 @@ def run(worker,adapted,spec,out,sealed,rank,world):
     audit=worker.audit_master_optimizer(1)
     worker.actor_lr_scheduler.step()
     commit(out/f'rank-{rank}/LOSS.json',dict(rank=rank,audit=audit,result=result,actions=heard,step=1))
-    from policy_identity import artifact,describe
-    worker.export_adapter(out/'step-1')
+    from policy_identity import artifact
+    if recoverable:
+        from checkpoint import save
+        clock.finish(contract['lineage']+':1',packet['selected_groups'],True)
+        kernel=packet['learning']['kernel']
+        worker.checkpoint_lineage=dict(dataset=packet['dataset'],behavior_policy_vector=kernel['behavior_policy_vector'],
+            current_policy_vector=kernel['current_policy_vector'],reference=kernel['reference_policy_vector'],
+            annealing_snapshot=plan.snapshot,group_ids=packet['selected_groups'],attempt_id=contract['lineage']+':1')
+        check_running(out,spec['storage_budget_bytes'])
+        save(worker,out/'step-1',clock,contract,1)
+    else:
+        worker.export_adapter(out/'step-1')
     # Every rank independently reads the published BF16 delta.
     public=artifact(out/'step-1/lora_adapter/adapter_model.safetensors')
     require(public['nonzero_effective_delta'],'exported empty effective update')
     commit(out/f'rank-{rank}/RESULT.json',dict(rank=rank,step=1,actions=heard,objective=result['objective_observation'],
-            metrics=result['metrics'],publication_sha256=public['identity_sha256'],adapter_export=True,arithmetic=worker.close_actor_arithmetic()))
+            metrics=result['metrics'],publication_sha256=public['identity_sha256'],adapter_export=True,
+            recoverable_checkpoint=recoverable,arithmetic=worker.close_actor_arithmetic()))

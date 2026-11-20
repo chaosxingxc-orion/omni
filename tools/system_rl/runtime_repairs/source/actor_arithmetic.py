@@ -1,9 +1,13 @@
-"""Attach the frozen four-card BF16 arithmetic at actor construction, including VJPs."""
+"""Attach the calibrated BF16 arithmetic at actor construction, including VJPs."""
 from contextlib import ExitStack
 
+PROFILES = {
+    4: 'omni-bf16-tp4-fsdp4-v1',
+    8: 'omni-bf16-tp4-fsdp8-candidate-v1',
+}
 
 def install(adapted, profile, world):
-    if world != 4 or profile != 'omni-bf16-tp4-fsdp4-v1':
+    if PROFILES.get(world) != profile or profile is None:
         raise ValueError('unknown actor arithmetic profile or unverified topology')
     from retained_expert_candidate import attach_hf as experts
     from retained_attention_candidate import attach_hf as attention
