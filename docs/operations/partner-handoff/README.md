@@ -1,10 +1,14 @@
-# 合作团队交接：P 节点四卡推理、四卡训练
+# Omni System RL 交接：P 节点四卡推理、四卡训练
 
 **接手点：冻结 P 策略已完成训推对齐，第一个真实优化器更新已通过，更新后的 LoRA 已导出。** 推理同事现在可以用它验证服务重载；训练同事可以并行接入四卡 checkpoint 的保存与恢复。该 BF16 adapter 未保存 FP32 主参数、Adam 矩、scheduler、Clock 和 RNG，不能据此直接续报第 2 步。
 
+项目仓库是 [omni](https://github.com/chaosxingxc-orion/omni)，内部工作目录为 `~/workspace/omni`。P（意图排序）、S1（槽位类型判定）、S2（槽值填充）、D（最终决策）的任务定义、知识卡、轨迹、奖励和评测均由 Omni 定义。本次交接的首步 loss 是 **Omni 的 P 节点**在真实语音轨迹上的结果。
+
+训练层复用了 `multimodal-jev` 集成的 verl actor、FSDP 模型加载及 LoRA 参数处理组件。内部路径中的 `jev-system-rl` 是这段集成历史留下的目录名。下文所有源码入口均位于 Omni 仓库或本次封闭运行包内，接手和复核无需另行检出上游仓库。
+
 ## 第一次接手：先在 CPU 复核
 
-本包包含交接说明、只读脚本和三份回执：[首步训练](p-first-fsdp4-loss.json)、[首批数据](bounded-p-train-handoff.json)、[冻结策略对齐](configured-actor-parity.json)。执行源码基线是公开仓提交 `aa4e202015a9b3cd95f3704ba7bb2e0641c3b252`。从项目方领取封闭运行副本 `first-loss-accepted/`；其中含本地配置及权重，单独受控交付。只复核结果无需镜像、模型或 NPU。
+本包包含交接说明、只读脚本和三份回执：[首步训练](p-first-fsdp4-loss.json)、[首批数据](bounded-p-train-handoff.json)、[冻结策略对齐](configured-actor-parity.json)。Omni 执行源码基线是提交 `aa4e202015a9b3cd95f3704ba7bb2e0641c3b252`。从项目方领取封闭运行副本 `first-loss-accepted/`；其中含本地配置及权重，单独受控交付。只复核结果无需镜像、模型或 NPU。
 
 在交接包目录执行（将最后一个参数换成实际收到的目录）：
 
@@ -28,19 +32,19 @@ python3 verify_first_step.py --receipt p-first-fsdp4-loss.json --run-root /path/
 
 ## 在哪里改、如何独立复现
 
-公开 checkout 从 `tools/system_rl/runtime_repairs/` 进入；内部工程从 `delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/` 进入。固定脚本分工如下：
+Omni 公开仓从 `tools/system_rl/runtime_repairs/` 进入；内部 Omni 工作目录下从 `delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/` 进入。固定脚本分工如下：
 
 | 入口 | 用途 |
 |---|---|
 | `publish_retained_cohort.py`、`pack_actor_fields.py` | 通过原消费者校验真实轨迹并封闭训练字段，关联请求、参考概率、Clock 和数据版本。已验收字段包可以直接复用。 |
 | `stage_bounded_actor_step.py`、`launch_retained_hf_fsdp.py` | 从成功退出的 HF 参考运行准备独立首步，在已有 guard 下核对镜像、卡组、空间并派发。 |
-| `bounded_actor_step.py`、`source/events.py` | 真实调用同一套 Jev/verl 的 `DataParallelPPOActor.update_policy`；单行去 padding 后送入模型，分数按原动作掩码映回，汇总全局 loss。 |
+| `bounded_actor_step.py`、`source/events.py` | 通过 Omni 训练入口调用 verl 的 `DataParallelPPOActor.update_policy`；单行去 padding 后送入模型，分数按原动作掩码映回，汇总全局 loss。 |
 | 封闭源码包内 `parents/jev-system-rl/implementation/{entry,lora_training_state,publication,newprocess_replay}.py` | 接连续训练、checkpoint 与发布的工作入口。已有八卡假设须在四卡拓扑实测。这些入口尚未用当前产物完成续训验收。 |
 
 **仅需复现首步时**，准备原参考 bundle、字段包和原镜像。训练镜像 ID 为 `sha256:52ba94e1b6ba35f09066a92222f013ce9563fdbd83a6a5e7a60d209ac29f756c`；TP4 推理镜像为 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`。校准实现绑定了源码与镜像的组合，不能仅替换同名镜像标签。合作环境用本地部署配置绑定现场地址，下面命令消费**已解析好的本地 JSON**：
 
 ```bash
-# 从公开 checkout 根目录运行；TRAIN_STEP_CONFIG 指向团队自己的配置
+# 从 Omni 公开仓根目录运行；TRAIN_STEP_CONFIG 指向团队自己的配置
 python3 tools/system_rl/runtime_repairs/stage_bounded_actor_step.py --config "$TRAIN_STEP_CONFIG"
 ```
 
