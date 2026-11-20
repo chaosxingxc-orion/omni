@@ -53,6 +53,13 @@ def install_rows(worker, rows):
                 text=worker.model_runner.get_model().language_model.model
                 setattr(worker,'_omni_'+site+'_base',attach_base(text,layers,side='vl',projections=(site+'_proj',)))
                 grouped[site+'_grouped_layers']=layers
+        if 'lora_row_geometry' in row_config:
+            import hashlib,lora_row_precision
+            spec=dict(row_config['lora_row_geometry'])
+            require(hashlib.sha256(Path(lora_row_precision.__file__).read_bytes()).hexdigest()==spec.pop('source_sha256'),
+                    'LoRA row precision source changed')
+            worker._omni_lora_geometry=lora_row_precision.attach(worker.model_runner.get_model().language_model.model,spec)
+            grouped['lora_row_geometry']=row_config['lora_row_geometry']
     return dict(rank=rank, family=precision, **grouped)
 
 
@@ -60,11 +67,11 @@ async def install_precision(engine, server, local):
     from service_overlay import awaited
     spec_ref=server['named_rpc_overlay']['precision_ref']
     rows=doc(local['rows_ref'])
-    require(set(rows)-{'q_base_layers','o_base_layers'}==set(ROW_ARGS),'expected complete retained precision composition')
+    require(set(rows)-{'q_base_layers','o_base_layers','lora_row_geometry'}==set(ROW_ARGS),'expected complete retained precision composition')
     result=await awaited(engine.collective_rpc('omni_local_install_rows',timeout=240,args=(dict(
         precision=doc(spec_ref), locations=doc(local['locations_ref']), rows=rows),)))
     require(sorted(r['rank'] for r in result)==list(range(4)) and
-            all(r['family']==result[0]['family'] and all(r.get(k+'_grouped_layers',[])==rows.get(k+'_base_layers',[]) for k in ('q','o'))
+            all(r['family']==result[0]['family'] and r.get('lora_row_geometry')==rows.get('lora_row_geometry') and all(r.get(k+'_grouped_layers',[])==rows.get(k+'_base_layers',[]) for k in ('q','o'))
                 for r in result), 'FOUR_TP_PRECISION_WORKERS')
     save(Path(server['overlay_root'])/'PRECISION.json',dict(specification_ref=spec_ref,
         rows_ref=local['rows_ref'],workers=result,actual_device_execution=True,

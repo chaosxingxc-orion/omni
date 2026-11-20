@@ -1,0 +1,35 @@
+{
+  "host": "${TRAIN_HOST}",
+  "run": "${RUN_NAME}",
+  "source_bundle": "${PRIOR_RUN}",
+  "restore_run": "${PRIOR_RUN}",
+  "prior_step": "${PRIOR_STEP}",
+  "restore_checkpoint_sha256": "${CHECKPOINT_SHA256}",
+  "lineage": "${LINEAGE}",
+  "devices": "${TRAIN_DEVICES}",
+  "storage_budget_bytes": "${TRAIN_STORAGE_BUDGET_BYTES}",
+  "timeout_seconds": "${TRAIN_TIMEOUT_SECONDS}",
+  "runtime_release": "${RUNTIME_RELEASE}",
+  "lora_row_geometry": "${LORA_ROW_GEOMETRY}",
+  "generation": {
+    "pending_capture_ref": "${PENDING_CAPTURE_REF}",
+    "generation_inventory_ref": "${GENERATION_INVENTORY_REF}",
+    "model": "${MODEL}",
+    "update_token_upper": "${UPDATE_TOKEN_UPPER}",
+    "parity": "${BEHAVIOR_PARITY}",
+    "runtime": {
+      "schema": "omni-bounded-capture-runtime-v1",
+      "cohort_dir": "${FINALIZED_COHORT_DIR}",
+      "prepared_cache_bytes": "${PREPARED_CACHE_BYTES}",
+      "sources": "${CAPTURE_SOURCE_ROLES}"
+    }
+  },
+  "capture_mounts": {
+    "root": "${CLOSED_CAPTURE_ROOT}",
+    "logical_roots": "${CAPTURE_MOUNT_TARGETS}",
+    "index_host_root": "${OFFICIAL_INDEX_LOCAL_ROOT}",
+    "overlays": "${CAPTURE_SOURCE_PINS}",
+    "tools": "${CAPTURE_TOOL_PINS}"
+  },
+  "stage_only": "${STAGE_ONLY}"
+}

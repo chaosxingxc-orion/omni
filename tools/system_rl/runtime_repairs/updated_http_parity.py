@@ -73,7 +73,24 @@ def prepare(root, wire_path, original, output=None, *, lanes=None, expected_tens
             all_scores.append(tensor.argmax(-1).tolist())
         require(all(s==all_scores[0] for s in all_scores),'TP workers disagree on argmax')
         traces=[w.get('prefix_trace') for w in after['workers']]
-        if after['config'].get('prefix_trace'):
+        trace_mode=after['config'].get('prefix_trace')
+        if isinstance(trace_mode,dict):
+            # A partial cache hit has no actual local execution for its prefix.
+            keys=['positions','decoder.input',*(f'{i}.{k}' for i in range(48) for k in ('in','post'))]
+            ops=['q','k','v','attn','o']
+            if trace_mode.get('row_operands'):ops+=['full_input','base','indices','lora_a','lora_b']
+            keys+=[('op.' if i==0 else f'op{i}.')+k for i in trace_mode['layers'] for k in ops]
+            if trace_mode.get('branch_operands'):
+                keys += [f'op{i}.{branch}.{site}' for i in trace_mode['layers'] for branches,sites in
+                         [(('q','k','v'),('base','a','b')),(('in','post'),('hidden','residual','sum'))]
+                         for branch in branches for site in sites]
+            for t in traces:
+                first=t['first_computed']
+                require(type(first) is int and 0<=first<len(prompt)==t['prompt_length'],'scheduler prompt extent')
+                expected={f'{k}:{max(first,a)}:{min(len(prompt),b)}' for k in keys for a,b in trace_mode['windows']
+                          if max(first,a)<min(len(prompt),b)}
+                require(expected and set(t['rows'])==expected,'incomplete absolute window capture')
+        elif trace_mode:
             require(all(t is not None and len(t)=={True:194,'layer0':204,'layer1':214,'layer1-q-operands':215,'q-operands':205,'o-operands':205}[after['config']['prefix_trace']]
                         for t in traces),'incomplete TP layer traces')
         else:
@@ -195,6 +212,41 @@ def evaluate(worker,adapted,spec,sealed,out,rank,world,checkpoint_ref,checkpoint
     batch=dict(schema='bounded-train-natural-requests-v1',rows=inputs)
     actions=dict(manifest_sha256=file_sha(path),records=outputs)
     worker.actor.actor_module.eval()
+    if packet_file.get('schema')=='closed-rollout-probability-diagnostic-v1':
+        from contextlib import ExitStack
+        from retained_kv_candidate import attach
+        from math import fsum
+        require(packet_file['training_use'] is False and all(r['raw_top1'] is None for r in rows),
+                'original rollout missing-top1 control only')
+        def unwrap(m):
+            while type(m).__name__ in ('CheckpointWrapper','FullyShardedDataParallel'):
+                m=m.module if type(m).__name__=='FullyShardedDataParallel' else m._checkpoint_wrapped_module
+            return m
+        results=[]
+        for control in [[], *packet_file['projection_controls']]:
+            calls={}
+            with ExitStack() as stack:
+                if 'lora_row_geometry' in spec:
+                    from lora_row_precision import attach_hf
+                    finish=attach_hf(adapted.get_base_model().model,spec['lora_row_geometry'])
+                    stack.callback(lambda: calls.update(lora_a=finish()))
+                for entry in control:
+                    name=entry['projection']
+                    require(name in ('q_proj','o_proj') and name not in calls,'invalid projection control')
+                    layers=entry['layers']
+                    close=attach(adapted.get_base_model().model,layers,side='hf',unwrap=unwrap,
+                                 training_vjp=True,projections=(name,))
+                    calls[name]=None
+                    stack.callback(lambda close=close,name=name: calls.update({name:close()}))
+                observed,=hf_scores(worker,adapted,batch,actions,file_sha(path),rank,world,actor_forward=True)
+            train_delta=[a-b for a,b in zip(observed['train_scores'],outputs[rank]['behavior_logprobs'],strict=True)]
+            results.append(dict(projections=calls,eval=observed,train_max_abs=max(map(abs,train_delta)),
+                                train_sequence_abs=abs(fsum(train_delta))))
+        commit(out/f'rank-{rank}/RESULT.json',dict(rank=rank,lane=rows[rank%len(rows)]['lane'],
+               response_sha=rows[rank%len(rows)]['response'],checkpoint_sha=checkpoint_ref['sha256'],
+               optimizer_updates=0,training_admission=False,results=results,
+               arithmetic=worker.close_actor_arithmetic()))
+        return
     if spec.get('published_adapter_control'):
         target=outputs[rank]
         def forward_control(*, q_operands=False, family_shadow=False):
@@ -227,7 +279,22 @@ def evaluate(worker,adapted,spec,sealed,out,rank,world,checkpoint_ref,checkpoint
             projection_family_shadow=rounded['boundaries'].get('projection_family_shadow'),
             master=original,public=rounded,arithmetic=worker.close_actor_arithmetic()))
         return
-    scores,=hf_scores(worker,adapted,batch,actions,file_sha(path),rank,world,actor_forward=True)
+    row_receipt={}
+    if 'lora_row_geometry' in spec:
+        from check_lora_row_vjp import check
+        from lora_row_precision import attach_hf,grouped_linear
+        close=attach_hf(adapted.get_base_model().model,spec['lora_row_geometry'])
+        try:
+            scores,=hf_scores(worker,adapted,batch,actions,file_sha(path),rank,world,actor_forward=True)
+        except BaseException:
+            close(check_coverage=False)
+            raise
+        row_receipt=close()
+        site=spec['lora_row_geometry']['site']
+        widths={'qkvo_lora_a':(2048,4096),'qkv_lora_a':(2048,),'o_lora_a':(4096,)}[site]
+        row_receipt['gradient_control']={str(w):check(grouped_linear,'npu',w) for w in widths}
+    else:
+        scores,=hf_scores(worker,adapted,batch,actions,file_sha(path),rank,world,actor_forward=True)
     errors=[a-b for a,b in zip(scores['train_scores'],outputs[rank]['behavior_logprobs'],strict=True)]
     replay_top=outputs[rank]['raw_top1']
     import math
@@ -235,7 +302,7 @@ def evaluate(worker,adapted,spec,sealed,out,rank,world,checkpoint_ref,checkpoint
     flips=[i+1 for i,(a,b) in enumerate(zip(scores['train_top1'],replay_top,strict=True)) if a!=b]
     passed=math.isfinite(mt) and mt<=limits['token'] and seq<=limits['sequence'] and len(flips)<=limits['max_argmax_flips'] and scores['max_abs']<=limits['token'] and scores['sequence_abs']<=limits['sequence'] and len(scores['top1_flips'])<=limits['max_argmax_flips']
     commit(out/f'rank-{rank}/RESULT.json',dict(rank=rank,lane=rows[rank%len(rows)]['lane'],tokens=scores['tokens'],
-        passed=passed,train_max_abs=mt,train_sequence_abs=seq,train_top1_flips=flips,eval_max_abs=scores['max_abs'],
+        **(dict(lora_row=row_receipt) if row_receipt else {}),passed=passed,train_max_abs=mt,train_sequence_abs=seq,train_top1_flips=flips,eval_max_abs=scores['max_abs'],
         eval_sequence_abs=scores['sequence_abs'],eval_top1_flips=scores['top1_flips'],restored_step=checkpoint['step'],
         observed_policy_artifact=export,checkpoint_sha=checkpoint_ref['sha256'],response_sha=rows[rank%len(rows)]['response'],
         optimizer_updates=0,arithmetic=worker.close_actor_arithmetic()))

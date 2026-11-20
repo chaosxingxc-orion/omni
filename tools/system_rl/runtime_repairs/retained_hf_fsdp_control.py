@@ -78,7 +78,36 @@ def main(spec, inputs_root, out):
             from bounded_actor_step import prepare, run
             # Preserve the original verl-before-task-adapter import order.
             worker, adapted, _ = construct(cfg, out)
+            if 'generation' in spec:
+                from bounded_actor_step import finalize_and_run
+                if 'lora_row_geometry' in spec:
+                    sealed('lora_row_precision.py')
+                    from lora_row_precision import attach_hf
+                    close_lora=attach_hf(adapted.get_base_model().model,spec['lora_row_geometry'])
+                    try:
+                        result=finalize_and_run(worker,adapted,spec,out,rank,world,sealed)
+                    except BaseException:
+                        close_lora(check_coverage=False)
+                        raise
+                    commit(out/f'rank-{rank}/LORA-ARITHMETIC.json',close_lora())
+                    return result
+                return finalize_and_run(worker,adapted,spec,out,rank,world,sealed)
             batch = prepare(spec, sealed, world)
+            if 'efficiency' in spec:
+                sealed('actor_efficiency.py')
+                from bounded_actor_step import recover
+                recover(worker,spec,batch)
+                from actor_efficiency import evaluate
+                return evaluate(worker,adapted,spec,out,rank,world,batch)
+            if 'updated_http_parity' in spec:
+                sealed('updated_http_parity.py')
+                sealed('retained_group_parity.py')
+                if spec.get('trace_q_operands') or spec.get('projection_family_shadow'):
+                    sealed('q_projection_trace.py')
+                from bounded_actor_step import recover
+                ref, restored = recover(worker,spec,batch)
+                from updated_http_parity import evaluate
+                return evaluate(worker,adapted,spec,sealed,out,rank,world,ref,restored)
             return run(worker, spec, out, rank, world, batch)
         worker, adapted, _ = construct(cfg, out)
         actor = worker.actor

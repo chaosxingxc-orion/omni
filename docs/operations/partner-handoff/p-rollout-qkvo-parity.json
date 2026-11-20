@@ -1,0 +1,61 @@
+{
+  "requests": 2,
+  "actions": 23,
+  "limits": {
+    "token": 0.01,
+    "sequence": 0.01,
+    "max_argmax_flips": 0
+  },
+  "all_passed": true,
+  "sites_per_rank": 192,
+  "gradient_widths": [
+    "2048",
+    "4096"
+  ],
+  "checkpoint_sha256": "3b725105a86382cd2faa6204ae31b9d6098886f5f4b767eb64476b7b9e9a984d",
+  "optimizer_updates": 0,
+  "results": [
+    {
+      "lane": "a",
+      "tokens": 11,
+      "ranks": [
+        0,
+        2,
+        4,
+        6
+      ],
+      "passed": true,
+      "train": {
+        "max_abs": 0.0,
+        "sequence_abs": 0.0,
+        "top1_flips": []
+      },
+      "eval": {
+        "max_abs": 0.0,
+        "sequence_abs": 0.0,
+        "top1_flips": []
+      }
+    },
+    {
+      "lane": "b",
+      "tokens": 12,
+      "ranks": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "passed": true,
+      "train": {
+        "max_abs": 0.0,
+        "sequence_abs": 0.0,
+        "top1_flips": []
+      },
+      "eval": {
+        "max_abs": 0.0,
+        "sequence_abs": 0.0,
+        "top1_flips": []
+      }
+    }
+  ]
+}

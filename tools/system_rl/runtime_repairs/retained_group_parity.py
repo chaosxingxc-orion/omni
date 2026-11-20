@@ -134,7 +134,7 @@ def sample(engine, cfg):
                 manifest_sha256=cfg['fresh_group']['sha256'],optimizer_steps=0)
 
 
-def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False, actor_forward=False, frozen_reference=False):
+def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, trace_group=None, origin_indices=None, router_shadow=False, actor_forward=False, frozen_reference=False, trace_layer0=False, trace_q_operands=False, q_replay_plan=None, trace_layer1=False, operand_layer=0, projection_family_shadow=False):
     """One owned request per rank per FSDP collective; no resampling or weight update."""
     import sys
     import torch
@@ -168,6 +168,8 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
         policy=dict(schema='omni-response-logits-v1',vocabulary=152064,
                     max_bytes=p['wire']['max_tokens']*152064*2)
         hooks=[]; boundary={}
+        q_trace=q_scope=family_scope=None
+        family={}
         if row['group']==trace_group:
             from policy_identity import tensor_hash
             base=adapted.get_base_model()
@@ -179,6 +181,9 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
                 while type(m).__name__ in ('CheckpointWrapper','FullyShardedDataParallel'):
                     m=m._checkpoint_wrapped_module if type(m).__name__=='CheckpointWrapper' else m.module
                 return m
+            if projection_family_shadow:
+                from q_projection_trace import observe_hf_base_family
+                family_scope=observe_hf_base_family(base.model,unwrap,family)
             for i,layer in enumerate(base.audio_tower.layers):
                 hooks.append(unwrap(layer).register_forward_hook(
                     lambda m,a,v,k=f'audio.{i}':record(k,v[0] if isinstance(v,tuple) else v)))
@@ -195,6 +200,23 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
             for i,layer in enumerate(base.model.layers):
                 for label,mod in [('in',unwrap(layer).input_layernorm),('post',unwrap(layer).post_attention_layernorm)]:
                     hooks.append(mod.register_forward_hook(lambda m,a,v,k=f'{i}.{label}':mark(k,v)))
+            for i in ((0,1) if trace_layer1 else (0,) if trace_layer0 else ()):
+                attn=unwrap(unwrap(base.model.layers[i]).self_attn)
+                prefix='op.' if i==0 else 'op1.'
+                def shards(key,value):
+                    for j,t in enumerate(value.chunk(4,dim=-1)):
+                        mark(f'{key}.{j}',t)
+                if i==operand_layer and trace_q_operands:
+                    from q_projection_trace import ProjectionTrace, observe_hf
+                    site=trace_q_operands if trace_q_operands in ('o','q') else 'q'
+                    q_trace=ProjectionTrace(q_replay_plan,site=site)
+                    q_scope=observe_hf(unwrap(getattr(attn,site+'_proj')), n, q_trace)
+                for key in ('q','k','v'):
+                    hooks.append(unwrap(getattr(attn,key+'_proj')).register_forward_hook(
+                        lambda m,a,v,k=prefix+key:shards(k,v)))
+                output=unwrap(attn.o_proj)
+                hooks.append(output.register_forward_pre_hook(lambda m,a,p=prefix:shards(p+'attn',a[0])))
+                hooks.append(output.register_forward_hook(lambda m,a,v,p=prefix:mark(p+'o',v)))
         if origin_indices is not None:
             layer=unwrap(base.model.layers[1])
             if router_shadow:
@@ -240,13 +262,18 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
                             hashlib.sha256(x.reshape(-1).view(torch.uint8).numpy().tobytes()).hexdigest()
                             for x in prompt.detach().cpu().contiguous()]
                 hooks.append(unwrap(mod).register_forward_hook(observe_op))
+        from contextlib import nullcontext
         try:
-            with torch.no_grad(),observe(worker.actor.actor_module,sample,policy) as cap:
+            with torch.no_grad(), (q_scope or nullcontext()), (family_scope or nullcontext()), observe(worker.actor.actor_module,sample,policy) as cap:
                 _, scores=forward(worker.actor,sample,temperature=p['wire']['temperature'],feature_dtype=torch.bfloat16)
         finally:
             for hook in hooks:hook.remove()
-        if trace_group is not None and row['group']==trace_group and len([k for k in boundary if not k.startswith('L1.')])!=227:
+        if trace_group is not None and row['group']==trace_group and len([k for k in boundary if not k.startswith('L1.')])!=227+(68 if trace_layer1 else 34 if trace_layer0 else 0):
             raise ValueError('incomplete HF trace '+str(len(boundary)))
+        if q_trace:
+            boundary[q_trace.site+'_operands']=q_trace.finish(n)
+        if family:
+            boundary['projection_family_shadow']=family
         h=scores[0].float().cpu().tolist()
         actor_evidence = {}
         if actor_forward:
@@ -277,9 +304,9 @@ def hf_scores(worker, adapted, manifest, sampled, manifest_hash, rank, world, tr
             actor_evidence['reference_scores']=ref[0].detach().float().cpu().tolist()
         delta=[a-b for a,b in zip(h,r['behavior_logprobs'],strict=True)]
         top=cap['tensor'].argmax(-1).tolist()
-        flips=[j+1 for j,(a,b) in enumerate(zip(top,r['raw_top1'],strict=True)) if a!=b]
+        flips=None if r['raw_top1'] is None else [j+1 for j,(a,b) in enumerate(zip(top,r['raw_top1'],strict=True)) if a!=b]
         logits=cap['tensor']
-        inadmissible=[j+1 for j,t in enumerate(r['raw_top1']) if logits[j,t]!=logits[j,top[j]]]
+        inadmissible=None if r['raw_top1'] is None else [j+1 for j,t in enumerate(r['raw_top1']) if logits[j,t]!=logits[j,top[j]]]
         results.append(dict(boundaries=boundary,inadmissible_top1=inadmissible,index=index,group=r['group'],replicate=r['replicate'],tokens=len(h),
             request_id=r['request_id'],max_abs=max(map(abs,delta)),sequence_abs=abs(math.fsum(delta)),
             above_limit=[j+1 for j,v in enumerate(delta) if abs(v)>.01],top1_flips=flips,

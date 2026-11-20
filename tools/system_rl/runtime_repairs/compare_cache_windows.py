@@ -35,6 +35,34 @@ def compare(prime, warm, cold):
             raise ValueError('different operator coverage')
         result.append(dict(rank=i, sites=len(su), prefix_diff=diff(pr, sites(c, 0, cut)),
                            suffix_diff=diff(su, sites(c, cut, n))))
+    # For the expanded trace, compare actual dataflow, including both
+    # residual inputs and the independent Q/K/V branches. A candidate is a
+    # first observed boundary, not an assertion about an unobserved kernel.
+    for i,r in enumerate(result):
+        keys={k.rsplit(':',2)[0] for k in w[i]['rows']}
+        layers=sorted(int(k.split('.')[0][2:]) for k in keys if k.endswith('.in.hidden'))
+        changed=set(r['suffix_diff'])
+        if not layers:continue
+        first=[]
+        for layer in layers:
+            b=f'op{layer}.';nin=f'{layer}.in'
+            dep={b+'in.sum':[b+'in.hidden',b+'in.residual'],nin:[b+'in.sum']}
+            for q in ('q','k','v'):
+                s=b+q
+                dep.update({s+'.base':[nin],s+'.a':[nin],s+'.b':[s+'.a'],s:[s+'.base',s+'.b']})
+            dep[b+'attn']=[b+q for q in ('q','k','v')]+['positions']
+            if b+'base' in keys:
+                dep.update({b+'full_input':[b+'attn'],b+'base':[b+'full_input'],b+'lora_a':[b+'full_input'],
+                            b+'lora_b':[b+'lora_a'],b+'o':[b+'base',b+'lora_b',b+'indices']})
+            dep.update({b+'post.hidden':[b+'o'],b+'post.residual':[b+'in.sum'],
+                        b+'post.sum':[b+'post.hidden',b+'post.residual'],f'{layer}.post':[b+'post.sum']})
+            for k,parents in dep.items():
+                if k == b+'full_input' and any(b+'attn' in peer['suffix_diff'] for peer in result):
+                    continue  # all-gather consumes every TP rank's attention output
+                if k in changed and not changed.intersection(parents):
+                    if not set(parents)<=keys:raise ValueError('missing paired operands: '+k)
+                    first.append(k)
+        r['first_observed_with_equal_local_inputs']=first
     return dict(prompt_tokens=n, cached_tokens=cut, actions_equal=warm['response_token_ids']==cold['response_token_ids'], ranks=result)
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 
 HERE=Path(__file__).resolve().parent
-D=HERE.parent/'system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration'
+D=HERE.parent/'runtime_repairs'
 FILES=('retained_action_replay.py','retained_attention_candidate.py',
        'retained_audio_attention_precision.py','retained_audio_row_precision.py',
        'retained_expert_candidate.py','retained_kv_candidate.py','retained_router_candidate.py')
@@ -79,6 +79,9 @@ def prepare(config,output):
         dst=bundle/'checkpoint'/src
         shutil.copytree(policy_src/src,dst)
     successor=config.get('successor_checkpoint_bundle')
+    inbox=config.get('update_inbox')
+    if inbox and (successor or not Path(inbox).is_absolute()):
+        raise ValueError('dynamic and static successors have separate configurations')
     if successor:
         successor=Path(successor)
         assert successor.is_absolute() and successor!=policy_src
@@ -107,6 +110,14 @@ def prepare(config,output):
         if layers:
             assert layers==sorted(set(layers)) and all(type(i) is int and 0<=i<48 for i in layers)
             grouped[name]=layers
+    if 'lora_row_geometry' in config:
+        import importlib.util
+        source=runtime/'source/lora_row_precision.py'
+        loader=importlib.util.spec_from_file_location('lora_row_precision',source)
+        mod=importlib.util.module_from_spec(loader);loader.loader.exec_module(mod)
+        mod.validate(config['lora_row_geometry'])
+        shutil.copyfile(source,impl/source.name)
+        grouped['lora_row_geometry']=dict(config['lora_row_geometry'],source_sha256=pin(source)['sha256'])
     write(bundle/'ROWS.json',{**{name:replay[name] for name in row_keys},**grouped})
     rpc=bundle/'rpc'
     rpc.mkdir()
@@ -152,19 +163,23 @@ def prepare(config,output):
                policy_overlay=dict(bundle=str(target/'bundle'),server=str(target/f'bundle/SERVER-{lane}.json'),
                                    checkpoint_mount=str(policy_src)),serve_args=serving)
         if successor:c['policy_overlay']['successor_mount']=str(successor)
+        if inbox:c['policy_overlay']['update_mount']=inbox
         assert c['model']==engine['model']
         write(local/'config.json',c)
         write(local/'PINS.json',{p.name:pin(p)['sha256'] for p in local.iterdir()})
         write(bundle/f'SERVER-{lane}.json',dict(endpoint=f"http://127.0.0.1:{c['port']}/v1/chat/completions",
             overlay_root='/runtime/state/policy',policy_ref=pin(policy),
             **(dict(successor_ref=pin(successor/'candidate/POLICY.json')) if successor else {}),
+            **(dict(update_inbox=inbox) if inbox else {}),
             profile_ref=pin(bundle/'PROFILE.json',target/'bundle/PROFILE.json'),
             service_identity=dict(container_name=c['name']+'-'+config['attempt'],physical_devices=c['cards'],image=c['image']),
             named_rpc_overlay=dict(files=refs,precision_ref=pin(bundle/'PRECISION-SPEC.json',target/'bundle/PRECISION-SPEC.json')),
             local_activation=dict(source_boot=c['host_boot_id'],guard=c['guard'],model=c['model'],bounded_candidate=True,
                 locations_ref=pin(bundle/'LOCATIONS.json',target/'bundle/LOCATIONS.json'),
                 rows_ref=pin(bundle/'ROWS.json',target/'bundle/ROWS.json'),
-                diagnostic_logits=dict(read(inputs/'LOGITS.json'),**({'prefix_trace':config['prefix_trace']} if config.get('prefix_trace') else {})))))
+                diagnostic_logits=dict(read(inputs/'LOGITS.json'),
+                    **({'prefix_trace':config['prefix_trace']} if config.get('prefix_trace') else {}),
+                    **({'selection':config['logits_selection']} if 'logits_selection' in config else {})))))
 
 
 if __name__=='__main__':

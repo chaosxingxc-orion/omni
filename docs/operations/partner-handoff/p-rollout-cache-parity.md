@@ -32,3 +32,7 @@ python tools/system_rl/runtime_repairs/verify_runtime_sources.py \
 第 30 层 O 的乘法现场已复核。两套 TP4、48 层的 Q/K/V/O 共 3072 个 A/B 分片与 checkpoint 全部相符。Q/K/V 在每个 rank 复制 A，沿输出通道切 B。O 沿输入通道切 A，复制 B。现场 O 在相同顺序下拼回完整输入与 A。跨录音命中 2176 个前缀 token 后，冷、热共有的 3355 行输入逐值相同，26840 个 BF16 中间结果中有 9 个不同。单卡原生 linear 精确复现两个窗口。同一 2048 行矩阵循环移动 128 行再还原，3 个元素改变，原位重复为 0 个。由此可将该算子的部分舍入差异定位到批内行位置。单卡 grouped matmul 的冷、热差为 0，与整段原生 linear 比较仍分别差 16 和 11 个元素。整模充分性与更新后训练验收另计。见[算子复验回执](p-rollout-o-row-replay.json)。
 
 对 48 层 O LoRA A 同时在推理和训练评分侧使用 grouped BF16 乘法后，第 30 层 O 的所有已测冷、热中间值均相同。第 31 层 post 仍有差异。首次 HF 诊断对 PEFT 输入的 dtype 假设错误，修复 BF16 autocast 边界后，8 个 rank 完成复算，独立算子输入和 FP32 主参数的梯度对照均逐值相同。冷请求 12 个动作两项概率差均为 0，热请求 11 个动作的最大单 token 和整段差分别为 0.042679、0.041136，与原失败结果相同。两请求均无 top-1 翻转。此次候选未通过，训练 Clock 为 1。见[整模对照回执](p-rollout-o-grouped-control.json)。
+
+**Q/K/V/O LoRA A 配对修复。** 第 31 层的两路残差、归一化输入和 Q/K/V 基座一致，四个 rank 最先观测到的局部分歧均是 Q/K/V LoRA A。只有 rank 3 的最终 Q 出现差异；O 汇聚四卡的 attention 输出，故在其他卡同样可见。两套服务的适配器切片已按各自的切分方向逐值验证。保留这些布局，将 48 层 Q/K/V/O 的 LoRA A 在两端统一为分组 BF16 矩阵乘。对同一录音分别命中 2176/5531 和 0/5531 个前缀 token 后，各 rank 的 148 个已观测边界在共同前缀及后缀全相等。train 和 eval 对各自实际采样动作复算：热 11、冷 12 个动作的最大单 token 差和整段差均为 0，两个宽度的输入和可训练主参数梯度在独立 VJP 对照中相等。冷、热各自采样的 token 可以不同。此验收没有 optimizer 更新。
+
+[第 31 层分支定位](p-rollout-lora-branch-localization.json) · [修复后算子回执](p-rollout-qkvo-windows.json) · [整模回执](p-rollout-qkvo-parity.json)

@@ -1,0 +1,35 @@
+{
+  "prompt_tokens": 5531,
+  "cached_tokens": 2176,
+  "actions_equal": false,
+  "ranks": [
+    {
+      "rank": 0,
+      "sites": 148,
+      "prefix_diff": [],
+      "suffix_diff": [],
+      "first_observed_with_equal_local_inputs": []
+    },
+    {
+      "rank": 1,
+      "sites": 148,
+      "prefix_diff": [],
+      "suffix_diff": [],
+      "first_observed_with_equal_local_inputs": []
+    },
+    {
+      "rank": 2,
+      "sites": 148,
+      "prefix_diff": [],
+      "suffix_diff": [],
+      "first_observed_with_equal_local_inputs": []
+    },
+    {
+      "rank": 3,
+      "sites": 148,
+      "prefix_diff": [],
+      "suffix_diff": [],
+      "first_observed_with_equal_local_inputs": []
+    }
+  ]
+}
