@@ -1,0 +1,38 @@
+{
+  "schema": "omni-parity-criterion-v1",
+  "version": "v1",
+  "owner_directive": "用户 2026-11-17：不要求 100% 一致，最终输出误差在 0.01 之内都可以接受",
+  "statement": "模型级验收只判最终输出误差；canonical 边界的逐位相等不再作为通过条件。",
+  "output": {
+    "reference": "不可变原始 HF 参考（native-recompute-integration POST-UPDATE.json，sha 6b9ba7d8…）中 8 个保留动作的 logprob",
+    "token_metric": "max_abs_logprob_delta",
+    "token_limit": 0.01,
+    "sequence_metric": "abs_sum_delta",
+    "sequence_limit": 0.01,
+    "formula": "max(abs(ref_i - vllm_i)) <= 0.01 and abs(sum(ref) - sum(vllm)) <= 0.01",
+    "rtol_dropped": true,
+    "rtol_reason": "0.01 为绝对口径；不再叠加 0.01*|ref| 的相对项（原口径 0.03+0.01*|ref| 更宽）"
+  },
+  "boundary_exactness_required": false,
+  "result_flip": {
+    "required": true,
+    "owner_rule": "用户 2026-11-17：误差可以到 0.01，但结果不允许翻转",
+    "scope": "每个参与验收的预测位置，在完整词表上的 argmax（不是 logprob 标量）",
+    "rule": "flip 当且仅当 argmax(candidate) 不属于参考该位置的最大值 token 集合",
+    "reference_tie_policy": "参考最大值被多个 token 精确并列时，落在并列集合内不算翻转；落在集合外算翻转，并在报告中单列该位置",
+    "margin": "参考 top1 与其下方最大非并列值之差；误差低于该差值的位置不可能翻转",
+    "evidence": "两个后端各自的 bf16 logits 块（本链 8×152064），逐行 argmax"
+  },
+  "boundary_role": "诊断信号，不是验收条件；首差位置仍由程序自底向上定位，用于修复与缺口记录",
+  "validity_gates": [
+    "HF_reference_exact",
+    "finite_logprobs",
+    "identical_shapes"
+  ],
+  "not_changed": [
+    "算子级（S1）探针仍要求同输入/同权重的逐位相等或显式 gap",
+    "训练准入还需要 recompute 闭环与 adapter 一致性，不由本口径替代",
+    "本口径不放宽任何已封存证据的阈值；封存报告保留其原始 thresholds 字段"
+  ],
+  "supersedes": "token_atol=0.03 / token_rtol=0.01 / sequence_atol=0.15（只对新派发生效）"
+}

@@ -38,6 +38,11 @@ def verify():
     assert C['serve_args'].count('--enable-prefix-caching') == 1 and '--no-enable-prefix-caching' not in C['serve_args']
     assert C['client_chat_template_kwargs'] == {'enable_thinking': False}
     assert C['serve_args'][C['serve_args'].index('--tensor-parallel-size')+1] == str(len(C['cards']))
+    if 'policy_overlay' in C:
+        overlay=C['policy_overlay']
+        assert set(overlay)-{'successor_mount'}=={'bundle','server','checkpoint_mount'} and Path(overlay['bundle']).is_dir()
+        assert Path(overlay['server']).is_relative_to(Path(overlay['bundle']))
+        assert command(['findmnt','-T',overlay['bundle'],'-n','-o','FSTYPE']) in ('ext4','xfs','btrfs')
 
 
 def name(attempt):
@@ -85,6 +90,12 @@ def argv(attempt, start):
     mounts = [(str(run), '/runtime', False), (str(run/'tmp'), '/tmp', False),
               (str(run/'tmp'), '/jev-tmp', False), (str(CODE), '/activation', True),
               (C['readonly_root'], C['readonly_root'], True)]
+    if 'policy_overlay' in C:
+        bundle=C['policy_overlay']['bundle']
+        if 'successor_mount' in C['policy_overlay']:
+            mounts.append((bundle+'/successor',C['policy_overlay']['successor_mount'],True))
+        mounts.extend([(bundle,bundle,True),(bundle+'/checkpoint',C['policy_overlay']['checkpoint_mount'],True),
+                       (C['guard'],C['guard'],True)])
     for p in ['/usr/local/Ascend/driver', '/usr/local/sbin/npu-smi', '/etc/hccn.conf',
               '/etc/ascend_install.info', '/usr/local/Ascend/firmware', '/usr/local/dcmi']:
         assert Path(p).exists(), p

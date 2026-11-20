@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "unique_recordings": 2,
+  "requests": 6,
+  "actions": 70,
+  "ranks": 8,
+  "stages": [
+    "short",
+    "short",
+    "long",
+    "long",
+    "warm",
+    "warm"
+  ],
+  "limits": {
+    "token": 0.01,
+    "sequence": 0.01,
+    "max_argmax_flips": 0
+  },
+  "checkpoint_sha256": "3b725105a86382cd2faa6204ae31b9d6098886f5f4b767eb64476b7b9e9a984d",
+  "forward": {
+    "train_max_abs": 0.0,
+    "train_sequence_abs": 0.0,
+    "eval_max_abs": 0.0,
+    "eval_sequence_abs": 0.0
+  },
+  "argmax_flips": 0,
+  "strict_gradients_verified": true
+}

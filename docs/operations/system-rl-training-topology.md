@@ -1,6 +1,10 @@
 # P 节点八卡训练与双 TP4 推理
 
-**当前接手点：** 原八卡首步更新后的权重在一条真实语音、两次 TP4 自然解码上，与恢复后的 FSDP8 训练及评估前向逐值一致。独立的严格确定性首步中，四卡与八卡的全部 LoRA 梯度、Adam 状态和更新量也逐值一致。原双机服务已经释放。尚无连续训练及 DEV 收益。 [合作交接](partner-handoff/README.md)。
+严格确定性 P 首步的同一份八卡 checkpoint 已完成同机更新态校准。四卡/八卡的 384 个 LoRA 张量、梯度及 Adam 更新逐值一致。两套 TP4 在旧版请求排空后切到新权重，清除旧缓存；两条录音共 6 个新权重请求、70 个动作，HF train/eval 与 vLLM 的单 token 差、整段差和 argmax 翻转均为 0。本次未执行连续训练或 DEV 评测。 [验收回执](partner-handoff/updated-lora-parity.json)。 [配置与运行入口](../../tools/system_rl/instruct_activation/README.md)。
+
+以下为此前的实验记录。
+
+**当时的接手点：** 原八卡首步更新后的权重在一条真实语音、两次 TP4 自然解码上，与恢复后的 FSDP8 训练及评估前向逐值一致。独立的严格确定性首步中，四卡与八卡的全部 LoRA 梯度、Adam 状态和更新量也逐值一致。原双机服务已经释放。尚无连续训练及 DEV 收益。 [合作交接](partner-handoff/README.md)。
 
 以下为此前的实验记录。
 

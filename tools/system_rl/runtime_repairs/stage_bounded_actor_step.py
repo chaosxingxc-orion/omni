@@ -56,6 +56,12 @@ def stage(c):
     if 'updated_http_parity' in c:
         if not s.get('restore_checkpoint') or 'efficiency' in c:
             raise ValueError('updated parity requires only the closed checkpoint probe')
+        packet=json.loads(Path(c['updated_http_parity']).read_bytes())
+        if 'limits' not in packet:  # historical packet; use its frozen criterion
+            limits_path=Path(c.get('parity_criterion',d.parent/'parity-criterion-v1/CRITERION.v1.json'))
+            criterion=json.loads(limits_path.read_bytes())
+            if not criterion['result_flip']['required']:raise ValueError('expected no-flip reference criterion')
+            s['parity_limits']=dict(token=criterion['output']['token_limit'],sequence=criterion['output']['sequence_limit'],max_argmax_flips=0)
         s['updated_http_parity']='updated-http.json'
         files['updated_http_parity.py']=d/'updated_http_parity.py'
         files[s['updated_http_parity']]=Path(c['updated_http_parity'])

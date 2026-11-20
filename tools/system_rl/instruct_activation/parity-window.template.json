@@ -1,0 +1,17 @@
+{
+  "schema": "omni-lora-parity-window-v1",
+  "release": "${RELEASE}",
+  "manifest": "${TRAIN_MANIFEST}",
+  "evidence": "${EVIDENCE}",
+  "checkpoint": "${CHECKPOINT}",
+  "lanes": "${LANES}",
+  "training_world_size": "${TRAINING_WORLD_SIZE}",
+  "timeout_seconds": 320,
+  "limits": {"token": 0.01, "sequence": 0.01, "max_argmax_flips": 0},
+  "stages": [
+    {"name":"old","policy":"initial","group":0,"replicate":0},
+    {"name":"short","policy":"successor","group":0,"replicate":0},
+    {"name":"long","policy":"successor","group":1,"replicate":0},
+    {"name":"warm","policy":"successor","group":0,"replicate":1}
+  ]
+}

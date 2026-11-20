@@ -1,0 +1,14 @@
+{
+  "schema": "omni-local-profile-v1",
+  "values": {
+    "RELEASE": "/local/releases/activation",
+    "TRAIN_MANIFEST": "/local/inputs/FRESH.json",
+    "EVIDENCE": "/local/evidence/window",
+    "CHECKPOINT": "/local/releases/policy/checkpoint/COMMITTED.json",
+    "LANES": [
+      "a",
+      "b"
+    ],
+    "TRAINING_WORLD_SIZE": 8
+  }
+}
