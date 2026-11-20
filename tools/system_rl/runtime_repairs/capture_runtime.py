@@ -18,8 +18,10 @@ def capture_runtime(spec):
     config = generation['runtime']
     if config['schema'] != 'omni-bounded-capture-runtime-v1':
         raise ValueError('unknown capture runtime configuration')
-    targets = {role: Path(mounts['logical_roots'][role])
-               for role in ('receipts', 'cold', 'overlays', 'tools', 'index')}
+    mount_roles = {'receipts', 'cold', 'overlays', 'tools', 'index'}
+    if 'policy_assets' in mounts['logical_roots']:
+        mount_roles.add('policy_assets')
+    targets = {role: Path(mounts['logical_roots'][role]) for role in sorted(mount_roles)}
     reserved = tuple(map(Path, ('/sealed', '/omni-hot', '/prior-checkpoint',
                                '/usr', '/opt', '/etc', '/dev', '/proc', '/sys')))
     for role, target in targets.items():
@@ -31,6 +33,8 @@ def capture_runtime(spec):
     sources = config['sources']
     required = {'publication', 'bounded_tp4', 'fresh_adapter', 'finalize_capture',
                 'capture_source', 'cohort_source'}
+    if {'consumer_source','consumer_wrapper'} & set(sources):
+        required.update(('consumer_source','consumer_wrapper'))
     if set(sources) != required:
         raise ValueError('incomplete capture source roles')
     for source in sources.values():

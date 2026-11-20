@@ -92,6 +92,13 @@ def main(spec, inputs_root, out):
                     commit(out/f'rank-{rank}/LORA-ARITHMETIC.json',close_lora())
                     return result
                 return finalize_and_run(worker,adapted,spec,out,rank,world,sealed)
+            if 'parity_restore_step' in spec:
+                from bounded_actor_step import restore_updated_probe
+                from updated_http_parity import evaluate
+                sealed('updated_http_parity.py')
+                sealed('retained_group_parity.py')
+                ref,restored=restore_updated_probe(worker,spec)
+                return evaluate(worker,adapted,spec,sealed,out,rank,world,ref,restored)
             batch = prepare(spec, sealed, world)
             if 'efficiency' in spec:
                 sealed('actor_efficiency.py')

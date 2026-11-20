@@ -62,6 +62,30 @@ def check(config):
         for lane in lanes:
             require(lane['endpoint'].startswith('http://127.0.0.1:'),'loopback only')
             before[lane['name']]=metrics(lane['endpoint']);idle(before[lane['name']])
+        if config.get('inbox_switch'):
+            change=config['inbox_switch']
+            require(not config.get('switch') and all(lane['successor'] for lane in lanes),
+                    'expected dynamic successor lanes')
+            terminal=doc(change['terminal'])
+            require(terminal['terminal_verified'] and terminal['unknown_requests']==0,
+                    'prior capture must be reconciled')
+            previous=change['previous']
+            successor=change['successor']
+            previous_step=doc(successor)['step']-1
+            require(previous_step>0,'direct next checkpoint required')
+            for lane in lanes:
+                active,_=receipt(dict(lane,successor=False),'ACTIVATION.json')
+                require(active['policy_ref']==previous,'wrong active predecessor')
+                raw=subprocess.check_output(['docker','exec',lane['container'],'cat',previous['path']],timeout=15)
+                require(hashlib.sha256(raw).hexdigest()==previous['sha256']
+                        and json.loads(raw)['step']==previous_step,'wrong predecessor checkpoint step')
+            root.mkdir(mode=0o700)
+            save(root/'SWITCH-INTENT.json',dict(previous=previous,successor=successor,
+                 terminal=change['terminal'],automatic_retry=False))
+            marker=Path(change['inbox'])/f'after-step-{previous_step}.json'
+            require(not marker.exists() and Path(successor['path']).is_relative_to(marker.parent),
+                    'invalid or prior inbox marker')
+            save(marker,dict(previous=previous,successor=successor))
         if config.get('switch'):
             drained=pin(config['switch']['drained_path'])
             terminal=doc(drained)
@@ -92,6 +116,13 @@ def check(config):
                         all(r['compared_original_keys']==config.get('adapter_tensors',len(r['loaded_tensors']))==len(r['loaded_tensors'])>0 for r in activation['workers']),'incomplete actual worker readback')
                 require(cache['reset_succeeded'] and cache['kv_cache'] and cache['prefix_cache'],'cache receipt required')
                 require({r['rank'] for r in precision['workers']}==set(range(lane.get('world_size',len(activation['service_identity']['physical_devices'])))),'precision workers absent')
+                if config.get('inbox_switch'):
+                    switched,_=receipt(lane,'SWITCHED.json')
+                    require(switched['old_removed_from_engine'] and switched['cache_reset']
+                            and switched['previous_policy_ref']==config['inbox_switch']['previous']
+                            and switched['activation_ref']['sha256']==act_ref['sha256']
+                            and switched['old_id']!=switched['new_id']==activation['adapter_id'],
+                            'incomplete dynamic switch receipt')
                 result.append(dict(activation_ref=act_ref,cache_ref=cache_ref,precision_ref=precision_ref,
                                    work=work_metrics(before[lane['name']],metrics(lane['endpoint'])),**reply))
             save(root/'RESULT.json',dict(lanes=result,elapsed_seconds=time.monotonic()-started,training_use=False))

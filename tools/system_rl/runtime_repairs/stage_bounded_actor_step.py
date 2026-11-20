@@ -160,9 +160,16 @@ def stage(c, snapshots=None):
             if run.parent!=parent.parent or run==dest:raise ValueError('invalid restore source')
             prior=json.loads(remote('cat '+q(str(run/'hot/EXIT.json'))))
             if prior.get('failure') or prior['exit_code'] or prior['complete_ranks']!=8:raise ValueError('restore source not closed')
-            proof=run/'hot/step-1/COMMITTED.json'
+            restore_step=c.get('restore_step',1)
+            if type(restore_step) is not int or restore_step<1 or (restore_step!=1 and 'updated_http_parity' not in c):
+                raise ValueError('explicit later step requires a no-update parity probe')
+            proof=run/f'hot/step-{restore_step}/COMMITTED.json'
             raw=subprocess.check_output(['ssh',host,'cat '+q(str(proof))])
+            if json.loads(raw)['step']!=restore_step:raise ValueError('wrong diagnostic checkpoint')
             s['restore_checkpoint']=dict(directory=str(proof.parent),sha256=hashlib.sha256(raw).hexdigest())
+            if restore_step!=1:
+                s['parity_restore_step']=restore_step
+                s['diagnostic_commit']=json.loads(raw)['contract']
             source_pins=json.loads(raw)['contract']['sources']
             # Restore the original training arithmetic even when the workspace
             # is preparing a different inference precision candidate.

@@ -112,6 +112,32 @@ def recover(worker,spec,batch):
     return ref,restored
 
 
+def restore_updated_probe(worker,spec):
+    from checkpoint import restore
+    from dependencies import require
+    from run_package import pin,read
+    path=Path('/prior-checkpoint')
+    ref=pin(path/'COMMITTED.json')
+    prior=read(ref)
+    contract=checkpoint_contract(spec)
+    old=prior['contract']
+    require(ref['sha256']==spec['restore_checkpoint']['sha256']
+            and prior['step']==prior['clock']['successful_optimizer_steps']==spec['parity_restore_step']
+            and old==spec['diagnostic_commit'] and prior['world_size']==8
+            and all(old[k]==contract[k] for k in ('lineage','training','devices','image')),
+            'wrong diagnostic predecessor')
+    ignored={'bounded_actor_step.py','retained_hf_fsdp_control.py','worker_dp8.py','SOURCE-PINS.json'}
+    require({k:v for k,v in old['sources'].items() if k not in ignored}
+            =={k:v for k,v in contract['sources'].items() if k not in ignored}
+            and old['lora_arithmetic']==dict(geometry=spec['lora_row_geometry'],
+                source_sha256=spec['files']['lora_row_precision.py']), 'diagnostic arithmetic differs')
+    require(old['sources']['worker_dp8.py']==contract['sources']['worker_dp8.py'],
+            'diagnostic worker differs')
+    restored,_=restore(worker,path,old)
+    worker.audit_master_optimizer(restored['step'])
+    return ref,restored
+
+
 def verify_continuation(spec, prior, packet=None):
     """Authenticate a transition without changing the predecessor manifest."""
     from dependencies import require

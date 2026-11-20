@@ -44,6 +44,10 @@ def capture_mounts(cfg, bundle):
         path = capture_root/'tools'/name
         if Path(name).name!=name or path.resolve()!=path or hashlib.sha256(path.read_bytes()).hexdigest()!=expected:
             raise ValueError('capture verification tool differs: '+name)
+    runtime = capture_runtime(cfg)
+    for role in ('consumer_source','consumer_wrapper'):
+        if role in runtime:
+            args += ['-e','OMNI_CAPTURE_'+role.upper()+'='+runtime[role]]
     return args
 
 
