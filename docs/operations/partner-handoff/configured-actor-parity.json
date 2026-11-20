@@ -1,0 +1,51 @@
+{
+  "schema": "configured-four-card-actor-parity-v1",
+  "model": "Qwen3-Omni-30B-A3B-Instruct",
+  "scope": "Frozen P policy, two real TRAIN recordings, four seeds. Eval and grad-enabled training forwards vs naturally sampled TP4 actions.",
+  "runs": {
+    "cold": {
+      "requests": 8,
+      "tokens": 87,
+      "max_token_difference": 0,
+      "max_sequence_difference": 0,
+      "strict_top1_flips": 0,
+      "report_sha256": "feb7c90be24c5dad6fb851dd0b8e3ef837b1ffcd785df9c1ac3fac0c66182fbc",
+      "config_sha256": "702e741d472f74b45585d73c086d721a673fe451738881e6a054ea3db39a52ba",
+      "rank_receipts": [
+        "a5d8718231f98960bbafc3a55fca29315f77f9763dd7d8d3134f063352377416",
+        "679ac15ed1cdf1709b557d511b15de532c8ba9b371e8f514c25ef08e24a4523b",
+        "472e22a7f683a621c87a1a61e50e2486d22016002baccd75fb6ff8e039226a43",
+        "48abd95e44330c3ef57db77d5bd9503ba1ea3b7362be525f42ce937787838afd"
+      ],
+      "rollout_sha256": "0fce709702644232a0cb15bc5970758d147de0625735b1c42c35cb414da870ac",
+      "exit_sha256": "0281aa8ff1553a8c2a8174e2a08238314dfa058fd6a232a8571432e7ff98cb9a"
+    },
+    "shared": {
+      "requests": 8,
+      "tokens": 86,
+      "max_token_difference": 0,
+      "max_sequence_difference": 0,
+      "strict_top1_flips": 0,
+      "report_sha256": "5d80f94bcf3132c22e54386233b94e884b242fd360542519167b1e086559f77c",
+      "config_sha256": "ab62157e9c039b2668b7268bc4123afe07a229155720ce1ee9ea886eb9770f21",
+      "rank_receipts": [
+        "4ebca6040fbcfe4ce502cfc013e9ef2fdf754f3e3a77319771a2ae0e07af65d1",
+        "679ac15ed1cdf1709b557d511b15de532c8ba9b371e8f514c25ef08e24a4523b",
+        "472e22a7f683a621c87a1a61e50e2486d22016002baccd75fb6ff8e039226a43",
+        "48abd95e44330c3ef57db77d5bd9503ba1ea3b7362be525f42ce937787838afd"
+      ],
+      "rollout_sha256": "9951c9a244db4066f5b5aeecdedc3d0725737748410adfaf78724658b505d248",
+      "exit_sha256": "27080b0f1db7fed14f30f0daab976cad3dc55772029462765f7ce88d1914b164"
+    }
+  },
+  "optimizer_steps": 0,
+  "frozen_lock": "fcd3a4b0da6001d54fe3c448edb1ea2f1d69be85e476b02ef7cdc423481e6341",
+  "release_marker": "89d505168ae54d4dee9d04bb5ea38d7d59ca49f9caa516a231c7b14b5dafae6d",
+  "worker": "1f3a29f540afb847abd5a7d590b8d8bb3c47b54b2df7e562416c3380d485aa91",
+  "excluded": [
+    "updated adapter export/reload",
+    "production throughput",
+    "training reward",
+    "other nodes and populations"
+  ]
+}
