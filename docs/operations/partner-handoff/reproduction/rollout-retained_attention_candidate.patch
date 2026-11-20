@@ -1,0 +1,12 @@
+--- a/tools/system_rl/runtime_repairs/retained_attention_candidate.py
++++ b/tools/system_rl/runtime_repairs/retained_attention_candidate.py
+@@ -153,7 +153,8 @@
+ 
+     _validate(layers, text.layers)
+     compute = causal_attention(training_vjp=training_vjp)
+-    fixed=causal_attention(absolute_tile=128,training_vjp=training_vjp) if tiled_layers else None
++    fixed=causal_attention(absolute_tile=128) if tiled_layers else None
++    if tiled_layers and training_vjp:raise ValueError("tile backward not validated")
+     counts, handles, active = Counter(), [], []
+ 
+     class AttentionMode(TorchFunctionMode):

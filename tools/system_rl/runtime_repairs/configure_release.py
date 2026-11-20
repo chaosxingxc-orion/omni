@@ -223,6 +223,12 @@ def configure(source,output,mode):
     bind_precision_profile(value)
     from storage import environment
     environment(root,value['iteration']['client_storage_bytes'])
+    if mode=='formal':
+        from verify_runtime_sources import require_release_sources
+        spec=value['iteration'].get('runtime_release')
+        require(spec is not None,'formal preparation requires a paired runtime_release configuration')
+        report=require_release_sources(spec)
+        value['iteration']['runtime_source_receipt']=write(root/'RUNTIME-SOURCES.json',report)
     c=value['iteration'];family_ref=family_selection(c,mode)
     b=bindings(root/'bindings',family_ref);c.update(b,execution_mode=mode)
     for key in ('authority_ref','resources_ref'):

@@ -1,0 +1,28 @@
+--- a/tools/system_rl/runtime_repairs/retained_hf_fsdp_control.py
++++ b/tools/system_rl/runtime_repairs/retained_hf_fsdp_control.py
+@@ -78,7 +78,25 @@
+             from bounded_actor_step import prepare, run
+             # Preserve the original verl-before-task-adapter import order.
+             worker, adapted, _ = construct(cfg, out)
++            if 'generation' in spec:
++                from bounded_actor_step import finalize_and_run
++                return finalize_and_run(worker,adapted,spec,out,rank,world,sealed)
+             batch = prepare(spec, sealed, world)
++            if 'efficiency' in spec:
++                sealed('actor_efficiency.py')
++                from bounded_actor_step import recover
++                recover(worker,spec,batch)
++                from actor_efficiency import evaluate
++                return evaluate(worker,adapted,spec,out,rank,world,batch)
++            if 'updated_http_parity' in spec:
++                sealed('updated_http_parity.py')
++                sealed('retained_group_parity.py')
++                if spec.get('trace_q_operands') or spec.get('projection_family_shadow'):
++                    sealed('q_projection_trace.py')
++                from bounded_actor_step import recover
++                ref, restored = recover(worker,spec,batch)
++                from updated_http_parity import evaluate
++                return evaluate(worker,adapted,spec,sealed,out,rank,world,ref,restored)
+             return run(worker, spec, out, rank, world, batch)
+         worker, adapted, _ = construct(cfg, out)
+         actor = worker.actor
