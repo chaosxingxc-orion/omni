@@ -71,6 +71,10 @@ def main(spec, inputs_root, out):
             commit(out/f'rank-{rank}'/'RESULT.json',measure(device,rank,probe['lengths'],probe['seed'],**{k:True for k in ('router_only','tiled_kv') if probe.get(k)}))
             return
         worker, adapted, _ = construct(cfg, out)
+        if 'accepted_fields' in spec:
+            sealed('bounded_actor_step.py')
+            from bounded_actor_step import run
+            return run(worker,adapted,spec,out,sealed,rank,world)
         actor = worker.actor
         if 'actor_arithmetic_profile' in cfg:
             fresh = spec['fresh_group']

@@ -22,7 +22,7 @@ def main(config):
     from storage import environment, check_running
     devices = cfg['devices']
     world = cfg['training']['world_size']
-    if world not in (4, 8) or list(range(world)) != devices:
+    if world not in (4, 8) or devices not in ([0,1,2,3],[4,5,6,7],list(range(8))) or len(devices)!=world:
         raise ValueError('expected contiguous visible ranks for native FSDP')
     boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
     if boot != cfg['boot_id']:
@@ -62,7 +62,7 @@ def main(config):
                     'HF_HUB_OFFLINE','TRANSFORMERS_OFFLINE','TOKENIZERS_PARALLELISM'):
             args += ['-e',key+'='+os.environ[key]]
         args += ['-e','PYTHONPATH=/sealed/tree/parents/jev-system-rl/implementation:/sealed/tree/jev/src:/opt/verl',
-                 '-e','TRANSFORMERS_CACHE=/omni-hot/hf/transformers','-e','ASCEND_RT_VISIBLE_DEVICES='+','.join(map(str,devices))]
+                 '-e','TRANSFORMERS_CACHE=/omni-hot/hf/transformers','-e','ASCEND_RT_VISIBLE_DEVICES='+','.join(map(str,range(world)))]
         for key in ('HCCL_SOCKET_IFNAME','GLOO_SOCKET_IFNAME','HCCL_IF_BASE_PORT'):
             args += ['-e',key+'='+str(cfg['communication'][key])]
         args += [image,'python3','-B','-m','torch.distributed.run','--standalone',f'--nproc-per-node={world}',

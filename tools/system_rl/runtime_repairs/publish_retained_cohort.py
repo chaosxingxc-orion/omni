@@ -153,6 +153,9 @@ def run(path, child):
     if child:
         with (root/'COHORT.guard').open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            if 'pack_fields' in c:
+                from pack_actor_fields import pack
+                return pack(c,training_root)
             result=publish(c,training_root)
             print(json.dumps({k:result[k] for k in ('selected_groups','complete_episodes','global_episode_denominator','training_ready','gradient_status')}))
         return

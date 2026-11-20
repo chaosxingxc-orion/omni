@@ -1,0 +1,54 @@
+{
+  "schema": "p-first-fsdp4-optimizer-update-v1",
+  "stage": "first bounded step from frozen base; no subsequent steps",
+  "model": "Qwen3-Omni-30B-A3B-Instruct",
+  "rollout": "TP4 retained natural samples",
+  "train": "FSDP4",
+  "training_rows": 8,
+  "action_tokens": 86,
+  "denominator": 8,
+  "optimizer_step": 1,
+  "components": {
+    "policy": -0.6874986886978149,
+    "kl": 0.0,
+    "policy_total": 0.6874986886978149,
+    "D_decision": 0.0,
+    "P_ranking": 0.0,
+    "S1_presence": 0.0,
+    "S2_values": 0.0,
+    "total": 0.6874986886978149
+  },
+  "gradient_norm": 8.517797470092773,
+  "pre_update_reward": 0.875,
+  "max_token_difference": 0.0,
+  "max_sequence_difference": 0.0,
+  "adapter": {
+    "master_dtype": "float32",
+    "publication_dtype": "bfloat16",
+    "conversion": "master.to(bfloat16), same as FSDP param_dtype",
+    "keys": 384,
+    "elements": 6684672
+  },
+  "adapter_bytes": 13420384,
+  "adapter_sha256": "7ef9b6afe9447d8d006d262b4a9e4b335ea30a67a3e1d7feff1c463605757f6f",
+  "publication_identity": "08330a539bd193a8660dbe65d7b632e155aa30b30ec4c9965eb71334a4ee4ee7",
+  "config_digest": "574ab6d5738fa80b207befe1112995429c612c4823c12c8b1d51c954dd499056",
+  "rank_results": [
+    "43d5752f0d7e62e8a7c04f3dd9162a008df2378a27e39910ed059642ae1592e6",
+    "1ae803fd73f15a8fa2d120cf300509bb7ef4caa37cfed9c1614599828b3c18fb",
+    "ec19a7d5e51f2c861eb3c41403fd97258757fca7ec2ab9a5c87001b66547dda2",
+    "1bf03cedecf005dd66f2ac721c4c590f082d146f0a68f689bbd4d37bff53ae24"
+  ],
+  "rank_losses": [
+    "ff2d72be1e5d475b270d08ab8300593a719bd414b8465f1927ca00eca0c6de8c",
+    "fd3efb95ddd11e26d2ba4b6e58901dba02a300fd1dfcb1766dbeeed96349bb46",
+    "58bf163a301d1a9de09f4ae3697b929fa37c40ac7e07b6eabfd4265a32c5bf08",
+    "e88be12dc25c477d2d7afdbdb0889e3d5e7f6df40341abbe90911425660fb628"
+  ],
+  "exit_digest": "b6010dfd3b0a99e36e7cc8aa736078e6122773b7abf391dfe6f0dfb04ee13f17",
+  "excluded": [
+    "updated policy inference reload",
+    "optimizer resume",
+    "DEV reward"
+  ]
+}
