@@ -1,0 +1,27 @@
+--- a/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/source/production_stage.py
++++ b/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/source/production_stage.py
+@@ -62,7 +62,11 @@
+         if request['stage']!='screen':
+             template.pop('train_encoder_handoff',None)
+     template['budget']['absolute_deadline']=config['deadline_epoch']
+-    template['budget']['wall_seconds']=min(template['budget']['wall_seconds'],config['deadline_epoch']-__import__('time').time())
++    remaining=config['deadline_epoch']-__import__('time').time()
++    lifetime=config.get('program_execution',{}).get('heldout_lifetime','template')
++    require(lifetime in ('template','iteration_deadline'),'unknown heldout program lifetime')
++    template['budget']['wall_seconds']=(remaining if split in ('DEV','TEST') and lifetime=='iteration_deadline'
++                                        else min(template['budget']['wall_seconds'],remaining))
+     template['budget']['new_requests']=request['budget']['requests_upper']
+     template['budget']['new_cost_units']=request['budget']['tokens_upper']
+     binding=dict(policy_ref=request['policy_ref'],endpoint_witness_ref=request['endpoint_witness_ref'])
+--- a/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/assemble_sampled_p.py
++++ b/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/assemble_sampled_p.py
+@@ -55,6 +55,9 @@
+     compiled=read(compile_profile(cfg['template_ref']['path'],profile['path'],root/'resolution'))
+     require(compiled['template_source_ref']==cfg['template_ref'],'formal template changed')
+     base.update(read(compiled['resolved_ref']),formal_rollout=rollout)
++    if 'heldout_lifetime' in cfg:
++        require(cfg['heldout_lifetime'] in ('template','iteration_deadline'),'unknown heldout program lifetime')
++        base['program_execution']['heldout_lifetime']=cfg['heldout_lifetime']
+     # Rebind only the signed release replacement of the capture driver. Preserve
+     # scorer/module/paired/specification and every unaffected source pin.
+     binding=copy.deepcopy(base['reward_evaluation'])
