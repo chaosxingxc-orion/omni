@@ -4,10 +4,12 @@ from functools import wraps
 
 def validate(config):
     shapes = config.get('batch_sizes')
-    if set(config)-{'pool_mode'} != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
+    if set(config)-{'pool_mode','capture_segments'} != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
         raise ValueError('explicit graph batch sizes and free HBM reserve required')
     if config.get('pool_mode','private') not in ('private','per_batch'):
         raise ValueError('unknown graph pool mode')
+    if config.get('capture_segments','both') not in ('both','before','after'):
+        raise ValueError('unknown graph segments')
     if not isinstance(shapes,list) or not shapes or any(type(n) is not int or not 1 <= n <= 8 for n in shapes) or sorted(set(shapes)) != shapes:
         raise ValueError('ordered unique decode batch sizes required')
 
@@ -63,7 +65,10 @@ def attach(worker, config):
         stream.synchronize()
         with torch.npu.graph(graph,stream=stream,pool=pool):
             output=callback(*inputs)
-        def run(*values):
+        # Captured kernels retain raw device pointers, not Python owners.
+        # Keep callbacks (and closed-over router/length tensors) alive as
+        # long as the graphs, including between asynchronous replays.
+        def run(*values, _owner=callback):
             for buf,value in zip(inputs,values,strict=True):
                 buf.copy_(value)
             graph.replay()
@@ -116,9 +121,10 @@ def attach(worker, config):
         if config.get('pool_mode')=='per_batch' and n not in pools:
             pools[n]=torch.npu.graph_pool_handle()
         pool=pools.get(n)
-        one=capture(before,(hidden,residual,cos,sin,mask),pool)
+        segments=config.get('capture_segments','both')
+        one=capture(before,(hidden,residual,cos,sin,mask),pool) if segments!='after' else before
         dummy=hidden.new_zeros((n,4096))
-        two=capture(after,(dummy,residual,mask),pool)
+        two=capture(after,(dummy,residual,mask),pool) if segments!='before' else after
         return one,two
 
     def wrap(i,layer):

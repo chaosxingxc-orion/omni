@@ -27,14 +27,34 @@ def reconcile(path, pid):
         for service in cfg['services']:
             for group, replica, wire in roster[service['name']]:
                 expected[root/f'round-{i}'/service['name']/f'{group}-{replica}'] = (service, wire)
-    require(set(expected) == {p.parent for p in root.rglob('INTENT.json')} ==
-            {p.parent for p in root.rglob('RESPONSE.json')} and
-            not list(root.rglob('UNKNOWN.json')), 'incomplete or unknown requests')
+    intents = {p.parent for p in root.rglob('INTENT.json')}
+    responses={p.parent for p in root.rglob('RESPONSE.json')}
+    unknowns={p.parent for p in root.rglob('UNKNOWN.json')}
+    require(intents and intents <= set(expected) and intents == responses|unknowns and
+            not responses & unknowns, 'incomplete or ambiguous requests')
+    # Later rounds are dispatched sequentially. Only a wholly unstarted
+    # suffix may be absent, never a partial request roster in a started round.
+    last = max(int(p.parent.parent.name.split('-')[1]) for p in intents)
+    require(intents == {p for p in expected if int(p.parent.parent.name.split('-')[1])<=last}
+            and not any((root/f'round-{i}').exists() for i in range(last+1,len(plan))),
+            'partial or ambiguous round')
     outcomes = []
     for directory, (service, wire) in expected.items():
-        intent, response = (doc(pin(directory/n)) for n in ('INTENT.json','RESPONSE.json'))
+        if directory not in intents:
+            continue
+        intent=doc(pin(directory/'INTENT.json'))
         require(intent['wire_sha256'] == hashlib.sha256(canonical(wire)).hexdigest() and
-                intent['endpoint'] == service['endpoint'] and response['response_sha256'] ==
+                intent['endpoint'] == service['endpoint'], 'request identity changed')
+        if directory in unknowns:
+            ref=pin(directory/'UNKNOWN.json')
+            failure=doc(ref)
+            require(service['endpoint'].startswith('http://127.0.0.1:') and
+                    failure['error']=="URLError(ConnectionRefusedError(111, 'Connection refused'))" and
+                    failure['automatic_retry'] is False, 'transport may have submitted this request')
+            outcomes.append(dict(connection_refused=ref,container=service['container']))
+            continue
+        response=doc(pin(directory/'RESPONSE.json'))
+        require(response['response_sha256'] ==
                 hashlib.sha256(response['raw'].encode()).hexdigest(), 'request identity changed')
         outcomes.append(dict(receipt=pin(directory/'RESPONSE.json'),status=response['status']))
     exited = {}
@@ -49,7 +69,8 @@ def reconcile(path, pid):
             require(info['State']['Pid']==service['pid'],'service replaced')
             service_identity(service)
             idle(metrics(service['endpoint']))
-    require(exited and any(r['status']>=400 for r in outcomes),'failed measurement required')
+    require(exited and all(r['container'] in exited for r in outcomes if 'connection_refused' in r)
+            and any(r.get('status',0)>=400 for r in outcomes),'failed measurement required')
     # Pin the waiter before checking ownership, so PID reuse cannot signal a successor.
     fd = os.pidfd_open(pid)
     try:
@@ -71,7 +92,8 @@ def reconcile(path, pid):
                     if time.monotonic()>=end:raise
                     time.sleep(.1)
             save(root/'DRAINED.json',dict(guards_releasable=True,passed=False,unknown_requests=0,
-                outcomes=outcomes,exited_containers=exited,source_boot=cfg['source_boot'],
+                outcomes=outcomes,undispatched=len(expected)-len(intents),
+                exited_containers=exited,source_boot=cfg['source_boot'],
                 config_ref=pin(path),finished_epoch=time.time()))
     finally:
         os.close(fd)

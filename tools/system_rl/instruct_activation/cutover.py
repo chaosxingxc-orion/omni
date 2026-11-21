@@ -26,7 +26,15 @@ def switch(c):
     with guard.open('rb') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         terminal=json.loads(Path(c['terminal']).read_bytes())
-        assert terminal['guards_releasable'] and not list(Path(c['terminal']).parent.rglob('UNKNOWN.json'))
+        assert terminal['guards_releasable']
+        unknowns=list(Path(c['terminal']).parent.rglob('UNKNOWN.json'))
+        if unknowns:
+            reconciled=[o['connection_refused'] for o in terminal['outcomes'] if 'connection_refused' in o
+                        and o['container'] in terminal['exited_containers']]
+            assert terminal['unknown_requests']==0 and terminal['passed'] is False
+            assert sorted(reconciled,key=lambda x:x['path'])==sorted(map(pin,unknowns),key=lambda x:x['path'])
+            assert all(json.loads(p.read_bytes())['error']=="URLError(ConnectionRefusedError(111, 'Connection refused'))"
+                       for p in unknowns)
         if 'training_terminal' in c:
             training=json.loads(Path(c['training_terminal']).read_bytes())
             assert training['terminal_verified'] is True and training['unknown_requests']==0
