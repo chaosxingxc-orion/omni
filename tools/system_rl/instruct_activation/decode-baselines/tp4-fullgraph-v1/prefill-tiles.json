@@ -1,0 +1,45 @@
+{
+  "changes": {
+    "engine": {},
+    "files": {
+      "parents/jev-system-rl/implementation/decode_layer_graph.py": {
+        "new": "bdf7947c6ed15684649fa2f07b8bd78ecf7f9633f6ebde6e33d54f538b716d3e",
+        "old": "2a8f79f5747bc9bedeca14111417df2d53d3f72e31714e724a7e3aabf3bfcb38"
+      },
+      "parents/jev-system-rl/implementation/service_overlay.py": {
+        "new": "e33397e6b2338d39f8b82ad4e6acce79112c5ce52e63eb0ef9f956a996ca2224",
+        "old": "0a88ec27a4ebb789a0d8e12638cde663c6d431f27ae823ff14b6af00b437bb78"
+      }
+    },
+    "rows": {
+      "decode_layer_graph": {
+        "new": {
+          "batch_sizes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "capture_segments": "both",
+          "pool_mode": "per_batch",
+          "prefill_tile_rows": 128,
+          "reserve_bytes": 2147483648,
+          "source_sha256": "bdf7947c6ed15684649fa2f07b8bd78ecf7f9633f6ebde6e33d54f538b716d3e"
+        },
+        "old": {
+          "batch_sizes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "capture_segments": "both",
+          "pool_mode": "per_batch",
+          "reserve_bytes": 2147483648,
+          "source_sha256": "2a8f79f5747bc9bedeca14111417df2d53d3f72e31714e724a7e3aabf3bfcb38"
+        }
+      }
+    }
+  },
+  "parent_sha256": "d7d638c141a3f245b72069739c490b5d7bf09a49f262c9df545fbc4c5d7f94d4"
+}

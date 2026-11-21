@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import tempfile
 
 HERE=Path(__file__).resolve().parent
 D=HERE.parent/'runtime_repairs'
@@ -46,7 +47,58 @@ def checkpoint_dirs(root, logical=None):
     return candidate.parent.name,manifest.parent.name
 
 
-def prepare(config,output):
+def prepare(config, output):
+    # Historical non-graph releases retain their original preparation path.
+    parent = config.get('decode_parent')
+    if not parent and ('decode_layer_graph' not in config or config.get('release_kind') != 'formal'):
+        return _prepare(config, output)
+    from decode_lineage import verify
+    if not parent:
+        raise ValueError('formal decode graph preparation requires decode_parent with lock and declaration')
+    if output.exists():
+        raise FileExistsError(output)
+    lock = Path(parent['lock'])
+    declaration = read(parent['declaration'])
+    with tempfile.TemporaryDirectory(dir=output.parent) as staging:
+        packet = Path(staging) / 'packet'
+        # Supply the measured runtime sources for unchanged helpers, and only
+        # take explicitly declared changes from the candidate source directory.
+        from decode_lineage import digest, snapshot
+        frozen = Path(parent['packet'])
+        lock_record = read(lock)
+        manifest = lock.with_name('packet-files.json')
+        if digest(manifest) != lock_record['packet_files_sha256']:
+            raise ValueError('parent packet manifest does not match lock')
+        inventory = {str(f.relative_to(frozen)): digest(f) for f in frozen.rglob('*') if f.is_file()}
+        if inventory != read(manifest):
+            raise ValueError('parent packet differs from the measured packet')
+        parent_runtime = lock_record['runtime']
+        if snapshot(frozen) != parent_runtime:
+            raise ValueError('configured parent packet does not match lock')
+        chosen = Path(config.get('runtime_sources', D)) / 'source'
+        prefix = 'parents/jev-system-rl/implementation/'
+        changed = declaration['changes']['files']
+        src = Path(staging) / 'runtime/source'
+        src.mkdir(parents=True)
+        names = {k[len(prefix):] for k in parent_runtime['files'].keys() | changed.keys()
+                 if k.startswith(prefix) and k.endswith('.py')}
+        for name in sorted(names):
+            key = prefix + name
+            wanted = changed[key]['new'] if key in changed else parent_runtime['files'][key]
+            if wanted is None:
+                continue
+            source = chosen / name if key in changed else frozen / 'bundle' / key
+            if not source.is_file() or digest(source) != wanted:
+                raise ValueError('source does not match declared revision: ' + name)
+            shutil.copyfile(source, src / name)
+        implementation = config.get('implementation_sources', D.parent / 'implementation')
+        _prepare(dict(config, runtime_sources=src.parent, implementation_sources=implementation), packet)
+        receipt = verify(packet, lock, declaration)
+        write(packet / 'DECODE-PARENT.json', receipt)
+        packet.rename(output)
+
+
+def _prepare(config,output):
     release=config.get('release_kind','precision')
     if release not in ('precision','formal','decode_profile','decode_replay'):
         raise ValueError('unknown release kind')

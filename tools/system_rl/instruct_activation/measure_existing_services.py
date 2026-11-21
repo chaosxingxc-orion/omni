@@ -53,6 +53,8 @@ def work_metrics(before, after):
         mm_queries=delta('mm_cache_queries_total'),mm_hits=delta('mm_cache_hits_total'),
         mean_ttft_seconds=mean('time_to_first_token_seconds'),
         mean_itl_seconds=mean('inter_token_latency_seconds'),
+        mean_request_tpot_seconds=mean('request_time_per_output_token_seconds'),
+        tpot_requests=delta('request_time_per_output_token_seconds_count'),
         itl_intervals=delta('inter_token_latency_seconds_count'),
         itl_total_seconds=delta('inter_token_latency_seconds_sum'),
         mean_decode_seconds=mean('request_decode_time_seconds'),
