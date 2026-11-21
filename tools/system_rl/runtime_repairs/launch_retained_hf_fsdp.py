@@ -65,6 +65,7 @@ def verify_staged_inputs(cfg, bundle):
 
 
 def main(config,check_capture=False):
+    entered = time.monotonic()
     config_bytes = config.read_bytes()
     cfg = json.loads(config_bytes)
     config_sha = hashlib.sha256(config_bytes).hexdigest()
@@ -149,12 +150,27 @@ def main(config,check_capture=False):
         for key in ('HCCL_SOCKET_IFNAME','GLOO_SOCKET_IFNAME','HCCL_IF_BASE_PORT'):
             args += ['-e',key+'='+str(cfg['communication'][key])]
         if check_capture:
-            args += [image,'python3','-B','-c','import json,sys;from pathlib import Path;sys.path.insert(0,"/sealed");from bounded_actor_step import capture_preflight;print(json.dumps(capture_preflight(json.load(open(sys.argv[1])),Path("/omni-hot"))))','/sealed/'+config.name]
-            result = json.loads(subprocess.check_output(args,text=True,timeout=600).splitlines()[-1])
+            entry = """
+import json, sys, time
+from pathlib import Path
+start = time.monotonic()
+sys.path.insert(0, '/sealed')
+from bounded_actor_step import capture_preflight
+loaded = time.monotonic()
+result = capture_preflight(json.loads(Path(sys.argv[1]).read_bytes()), Path('/omni-hot'))
+print(json.dumps(dict(result=result, import_seconds=loaded-start, audit_seconds=time.monotonic()-loaded)))
+"""
+            args += [image,'python3','-B','-c',entry,'/sealed/'+config.name]
+            prepared = time.monotonic()
+            observed = json.loads(subprocess.check_output(args,text=True,timeout=600).splitlines()[-1])
+            finished = time.monotonic()
+            result = observed['result']
             if not (result['groups'] > 0 and result['inventory_files'] > 0):
                 raise ValueError('capture preflight did not verify a real cohort')
             save(preflight_receipt,dict(result,train_config_sha256=config_sha,
-                inventory_sha256=cfg['generation']['generation_inventory_ref']['sha256']))
+                inventory_sha256=cfg['generation']['generation_inventory_ref']['sha256'],
+                timing_seconds=dict(host_checks_and_setup=prepared-entered, cpu_container=finished-prepared,
+                                    container_import=observed['import_seconds'], capture_audit=observed['audit_seconds'])))
             print(json.dumps(result))
             return
         args += [image,'python3','-B','-m','torch.distributed.run','--standalone',f'--nproc-per-node={world}',

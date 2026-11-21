@@ -1,9 +1,35 @@
 """Stage a new attempt under the existing physical-device guard; never replace prior outcomes."""
 import argparse,hashlib,json,re,shlex,subprocess,tempfile
+from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
+import sys
+import tarfile
+import time
 
 
-def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
+@contextmanager
+def measure(timings, name):
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[name] = time.monotonic() - start
+
+
+def read_predecessor(remote, prior, step, world):
+    names = ['TRAIN.local.json', 'hot/EXIT.json', f'hot/step-{step}/COMMITTED.json',
+             *(f'hot/rank-{rank}/RESULT.json' for rank in range(world))]
+    command = shlex.join(['tar', '-cf', '-', '-C', str(prior), '--', *names])
+    raw = remote(command, text=False)
+    with tarfile.open(fileobj=BytesIO(raw), mode='r:') as archive:
+        roster = archive.getmembers()
+        if [m.name for m in roster] != names or any(not m.isfile() for m in roster):
+            raise ValueError('unexpected predecessor receipt roster')
+        return [archive.extractfile(member).read() for member in roster]
+
+
+def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
     """Continue from a terminal run using its unchanged worker and optimizer."""
     q=shlex.quote
     prior=Path(c['restore_run'])
@@ -11,15 +37,16 @@ def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
         raise ValueError('invalid continuation source')
     if any(k in c for k in ('trace_update','efficiency','updated_http_parity','published_adapter_control')):
         raise ValueError('continuation cannot be combined with a diagnostic')
-    read_remote=lambda p:remote('cat -- '+q(str(p)))
-    old=json.loads(read_remote(prior/'TRAIN.local.json'))
-    terminal=json.loads(read_remote(prior/'hot/EXIT.json'))
-    if terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
-        raise ValueError('predecessor is not terminal with eight complete ranks')
     step=c['prior_step']
     if type(step) is not int or step<1:raise ValueError('positive prior step required')
     checkpoint=prior/f'hot/step-{step}'
-    proof_raw=read_remote(checkpoint/'COMMITTED.json').encode()
+    with measure(timings, 'predecessor_receipts'):
+        old_raw, terminal_raw, proof_raw, *owner_raw = read_predecessor(remote, prior, step, 8)
+        old = json.loads(old_raw)
+        terminal = json.loads(terminal_raw)
+    verify_started = time.monotonic()
+    if terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
+        raise ValueError('predecessor is not terminal with eight complete ranks')
     proof_sha=hashlib.sha256(proof_raw).hexdigest()
     if proof_sha!=c['restore_checkpoint_sha256']:raise ValueError('checkpoint pin changed')
     proof=json.loads(proof_raw)
@@ -27,7 +54,7 @@ def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
         raise ValueError('strict training source differs')
     if old['files']['bounded_actor_step.py']!=proof['contract']['sources']['bounded_actor_step.py']:
         raise ValueError('predecessor driver does not match committed source')
-    owner_result=[json.loads(read_remote(prior/f'hot/rank-{rank}/RESULT.json')) for rank in range(8)]
+    owner_result=[json.loads(raw) for raw in owner_raw]
     if any(r.get('rank')!=i or r.get('step')!=step or not r.get('recoverable_checkpoint')
            or r.get('publication_sha256')!=proof['resident_identity']['publication']['identity_sha256']
            for i,r in enumerate(owner_result)):raise ValueError('terminal rank/checkpoint identity differs')
@@ -76,7 +103,6 @@ def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
         s['source_pins']['retained_hf_fsdp_control.py']=s['files']['retained_hf_fsdp_control.py']
     from bounded_actor_step import verify_continuation
     sys_path=d.parent/'implementation'
-    import sys
     sys.path.insert(0,str(sys_path))
     try:verify_continuation(s,proof)
     finally:sys.path.remove(str(sys_path))
@@ -99,6 +125,7 @@ def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
                     raise ValueError('release does not bind paired LoRA arithmetic: '+role)
         snapshots = dict(snapshots or {}, **{'RUNTIME-SOURCES.json':json.dumps(receipt,indent=2).encode()})
         s.setdefault('configuration_sha256',{})['RUNTIME-SOURCES.json']=hashlib.sha256(snapshots['RUNTIME-SOURCES.json']).hexdigest()
+    timings['config_and_source_checks'] = time.monotonic() - verify_started
     if c.get('check_only') is True:
         print(json.dumps(dict(status='continuation_contract_checked',predecessor_step=step,
             checkpoint_sha256=proof_sha,optimizer_updates=0)))
@@ -106,20 +133,28 @@ def stage_continuation(c, d, host, dest, remote, *, snapshots=None):
     # Never copy hot state or alter a sealed predecessor. Original launcher
     # still locks the same guard, checks boot/occupancy and mounts state RO.
     links=(set(old['files'])|{'tree','dispatch_retained_hf_boundary.py','retained_hf_fsdp_control.py'})-set(overlay)-{'finalized_generation'}
-    remote('mkdir -m 700 '+q(str(dest))+' && cp -al -- '+' '.join(q(str(prior/n)) for n in sorted(links))+' '+q(str(dest))+'/')
-    with tempfile.TemporaryDirectory() as tmp:
-        payloads['TRAIN.local.json']=json.dumps(s,indent=2).encode()
-        for name,payload in {**payloads,**(snapshots or {})}.items():
-            path=Path(tmp)/name
-            path.write_bytes(payload)
-            if name=='CAPTURE-PROFILE.local.json':
-                path.chmod(0o600)
-            subprocess.run(['scp','-q',str(path),host+':'+str(dest/name)],check=True)
+    payloads['TRAIN.local.json']=json.dumps(s,indent=2).encode()
+    with measure(timings, 'stage_bundle'):
+        buffer = BytesIO()
+        with tarfile.open(fileobj=buffer, mode='w:') as archive:
+            for name, payload in {**payloads, **(snapshots or {})}.items():
+                if Path(name).name != name or name in ('', '.', '..'):
+                    raise ValueError('invalid staged filename')
+                member = tarfile.TarInfo(name)
+                member.mode = 0o600
+                member.size = len(payload)
+                archive.addfile(member, BytesIO(payload))
+        mkdir = shlex.join(['mkdir', '-m', '700', '--', str(dest)])
+        link = shlex.join(['cp', '-al', '--', *(str(prior/n) for n in sorted(links)), str(dest)+'/'])
+        unpack = shlex.join(['tar', '--keep-old-files', '-xmf', '-', '-C', str(dest)])
+        remote(f'umask 077 && {mkdir} && {link} && {unpack}', text=False, input=buffer.getvalue())
     launcher='python3 -B launch_retained_hf_fsdp.py --config TRAIN.local.json'
     if 'generation' in c:
-        print(remote('cd '+q(str(dest))+' && '+launcher+' --check-capture').strip())
+        with measure(timings, 'capture_preflight'):
+            print(remote('cd '+q(str(dest))+' && '+launcher+' --check-capture').strip())
     if not c.get('stage_only'):
-        remote('cd '+q(str(dest))+' && (nohup '+launcher+' >launch.log 2>&1 </dev/null & )')
+        with measure(timings, 'launch_submission'):
+            remote('cd '+q(str(dest))+' && (nohup '+launcher+' >launch.log 2>&1 </dev/null & )')
     print(dest)
 
 
@@ -127,9 +162,21 @@ def stage(c, snapshots=None):
     host=c['host']; tag=c['run']; q=shlex.quote
     if not re.fullmatch(r'[A-Za-z0-9_-]+',host) or not re.fullmatch(r'[a-z0-9-]+',tag):raise ValueError('invalid run or alias')
     parent=Path(c['source_bundle']); dest=parent.with_name(tag); d=Path(__file__).resolve().parent
-    remote=lambda cmd:subprocess.check_output(['ssh',host,cmd],text=True)
+    def remote(cmd, *, text=True, **kwargs):
+        return subprocess.check_output(['ssh',host,cmd],text=text,**kwargs)
     if 'prior_step' in c:
-        return stage_continuation(c,d,host,dest,remote,snapshots=snapshots)
+        timings = {}
+        completed = False
+        try:
+            with measure(timings, 'total'):
+                result = stage_continuation(c,d,dest,remote,snapshots=snapshots,timings=timings)
+            completed = True
+            return result
+        finally:
+            timings['other'] = timings['total'] - sum(v for k,v in timings.items() if k!='total')
+            # Keep the stdout handoff contract for existing callers.
+            print(json.dumps(dict(schema='omni-continuation-submit-timing-v1', completed=completed,
+                                  stage_only=bool(c.get('stage_only')), seconds=timings)), file=sys.stderr)
     if 'check_only' in c:raise ValueError('check_only requires a continuation')
     s=json.loads(remote('cat '+q(str(parent/'HF-ACTOR.local.json'))))
     if json.loads(remote('cat '+q(str(parent/'hot/EXIT.json'))))['exit_code']!=0:raise ValueError('incomplete reference run')
