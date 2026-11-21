@@ -1,0 +1,29 @@
+--- a/tools/system_rl/runtime_repairs/formal_rollout.py
++++ b/tools/system_rl/runtime_repairs/formal_rollout.py
+@@ -258,6 +258,8 @@
+     source.update(output_root=str(cohort), cohort_id='dp8-'+request_ref['sha256'][:20],
+         lease_fence=dict(root=str(fence), remote=remote, safety_seconds=spec['safety_seconds']))
+     source['native']['attempt_id'] = source['cohort_id']
++    if 'official_index_cache_root' in spec:
++        source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
+     source['capture'].update(lanes=list(providers),episode_concurrency={k:spec['episode_concurrency'] for k in providers},
+         endpoint_policy_ref=request['endpoint_witness_ref'],lane_transports={k:dict(
+             local_endpoint=urls[k]+'/v1/chat/completions',remote_endpoint=read(p['service_ready'])['endpoint'])
+--- a/tools/system_rl/runtime_repairs/runtime_builder.py
++++ b/tools/system_rl/runtime_repairs/runtime_builder.py
+@@ -101,7 +101,14 @@
+             'official TRAIN source required')
+     require({d['domain'] for d in official['domains']}=={'train_real','train_synth'},
+             'both official TRAIN domains required')
+-    official['index_cache_root'] = str(Path(root).resolve()/'official-source-index')
++    cache = Path(root).resolve()/'official-source-index'
++    if 'official_index_cache_root' in source['capture']:
++        cache = Path(source['capture']['official_index_cache_root'])
++        cohort = Path(root).resolve()
++        require(cache.is_absolute() and cache == cache.resolve() and cache != Path('/')
++                and not cache.is_relative_to(cohort) and not cohort.is_relative_to(cache),
++                'shared official index must be outside the sealed cohort')
++    official['index_cache_root'] = str(cache)
+     source['capture']['official_source_config_ref'] = write(Path(root)/'OFFICIAL-SOURCE.json', official)
+     return source
+ 
