@@ -18,3 +18,5 @@ This is the parameterized successor to the sealed single-instance Instruct activ
 可复制 `parity-window.profile.example.json` 到本地填写；只有实验设计变化时才修改 window 模板。严格四/八卡首步对照在原训练配置使用 JSON 布尔值 `"deterministic_backward": true`，仅在建立新谱系时指定。配置化窗口的 HF 评分直接取 PAIRED 中的 limits；仅复核旧无 limits 封闭包时需要提供 `parity_criterion`。部署包的 checkpoint 子目录由封闭 publication 引用定位。prepare_policy 的本地配置可用 `runtime_sources` 指向运行修复源码目录、`implementation_sources` 指向受控发布的 implementation 目录；现行验收拓扑仍为 TP4。
 
 常驻实例使用本地 inbox 时，原 check_policy.py 通过已封闭的前后 policy 引用和各 lane 的切换回执链查找当前版本。配置沿用 inbox_switch 的 previous、successor、terminal、inbox。切换仍要求原 guard、已对账旧请求和连续 checkpoint。首次静态窗口继续通过 parity_window.py 执行。
+
+正式部署在 `prepare_policy.py` 的本地配置显式设置 `release_kind: formal`，同一入口生成独立包，不携带逐层或全词表采集模块。可用 `formal_engine_limits` 指定 `max_num_seqs` 和 `max_num_batched_tokens`（正整数）；未配置时沿用原服务设置。更改上限需要新包，以同批真实语音及相同 adapter 核对实际吞吐和同动作概率。第一版正式包沿用了已有算术配置中的 `preserve_original`；清理不参与输出的原算子对照需独立验证。校准包继续用 `release_kind: precision`，不接受正式容量覆盖。

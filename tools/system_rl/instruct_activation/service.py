@@ -98,9 +98,31 @@ def offline():
             s.bind(str(p))
         finally:
             p.unlink(missing_ok=True)
+    if 'policy_overlay' in CFG:
+        subprocess.run(service_argv(check_only=True), env=child_environment(), check=True)
     # Exercise real local file + directory synchronization, retain receipt.
     durable(HOT/'state'/'PREFLIGHT.json', result)
     print(json.dumps(result, indent=2))
+
+
+def service_argv(*,check_only=False):
+    python=sys.executable
+    common=['--served-model-name', CFG['served_model_name'], '--host', CFG['host'], '--port', str(CFG['port'])]
+    if 'policy_overlay' in CFG:
+        overlay=CFG['policy_overlay']
+        return [python,'-B',str(Path(overlay['bundle'])/'parents/jev-system-rl/implementation/service_bootstrap.py'),
+                '--config',overlay['server'],*(['--check-only'] if check_only else []),
+                '--','--model',CFG['model'],*common,*CFG['serve_args']]
+    return [python,'-m','vllm.entrypoints.cli.main','serve',CFG['model'],*common,*CFG['serve_args']]
+
+
+def child_environment():
+    env=os.environ.copy()
+    if 'policy_overlay' in CFG:
+        bundle=Path(CFG['policy_overlay']['bundle'])
+        env['PYTHONPATH']=os.pathsep.join(filter(None,(
+            str(bundle/'parents/policy-iteration-successor'),env.get('PYTHONPATH'))))
+    return env
 
 
 def serve():
@@ -108,13 +130,11 @@ def serve():
     guard = (state/'service.guard').open('a+')
     fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
     result = check()
-    argv = ['/usr/local/python3.12.13/bin/python3', '-m', 'vllm.entrypoints.cli.main',
-            'serve', CFG['model'], '--served-model-name', CFG['served_model_name'],
-            '--host', CFG['host'], '--port', str(CFG['port'])] + CFG['serve_args']
+    argv=service_argv()
     # Persist launch intent before any engine creation. No silent restart/retry.
     launch = dict(result, argv=argv, boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())
     durable(state/'LAUNCH.json', launch)
-    child = subprocess.Popen(argv, start_new_session=True)
+    child = subprocess.Popen(argv, env=child_environment(), start_new_session=True)
     stopped = []
     def stop(sig, frame):
         stopped.append('signal:' + str(sig))

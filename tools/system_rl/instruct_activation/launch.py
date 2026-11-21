@@ -40,9 +40,13 @@ def verify():
     assert C['serve_args'][C['serve_args'].index('--tensor-parallel-size')+1] == str(len(C['cards']))
     if 'policy_overlay' in C:
         overlay=C['policy_overlay']
-        assert set(overlay)-{'successor_mount'}=={'bundle','server','checkpoint_mount'} and Path(overlay['bundle']).is_dir()
+        assert set(overlay)-{'successor_mount','update_mount'}=={'bundle','server','checkpoint_mount'} and Path(overlay['bundle']).is_dir()
         assert Path(overlay['server']).is_relative_to(Path(overlay['bundle']))
         assert command(['findmnt','-T',overlay['bundle'],'-n','-o','FSTYPE']) in ('ext4','xfs','btrfs')
+        if 'update_mount' in overlay:
+            inbox=Path(overlay['update_mount'])
+            assert inbox.is_absolute() and inbox.resolve()==inbox and inbox.is_dir()
+            assert command(['findmnt','-T',str(inbox),'-n','-o','FSTYPE']) in ('ext4','xfs','btrfs')
 
 
 def name(attempt):
@@ -94,6 +98,9 @@ def argv(attempt, start):
         bundle=C['policy_overlay']['bundle']
         if 'successor_mount' in C['policy_overlay']:
             mounts.append((bundle+'/successor',C['policy_overlay']['successor_mount'],True))
+        if 'update_mount' in C['policy_overlay']:
+            path=C['policy_overlay']['update_mount']
+            mounts.append((path,path,True))
         mounts.extend([(bundle,bundle,True),(bundle+'/checkpoint',C['policy_overlay']['checkpoint_mount'],True),
                        (C['guard'],C['guard'],True)])
     for p in ['/usr/local/Ascend/driver', '/usr/local/sbin/npu-smi', '/etc/hccn.conf',

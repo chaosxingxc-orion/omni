@@ -117,6 +117,17 @@ def main():
     sys.path[:0]=[overlay_root,str(acl),str(implementation)]
     os.environ['PYTHONPATH']=':'.join([overlay_root,str(acl),str(implementation),os.environ.get('PYTHONPATH','')])
     local=config.get('local_activation')
+    inbox=config.get('update_inbox')
+    release=config.get('release_kind','precision')
+    require(release in ('formal','precision'),'unknown inference release kind')
+    if release=='formal':
+        require(local and 'diagnostic_logits' not in local and not config.get('successor_ref'),
+                'formal inference requires the uninstrumented local activation bundle')
+    if inbox:
+        require(local and local['bounded_candidate'] is True and not config.get('successor_ref'),
+                'guarded local checkpoint inbox required')
+        require(Path(inbox).is_absolute() and Path(inbox).resolve()==Path(inbox) and Path(inbox).is_dir(),
+                'invalid checkpoint inbox mount')
     if local:
         from local_activation import prepare, owner_check, install_precision
         prepare(local, overlay_root)
@@ -133,7 +144,7 @@ def main():
             validate_publication(policy['publication_ref'])
             doc(config['profile_ref'])
             return
-        if local.get('diagnostic_logits'):
+        if release=='precision' and local.get('diagnostic_logits'):
             import service_overlay
             from rollout_logits_service import overlay_class
             service_overlay.ServiceOverlay=overlay_class(service_overlay.ServiceOverlay,
@@ -159,15 +170,20 @@ def main():
 
     class Middleware:
         def __init__(self,app):
-            self.app=app;self.overlay=None;self.lock=asyncio.Lock();self.failure=None;self.generation_lock=asyncio.Lock()
+            self.app=app;self.overlay=None;self.lock=asyncio.Lock();self.failure=None
+            self.generation_lock=asyncio.Lock()
+            self.generations=GenerationDrain()
         async def __call__(self,scope,receive,send):
             if scope.get('type')!='http':return await self.app(scope,receive,send)
-            if config.get('successor_ref') and scope.get('path')=='/v1/chat/completions':
+            if release=='precision' and (config.get('successor_ref') or inbox) and scope.get('path')=='/v1/chat/completions':
                 async with self.generation_lock:
                     return await self.dispatch(scope,receive,send)
             return await self.dispatch(scope,receive,send)
 
         async def dispatch(self,scope,receive,send):
+            generation=scope.get('path')=='/v1/chat/completions'
+            if local and not generation:
+                return await self.app(scope,receive,send)
             async with self.lock:
                 if self.failure is not None and scope.get('path') in ('/metrics','/health'):
                     return await self.app(scope,receive,send)
@@ -217,6 +233,19 @@ def main():
                         save(Path(config['overlay_root'])/'ACTIVATION-FAILED.json',dict(error=self.failure))
                         raise
                     self.overlay=pending
+                elif local and inbox and scope.get('path')=='/v1/chat/completions':
+                    old=doc(self.overlay.active['policy_ref'])
+                    marker=Path(inbox)/f"after-step-{old['step']}.json"
+                    if marker.exists():
+                        try:
+                            await self.generations.drained.wait()
+                            owner_check(local)
+                            successor=local_successor(inbox, marker, self.overlay.active['policy_ref'])
+                            await self.overlay.replace_checkpoint(successor,config['profile_ref'],
+                                                                  config['named_rpc_overlay']['precision_ref'])
+                        except BaseException as error:
+                            self.failure=repr(error)
+                            raise
                 elif (local and config.get('successor_ref') and scope.get('path')=='/v1/chat/completions'
                       and self.overlay.active['policy_ref']!=config['successor_ref']
                       and (Path(config['overlay_root'])/'SWITCH-REQUEST.json').exists()):
@@ -229,7 +258,11 @@ def main():
                     except BaseException as error:
                         self.failure=repr(error)
                         raise
-            return await self.overlay(scope,receive,send)
+                if generation:self.generations.enter()
+            try:
+                return await self.overlay(scope,receive,send)
+            finally:
+                if generation:self.generations.leave()
 
     def build(*args,**kwargs):
         return build_with_overlay(original_build,Middleware,*args,**kwargs)
@@ -242,6 +275,57 @@ def main():
         fully_sharded_loras=parsed.fully_sharded_loras,worker_extension_cls=parsed.worker_extension_cls))['lora_dtype']
     import uvloop
     uvloop.run(api_server.run_server(parsed))
+
+
+class GenerationDrain:
+    """Track requests admitted under the middleware lock until ASGI returns.
+
+    Completion must never need that lock: the next adapter holds it while
+    awaiting drain, so only the old adapter can serve existing requests.
+    """
+    def __init__(self):
+        self.active=0
+        self.drained=asyncio.Event()
+        self.drained.set()
+
+    def enter(self):
+        self.active+=1
+        self.drained.clear()
+
+    def leave(self):
+        self.active-=1
+        require(self.active>=0,'generation admission underflow')
+        if not self.active:self.drained.set()
+
+
+def local_successor(inbox, marker, previous):
+    """Authenticate the direct next optimizer commit before touching the engine."""
+    from publication import validate_publication
+    require(marker.resolve()==marker, 'checkpoint marker must be immutable local data')
+    change=doc(pin(marker))
+    require(set(change)=={'previous','successor'} and change['previous']==previous,
+            'checkpoint switch predecessor changed')
+    successor=change['successor']
+    root=Path(inbox)
+    def contained(ref):
+        p=Path(ref['path'])
+        require(p.is_absolute() and p.resolve()==p and p.is_relative_to(root),
+                'checkpoint successor escapes local inbox')
+    contained(successor)
+    old=doc(previous);new=doc(successor)
+    contained(new['publication_ref'])
+    publication=doc(new['publication_ref'])
+    contained(publication['checkpoint_ref'])
+    for ref in publication['assets']:contained(ref)
+    before=validate_publication(old['publication_ref'])
+    after=validate_publication(new['publication_ref'])
+    require(new['kind']=='checkpoint' and new['step']==after['step']==before['step']+1
+            and before['scientific_contract']['lineage']==after['scientific_contract']['lineage']
+            and before['resident_identity']['base']==after['resident_identity']['base']
+            and all(after['clock']['groups'].get(key)==value for key,value in before['clock']['groups'].items())
+            and all(after['clock']['attempts'].get(key)==value for key,value in before['clock']['attempts'].items()),
+            'checkpoint successor does not extend the original history')
+    return successor
 
 
 if __name__=='__main__':main()

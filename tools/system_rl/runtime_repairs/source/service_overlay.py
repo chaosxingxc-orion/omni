@@ -229,7 +229,7 @@ class ServiceOverlay:
             nonlocal status
             if message['type'] == 'http.response.start':
                 status = message['status']
-            if message['type'] == 'http.response.body':
+            if call_ref is not None and message['type'] == 'http.response.body':
                 chunks.append(message.get('body', b''))
             # Persist the endpoint observation BEFORE the client can observe a
             # successful final response, eliminating the witness visibility race.

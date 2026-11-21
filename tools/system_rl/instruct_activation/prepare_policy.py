@@ -10,6 +10,10 @@ D=HERE.parent/'runtime_repairs'
 FILES=('retained_action_replay.py','retained_attention_candidate.py',
        'retained_audio_attention_precision.py','retained_audio_row_precision.py',
        'retained_expert_candidate.py','retained_kv_candidate.py','retained_router_candidate.py')
+PRECISION_ONLY_FILES = {
+    'abi_probe.py', 'actual_probe.py', 'logits_scope.py', 'logits_selection.py',
+    'probe_facts.py', 'probe_installed.py',
+}
 
 
 def read(path):
@@ -27,20 +31,34 @@ def write(path,value):
         stream.write('\n')
 
 
-def checkpoint_dirs(root):
+def checkpoint_dirs(root, logical=None):
     root=root.resolve()
+    logical=root if logical is None else logical
     publication=read(root/'candidate/POLICY.json')['publication_ref']
     candidate=Path(publication['path'])
-    if candidate.parent!=root/'candidate' or pin(candidate)!=publication:
+    if candidate.parent!=logical/'candidate' or pin(root/'candidate'/candidate.name,candidate)!=publication:
         raise ValueError('publication does not belong to sealed bundle')
-    checkpoint=read(candidate)['checkpoint_ref']
+    checkpoint=read(root/'candidate'/candidate.name)['checkpoint_ref']
     manifest=Path(checkpoint['path'])
-    if manifest.parent.parent!=root or manifest.parent==candidate.parent or pin(manifest)!=checkpoint:
+    if (manifest.parent.parent!=logical or manifest.parent==candidate.parent or
+            pin(root/manifest.parent.name/manifest.name,manifest)!=checkpoint):
         raise ValueError('checkpoint does not belong to sealed bundle')
     return candidate.parent.name,manifest.parent.name
 
 
 def prepare(config,output):
+    release=config.get('release_kind','precision')
+    if release not in ('precision','formal'):
+        raise ValueError('explicit release kind must be precision or formal')
+    formal=release=='formal'
+    if formal and any(key in config for key in ('prefix_trace','logits_selection','successor_checkpoint_bundle')):
+        raise ValueError('precision collection settings cannot enter a formal bundle')
+    engine_limits = config.get('formal_engine_limits', {})
+    if (not isinstance(engine_limits, dict)
+            or ('formal_engine_limits' in config and not formal)
+            or set(engine_limits) - {'max_num_seqs', 'max_num_batched_tokens'}
+            or any(type(value) is not int or value <= 0 for value in engine_limits.values())):
+        raise ValueError('formal_engine_limits requires supported positive integer limits in a formal release')
     runtime=Path(config.get('runtime_sources',D))
     implementation=Path(config.get('implementation_sources',runtime.parent/'implementation'))
     output.mkdir(mode=0o700)
@@ -58,6 +76,10 @@ def prepare(config,output):
         dest=bundle/'parents'/rel
         dest.mkdir(parents=True)
         for p in (parents/rel).iterdir():
+            if formal and (p.name in PRECISION_ONLY_FILES
+                           or p.name.startswith(('diagnostic','rollout_logits','q_projection_trace',
+                                                 'causal_diagnostic')) or p.name.endswith('_cpu.py')):
+                continue
             if p.is_file() and p.suffix in ('.py','.json'):shutil.copyfile(p,dest/p.name)
     rel=Path('jev/src/multimodal_jev/local_runtime_storage.py')
     (bundle/rel).parent.mkdir(parents=True)
@@ -69,13 +91,16 @@ def prepare(config,output):
             shutil.copyfile(implementation/name,impl/name)
     if config.get('prefix_trace') in ('q-operands','o-operands','layer1-q-operands'):
         shutil.copyfile(implementation/'q_projection_trace.py',impl/'q_projection_trace.py')
-    policy_src=Path(config['checkpoint_bundle'])
+    policy_src=Path(config['checkpoint_bundle']).resolve()
+    policy_mount=Path(config.get('checkpoint_mount',str(policy_src)))
+    if not policy_mount.is_absolute() or '..' in policy_mount.parts:
+        raise ValueError('checkpoint mount must be absolute and canonical')
     # All source JSON, including nested publication refs, stays byte-identical.
     # The remote launcher mounts this closed checkpoint at its original logical
     # path, retaining the published artifact identity.
     policy=policy_src/'candidate/POLICY.json'
-    assert read(policy)['publication_ref']['path']==str(policy_src/'candidate/POLICY-CANDIDATE.json')
-    for src in checkpoint_dirs(policy_src):
+    assert read(policy)['publication_ref']['path']==str(policy_mount/'candidate/POLICY-CANDIDATE.json')
+    for src in checkpoint_dirs(policy_src,policy_mount):
         dst=bundle/'checkpoint'/src
         shutil.copytree(policy_src/src,dst)
     successor=config.get('successor_checkpoint_bundle')
@@ -134,14 +159,27 @@ def prepare(config,output):
         dst=rpc/name
         shutil.copyfile(src,dst)
         if name=='named_rpc_worker.py':
-            with dst.open('a') as stream:
-                stream.write("\nfrom local_activation import install_rows\n"
-                             "NamedWorkerRPCMixin.omni_local_install_rows=install_rows\n"
-                             "import sys as _sys\n"
-                             "from rollout_logits_rpc import install_named_extension as _extend\n"
-                             "_extend(_sys.modules[__name__])\n")
+            if formal:
+                dst.write_text(
+                    "from local_activation import install_rows\n\n"
+                    "RPC_METHODS = ('omni_sync_worker_readback',)\n\n"
+                    "class NamedWorkerRPCMixin:\n"
+                    "    omni_local_install_rows = install_rows\n\n"
+                    "    def omni_production_precision(self, spec):\n"
+                    "        from precision_runtime import install\n"
+                    "        return install(self, spec)\n\n"
+                    "    def omni_sync_worker_readback(self, *args, **kwargs):\n"
+                    "        from engine_bridge import worker_readback\n"
+                    "        return worker_readback(self, *args, **kwargs)\n")
+            else:
+                with dst.open('a') as stream:
+                    stream.write("\nfrom local_activation import install_rows\n"
+                                 "NamedWorkerRPCMixin.omni_local_install_rows=install_rows\n"
+                                 "import sys as _sys\n"
+                                 "from rollout_logits_rpc import install_named_extension as _extend\n"
+                                 "_extend(_sys.modules[__name__])\n")
         refs[name]=pin(dst,target/'bundle/rpc'/name)
-    engine=replay['engine']
+    engine = {**replay['engine'], **engine_limits}
     assert engine['dtype']=='bfloat16' and engine['lora_dtype']=='float32'
     assert engine['enable_prefix_caching'] and engine['enable_lora'] and engine['enforce_eager'] and not engine['async_scheduling']
     for lane in config['lanes']:
@@ -159,16 +197,19 @@ def prepare(config,output):
             '--gpu-memory-utilization',str(engine['gpu_memory_utilization']),'--max-num-seqs',str(engine['max_num_seqs']),
             '--enforce-eager','--no-async-scheduling','--enable-prefix-caching','--dtype',engine['dtype'],
             '--limit-mm-per-prompt','{"audio":1,"image":0,"video":0}']
+        if 'max_num_batched_tokens' in engine_limits:
+            serving.extend(['--max-num-batched-tokens', str(engine_limits['max_num_batched_tokens'])])
         c=dict(original,name=original['name']+'-rl',root=str(target/('lane-'+lane)),
                policy_overlay=dict(bundle=str(target/'bundle'),server=str(target/f'bundle/SERVER-{lane}.json'),
-                                   checkpoint_mount=str(policy_src)),serve_args=serving)
+                                   checkpoint_mount=str(policy_mount)),serve_args=serving)
         if successor:c['policy_overlay']['successor_mount']=str(successor)
         if inbox:c['policy_overlay']['update_mount']=inbox
         assert c['model']==engine['model']
         write(local/'config.json',c)
         write(local/'PINS.json',{p.name:pin(p)['sha256'] for p in local.iterdir()})
         write(bundle/f'SERVER-{lane}.json',dict(endpoint=f"http://127.0.0.1:{c['port']}/v1/chat/completions",
-            overlay_root='/runtime/state/policy',policy_ref=pin(policy),
+            release_kind=release,overlay_root='/runtime/state/policy',
+            policy_ref=pin(policy,policy_mount/'candidate/POLICY.json'),
             **(dict(successor_ref=pin(successor/'candidate/POLICY.json')) if successor else {}),
             **(dict(update_inbox=inbox) if inbox else {}),
             profile_ref=pin(bundle/'PROFILE.json',target/'bundle/PROFILE.json'),
@@ -177,9 +218,9 @@ def prepare(config,output):
             local_activation=dict(source_boot=c['host_boot_id'],guard=c['guard'],model=c['model'],bounded_candidate=True,
                 locations_ref=pin(bundle/'LOCATIONS.json',target/'bundle/LOCATIONS.json'),
                 rows_ref=pin(bundle/'ROWS.json',target/'bundle/ROWS.json'),
-                diagnostic_logits=dict(read(inputs/'LOGITS.json'),
+                **({} if formal else dict(diagnostic_logits=dict(read(inputs/'LOGITS.json'),
                     **({'prefix_trace':config['prefix_trace']} if config.get('prefix_trace') else {}),
-                    **({'selection':config['logits_selection']} if 'logits_selection' in config else {})))))
+                    **({'selection':config['logits_selection']} if 'logits_selection' in config else {})))))))
 
 
 if __name__=='__main__':
