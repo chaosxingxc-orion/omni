@@ -33,7 +33,7 @@ def checked(ref):
 
 
 def validate(spec):
-    require(set(spec)-{'arithmetic_delta_ref','efficiency_delta_ref','audio_repair_ref'}=={'schema','source_seal_ref','config_ref','sources','mode','audio_policy'},'explicit family release fields')
+    require(set(spec)-{'arithmetic_delta_ref','efficiency_delta_ref','audio_repair_ref','original_operator_control'}=={'schema','source_seal_ref','config_ref','sources','mode','audio_policy'},'explicit family release fields')
     require(spec['schema']==SCHEMA and spec['mode']=='diagnostic_candidate',
             'persistent full-model numerical acceptance still required')
     require(spec['audio_policy'] in ('native_unmodified','conv1_internal_format_disabled_v1'),'explicit audio dispatch policy')
@@ -73,7 +73,8 @@ def validate(spec):
         parent=json.loads(checked(delta['parent_spec_ref']).read_text())
         require('efficiency_delta_ref' not in parent,'one explicit efficiency successor')
         validate(parent)
-        for key in ('schema','source_seal_ref','config_ref','mode','arithmetic_delta_ref'):
+        for key in ('schema','source_seal_ref','config_ref','mode','arithmetic_delta_ref',
+                    'audio_policy','audio_repair_ref','original_operator_control'):
             require(parent.get(key)==spec.get(key),'efficiency change cannot alter numerical parent')
         efficiency=delta['changes']
         require(set(efficiency)=={'family_runtime.py','moe_family_runtime.py',
@@ -94,6 +95,10 @@ def validate(spec):
     require(config['layers']==list(range(48)) and config['preserve_original'] is True and
             config['down_weight_layout']=='hf_transposed' and config['router_selection'] is True,
             'exact original all48 candidate configuration')
+    if 'original_operator_control' in spec:
+        require(spec['original_operator_control'] is False and not efficiency,
+                'disable only original operator controls in this candidate')
+        config=dict(config,preserve_original=False)
     return config,sources
 
 
@@ -137,7 +142,8 @@ def counters(audit,config):
             require(set(row['layers'])=={str(i) for i in config['layers']},'all48 MoE attachments')
             result[name]={k:v['calls'] for k,v in row['layers'].items()}
         else:
-            require(row['original_calls']==row['calls'],'original operator control missing: '+name)
+            require(row['original_calls']==(row['calls'] if config['preserve_original'] else 0),
+                    'original operator control count differs from configured mode: '+name)
             result[name]=row['calls']
     return result
 
@@ -170,6 +176,8 @@ def install(worker,spec):
             config_sha256=spec['config_ref']['sha256'],audio_policy=spec['audio_policy'],
             single_prefill_restriction=False,production_acceptance=False,training_admission=False)
         if 'arithmetic_delta_ref' in spec:receipt['arithmetic_delta_ref']=spec['arithmetic_delta_ref']
+        for option in ('efficiency_delta_ref','original_operator_control'):
+            if option in spec:receipt[option]=spec[option]
         if audio_audit is not None:receipt['audio_repair_ref']=spec['audio_repair_ref']
         setattr(model,ATTR,dict(spec=json.loads(json.dumps(spec)),config=config,audit=audit,
                               restore=undo,restore_imports=undo_imports,receipt=receipt,

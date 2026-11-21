@@ -8,6 +8,33 @@
 | [vLLM-Omni #10037](https://github.com/vllm-project/vllm-omni/issues/10037) | A2 多模态文本输出 61.30 → 61.96 ms；A3 CI 文本输出 36.08 ms 基线，回退后约 58–65 ms | A2 对照为 v0.32 → v0.33，A3 为 `random-mm` 100/100、1 req/s。不同负载、设备和引擎路径，不能据此估计我们的升级收益 |
 | 本次双 TP4 | 同组同实例，每路并发 1／2／4，后续 token 间隔分别约 5.53／6.37／6.26 s | 910B3，真实 P 语音，提示约 4.6k／5.4k token，输出约 10–12 token，实际第 3 步 LoRA。vLLM 的 ITL 按输出间隔计权，与公开 TPOT 只可作量级比较 |
 
+# 公开基准的实际版本
+
+55.84／67.47 ms 来自上游在昇腾 910B1 的稳态测量。实际环境是 vLLM **0.33.0**、vLLM-Ascend **`221fb096cd1cdf9f0b273da9b9624fbf4bb7f200`**、CANN **9.2.1**、torch **2.10.0** 和 torch-npu **2.10.0.post7**。vLLM-Omni 使用 **`e63fe779286d82c7a28856b873113958d3592281`**，两次测量只相差跳过 Talker payload 的原型。以 `vllm serve --omni --async-chunk` 启动，Thinker 使用 Model Runner V2、TP2、PIECEWISE 图和 64 个序列上限。其 NPU 配置关闭 prefix cache，第三张卡跑其余阶段。原型将平均 TPOT 降低 17.2%，P99 从 88.09 降至 78.89 ms。0.34 是合入目标，PR 只记录了 0.34 上的 CPU 测试。PR 未列出 A2 现场镜像 digest。[测量与命令](https://github.com/vllm-project/vllm-omni/pull/10631) · [Ascend 源码](https://github.com/vllm-project/vllm-ascend/commit/221fb096cd1cdf9f0b273da9b9624fbf4bb7f200) · [NPU 部署配置](https://github.com/vllm-project/vllm-omni/blob/e63fe779286d82c7a28856b873113958d3592281/vllm_omni/deploy/qwen3_omni_moe.yaml)
+
+同项目 A3 CI 的 vLLM 0.33.0 使用 `quay.io/atlas-ci/vllm-ascend:v0.33.0-a3`，镜像摘要 `sha256:ec7cd7c98616d55500e21a17b63be3a99603d520087f41dc37b60ae6c75d0730`。0.33 上从 Runner V1 切换到 V2 后，纯文本长输出的并发 16 TPOT 从 117.63 ms 回到 48.76–51.55 ms。同期多模态文本输出均值仍在约 60–65 ms。[A3 CI 版本与运行日志](https://github.com/vllm-project/vllm-omni/issues/10037#issuecomment-6968740745)
+
+Qwen 模型团队的技术报告给出 234 ms 理论首包时延，描述使用 vLLM 和 CUDA Graph，并对 MTP、codec decoder 使用 torch.compile。报告没有披露用于该表的 vLLM 版本或 commit。首个音频包与 P 阶段的后续文本 token 间隔采用不同计时边界。[Qwen3-Omni 技术报告表 2](https://arxiv.org/html/2509.17765v1)
+
+当前 P 服务从原生 vLLM 的 HTTP 入口启动单个 Thinker，没有启动 `--omni` 多阶段管线。版本对照应以 0.33.0 + Ascend 对应 commit + Runner V2 为独立参考，检查 Thinker、TP4 LoRA、缓存和 raw logprob，再考虑迁移。上游跳过 Talker 的改动对只跑 Thinker 的路径没有同样的触发条件。
+
+# Decode 同机对照
+
+四套 TP4 分别做两组同机配对。第一组只去掉重复执行的原算子。第二组在 MoE 中跳过没有 token 的四专家权重块，四个 rank 在跳过通信前核对活动专家一致。两组使用相同发布版第 3 步 LoRA、两条真实语音、相同逐样本供给和采样参数，KV 和 prefix cache 均开启。串行轮每侧 2 个请求，并发 4 轮每侧 8 个请求。以下均为 vLLM 引擎记录的首 token 之后的平均 ITL。
+
+| 候选 | 每实例并发 | 对照 → 候选 ITL | 对照 → 候选间隔数 | 变化 | 回执 SHA 前缀 |
+|---|---:|---:|---:|---:|---|
+| 去掉重复算子 | 1 | 5.487 → 5.561 s | 20 → 20 | 慢 1.4% | `8e1a4a36aed8` |
+| 去掉重复算子 | 4 | 7.158 → 7.126 s | 81 → 81 | 快 0.45% | `b709b3d982bf` |
+| 跳过空专家权重块 | 1 | 5.427 → 3.797 s | 20 → 20 | 快 30.0% | `e77c89fb8e35` |
+| 跳过空专家权重块 | 4 | 5.989 → 5.685 s | 78 → 87 | 快 5.1% | `bf0479437dcc` |
+
+空专家串行轮两侧各生成 22 token，序列及 logprob 逐值相同。请求排队均小于 0.1 ms，平均首 token 为 44.30 → 43.84 秒，批次墙钟为 197.18 → 163.65 秒。两侧均命中 2,176/9,990 prefix token。并发 4 时，两侧各成功 8 请求，生成 86 → 95 token，5 对序列相同且 54 个动作 logprob 逐值相同，另 3 对序列分叉，批次墙钟为 219.95 → 231.64 秒。去掉重复算子两轮的 10 对序列和 111 个动作 logprob 全部一致。四轮共 40/40 个请求正常终止并排空。
+
+三个并发分叉发生在第 1、9、1 个输出位置。第 9 位置分叉前，8 个共享 token 的 logprob 逐值一致。并发轮的采样分叉先用同动作回放定位，后续更新态验收仍需覆盖缓存和 top-1。3.797 秒/间隔约为上游 55.84 ms/输出 token 的 68 倍。下一处优先核对每个 decode 步的专家权重搬运、投影 gather 与设备同步时间。
+
+# 本地实测口径
+
 同一推理主机、同一镜像的历史基础服务，两路各处理一次真实 P 语音，10 个输出 token，HTTP 耗时 5.23／5.56 秒；当时没有这套更新态 LoRA 和精度叠加，冷热、输入和批大小未配对。它比跨硬件公开数字更直接地说明旧镜像本身能运行得快。
 
 本轮 6 次独立 cache salt 的短测共 48/48 个有效响应，已排空。每轮由两套实例处理两组，每组四个 seed；复用两条语音的同一份逐样本召回输入。吞吐不计正式训练。原始回执通过下表 SHA-256 前缀定位。
@@ -37,4 +64,4 @@
 
 优先在现镜像做 A/B：保留已对齐的 BF16 LoRA、注意力和 MoE 输出，首先移除不被消费的旧算子对照，核实实际 cache 写入仍由原后端负责。当前活跃配置仍有 `preserve_original=true`；48 层路径执行额外原算子、按小块反复 TP all-gather 权重、同步读取设备上的 MoE 元数据，并将分页 KV 物化后按固定块处理注意力。没有开启图执行。以上由现网源码证实；各项占比需要独立 A/B 或短程剖析。若仍慢，依次验证空专家块、冻结权重复用、在设备上组织路由和批 attention；图执行应单独检验，否则现有 eager 包装器、Python 状态和同步点会影响图兼容性。
 
-升级与算子精简均使用同权重、真实语音、冷缓存/跨录音部分命中、业务采样并发和热切换的配对回执。沿用已有一 token／整段 logprob 门槛各 0.01 和 top-1 回归门槛，并核实实际版本、缓存失效和每 rank 权重读回。现网在这次版本分析期间没有切换；正式 5,000 条训练进度仍为 0，Clock 3 来自有限验收。
+升级与算子精简均使用同权重、真实语音、冷缓存/跨录音部分命中、业务采样并发和热切换的配对回执。沿用已有一 token／整段 logprob 门槛各 0.01 和 top-1 回归门槛，并核实实际版本、缓存失效和每 rank 权重读回。正式 5,000 条训练进度仍为 0，Clock 3 来自有限验收。

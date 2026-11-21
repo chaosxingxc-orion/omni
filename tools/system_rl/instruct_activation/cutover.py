@@ -49,11 +49,20 @@ def switch(c):
                         if row.startswith('vllm:num_requests_'+state+'{')]
                 assert values and all(v==0 for v in values),'active request'
             rows.append((lane,before,new,raw,Path(old.C['root'])/'runs'/lane['old_attempt']/'state/EXIT.json'))
-        assert sorted(x[2].C['cards'] for x in rows)==[[0,1,2,3],[4,5,6,7]]
+        retained=[]
+        for n,lane in enumerate(c.get('retain_lanes',[])):
+            service=load(lane['code'],f'retain{n}')
+            assert Path(service.C['guard'])==guard and service.C['host_boot_id']==rows[0][2].C['host_boot_id']
+            state=service.inspect(service.name(lane['attempt']))
+            assert state['State']['Running']
+            with urllib.request.urlopen(f"http://127.0.0.1:{service.C['port']}/health",timeout=8) as response:
+                assert response.status==200
+            retained.append(dict(container_id=state['Id'],cards=service.C['cards']))
+        assert sorted([x[2].C['cards'] for x in rows]+[x['cards'] for x in retained])==[[0,1,2,3],[4,5,6,7]]
         save(root/'INTENT.json',dict(predecessors=[dict(container_id=x[1]['Id'],
             cards=x[2].C['cards'],metrics=x[3]) for x in rows],terminal_ref=pin(c['terminal']),
             training_terminal_ref=pin(c['training_terminal']) if 'training_terminal' in c else None,
-            source_boot=rows[0][2].C['host_boot_id'],started=time.time(),automatic_retry=False))
+            source_boot=rows[0][2].C['host_boot_id'],retained=retained,started=time.time(),automatic_retry=False))
         for lane,before,new,_,predecessor in rows:
             subprocess.run(['docker','stop','-t',str(new.C['stop_timeout_seconds']+15),before['Id']],
                            check=True,timeout=new.C['stop_timeout_seconds']+25,capture_output=True)

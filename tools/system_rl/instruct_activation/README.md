@@ -20,3 +20,7 @@ This is the parameterized successor to the sealed single-instance Instruct activ
 常驻实例使用本地 inbox 时，原 check_policy.py 通过已封闭的前后 policy 引用和各 lane 的切换回执链查找当前版本。配置沿用 inbox_switch 的 previous、successor、terminal、inbox。切换仍要求原 guard、已对账旧请求和连续 checkpoint。首次静态窗口继续通过 parity_window.py 执行。
 
 正式部署在 `prepare_policy.py` 的本地配置显式设置 `release_kind: formal`，同一入口生成独立包，不携带逐层或全词表采集模块。可用 `formal_engine_limits` 指定 `max_num_seqs` 和 `max_num_batched_tokens`（正整数）；未配置时沿用原服务设置。更改上限需要新包，以同批真实语音及相同 adapter 核对实际吞吐和同动作概率。第一版正式包沿用了已有算术配置中的 `preserve_original`；清理不参与输出的原算子对照需独立验证。校准包继续用 `release_kind: precision`，不接受正式容量覆盖。
+
+使用 `formal_decode_candidate` 在同一入口生成独立性能候选。可配置 `without_original_controls` 去掉原算子对照，或设置 `skip_empty_experts` 跳过四个专家均无 token 的块，并在 `empty_expert_sources` 提供已封闭的效率差量 JSON。在原 guard 下先预检并排空请求。单实例切换时在 cutover 配置中用 `retain_lanes` 引用继续运行的对照实例。候选的训练准入由更新态精度与缓存复验决定。
+
+用同一个 `measure_existing_services.py` 运行配对压测，复用发布包中提供 `io_utils` 的 Python 路径。配置 `grouped_blocks` 为两条真实输入及各自的请求引用，`round_order` 用 `["paired"]` 或 `["paired", "paired_warm"]`，`grouped_concurrency` 指定每侧并发。两侧提交同一批请求，每个并发档有独立 cache salt。结果保存引擎 ITL 的总时长及间隔数，以及首 token、排队和每侧输出 token 吞吐。

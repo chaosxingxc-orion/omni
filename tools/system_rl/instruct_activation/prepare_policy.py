@@ -61,6 +61,12 @@ def prepare(config,output):
         raise ValueError('formal_engine_limits requires supported positive integer limits in a formal release')
     runtime=Path(config.get('runtime_sources',D))
     implementation=Path(config.get('implementation_sources',runtime.parent/'implementation'))
+    candidate = config.get('formal_decode_candidate')
+    if 'formal_decode_candidate' in config and (not formal or
+            candidate not in ('without_original_controls','skip_empty_experts')):
+        raise ValueError('select one supported formal decode candidate')
+    if ('empty_expert_sources' in config) != (candidate == 'skip_empty_experts'):
+        raise ValueError('empty expert source closure is required only for the empty expert candidate')
     output.mkdir(mode=0o700)
     inputs=Path(config['inputs'])
     target=Path(config['remote_root'])
@@ -114,17 +120,56 @@ def prepare(config,output):
             shutil.copytree(successor/src,bundle/'successor'/src)
     precision=Path(replay['precision_ref']['path'])
     assert pin(precision)==replay['precision_ref']
-    shutil.copyfile(precision,bundle/'PRECISION-SPEC.json')
     shutil.copyfile(inputs/'PROFILE.json',bundle/'PROFILE.json')
     loc=[]
     spec=read(precision)
-    for ref in [spec['source_seal_ref'],spec['config_ref'],spec['arithmetic_delta_ref'],
-                spec['audio_repair_ref'],*spec['sources'].values()]:
+    original_refs=[spec['source_seal_ref'],spec['config_ref'],spec['arithmetic_delta_ref'],
+                   spec['audio_repair_ref'],*spec['sources'].values()]
+    for ref in original_refs:
         name=Path(ref['path']).name
         local=next(p for p in (impl/name,bundle/'parents/jev-system-rl/production-family93'/name) if p.is_file())
         observed=pin(local,target/'bundle'/local.relative_to(bundle))
         assert (observed['sha256'],observed['bytes'])==(ref['sha256'],ref['bytes']),name
         loc.append(dict(observed,logical=ref['path']))
+    if candidate:
+        validator=runtime/'source/family_precision.py'
+        if not validator.is_file():
+            validator=runtime/'family_precision.py'
+        shutil.copyfile(validator,impl/'family_precision.py')
+    if candidate == 'without_original_controls':
+        spec['original_operator_control']=False
+    if candidate == 'skip_empty_experts':
+        efficiency=bundle/'efficiency'
+        efficiency.mkdir()
+        approved=read(config['empty_expert_sources'])
+        if (approved['schema']!='omni-empty-expert-efficiency-delta-v1' or
+                approved['training_admission'] is not False or
+                approved['options']!={'skip_empty_expert_chunks':True} or
+                set(approved['changes'])!={'family_runtime.py','moe_family_runtime.py',
+                                           'expert_gate_repair.py','expert_down_projection.py'}):
+            raise ValueError('expected exact sealed empty expert source closure')
+        parent=efficiency/'PARENT-SPEC.json'
+        shutil.copyfile(precision,parent)
+        changes={}
+        spec['sources']=dict(spec['sources'])
+        for name,row in approved['changes'].items():
+            ref=row['result_ref']
+            source=Path(ref['path'])
+            if row['parent_ref']!=spec['sources'][name] or pin(source)!=ref:
+                raise ValueError('empty expert source does not match sealed parent: '+name)
+            destination=efficiency/name
+            shutil.copyfile(source,destination)
+            result=pin(destination,target/'bundle/efficiency'/name)
+            changes[name]=dict(parent_ref=row['parent_ref'],result_ref=result)
+            spec['sources'][name]=result
+        delta=efficiency/'EFFICIENCY-DELTA.json'
+        write(delta,dict(approved,parent_spec_ref=pin(parent,target/'bundle/efficiency'/parent.name),
+                         changes=changes))
+        spec['efficiency_delta_ref']=pin(delta,target/'bundle/efficiency'/delta.name)
+    if candidate:
+        write(bundle/'PRECISION-SPEC.json',spec)
+    else:
+        shutil.copyfile(precision,bundle/'PRECISION-SPEC.json')
     write(bundle/'LOCATIONS.json',loc)
     row_keys=('audio_row_sites','gate_candidate_layers','attention_candidate_layers','down_candidate_layers',
               'audio_attention_layers','router_layers','kv_layers','tiled_layers')
