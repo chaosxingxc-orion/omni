@@ -157,26 +157,23 @@ def report(config_path):
           'sampled cursor differs from closed windows')
  first_three=len(rows)>=3
  next_window=continued_capture(root,cursor,successful_window_indices[2]) if formal and first_three else None
- accepted=next_window is not None
- if accepted and cursor['phase']=='done' and consumed_through<cfg['sampled_training']['sample_count']:
-  accepted=False
  return dict(schema='committed-training-objectives-v1',config_ref=config_ref,
    cursor_ref=cursor_ref,phase=cursor['phase'],successful_updates=cursor['step'],
    initial_step=initial_step,run_updates=len(rows),formal_sampled_training=formal,
    sampled_consumed=cursor.get('sampled_consumed'),
    sampled_total=cfg['sampled_training']['sample_count'] if formal else None,
    observations=rows,first_three_complete=first_three,next_window=next_window,
-   formal_startup_accepted=accepted,dev_gain_claim=False,
-   status=('formal_training_continued' if accepted else 'awaiting_next_formal_window' if formal and first_three
+   formal_startup_accepted=False,dev_gain_claim=False,
+   status=('awaiting_controller_observation' if formal and first_three
            else 'three_updates_observed' if first_three else 'pending_real_optimizer_results'))
 
 
-def controller_holds_guard(root):
+def controller_guard_owner(root, config_path):
  """Read the lock table so the observer never contends for the training guard."""
  try:
   guard=(Path(root)/'iteration.guard').stat()
  except FileNotFoundError:
-  return False
+  return None
  identity=(os.major(guard.st_dev),os.minor(guard.st_dev),guard.st_ino)
  for line in Path('/proc/locks').read_text().splitlines():
   fields=line.split()
@@ -184,8 +181,15 @@ def controller_holds_guard(root):
    continue
   major,minor,inode=fields[5].split(':')
   if (int(major,16),int(minor,16),int(inode))==identity:
-   return True
- return False
+   pid=int(fields[4])
+   try:
+    cmd=(Path('/proc')/str(pid)/'cmdline').read_bytes().rstrip(b'\0').split(b'\0')
+   except (PermissionError,FileNotFoundError,ProcessLookupError):
+    return None
+   if len(cmd)>=4 and Path(os.fsdecode(cmd[-3])).name=='iteration.py' and cmd[-2]==b'--config' and (
+      cmd[-1]==os.fsencode(Path(config_path).resolve())):
+    return pid
+ return None
 
 
 def observe(config_path):
@@ -193,14 +197,22 @@ def observe(config_path):
  from run_package import read
  config=read(config_path)
  root=Path(config['output_root'])
- active_before=controller_holds_guard(root)
+ owner=controller_guard_owner(root,config_path)
  result=report(config_path)
- active=active_before and controller_holds_guard(root)
+ active=owner is not None and owner==controller_guard_owner(root,config_path)
  result['iteration_guard_held']=active
- if result['formal_startup_accepted'] and not active:
-  complete=(result['phase']=='done' and result['sampled_consumed']==result['sampled_total'])
-  if not complete:
-   result.update(formal_startup_accepted=False,status='formal_controller_not_running')
+ if result['first_three_complete'] and result['formal_sampled_training']:
+  complete=False
+  if result['sampled_consumed']==result['sampled_total'] and (root/'SAMPLED-TRAIN-COMPLETE.json').is_file():
+   seal=read(root/'SAMPLED-TRAIN-COMPLETE.json')
+   complete=(seal['consumed']==result['sampled_total'] and seal['optimizer_steps']==result['successful_updates'])
+  # These are the regular sampled controller phases after an optimizer update.
+  # A fourth rollout can be reported when available, but is not a prerequisite.
+  running=result['phase'] in ('endpoint','dev','phase_screen','screen','capture','finalize','update')
+  accepted=complete or (active and running)
+  status=('formal_sample_consumed' if complete else 'formal_training_continued' if accepted
+          else 'formal_controller_not_running' if not active else 'formal_controller_not_continuing')
+  result.update(formal_startup_accepted=accepted,status=status,controller_pid=owner if active else None)
  return result
 
 
