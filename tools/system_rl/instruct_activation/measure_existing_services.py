@@ -63,7 +63,8 @@ def work_metrics(before, after):
 def grouped_rounds(config, services):
     """Two complete groups per round; matched wires and isolated cache namespaces."""
     blocks=config['grouped_blocks']
-    require(config['schema']=='existing-service-efficiency-v1' and len(services)==2 and blocks,
+    require(config['schema']=='existing-service-efficiency-v1' and (len(services)==2 or
+            len(services)==1 and config.get('decode_replay') is True) and blocks,
             'group measurement needs two instances and paired blocks')
     arms=config['round_order']
     paired=arms in (['paired'],['paired','paired_warm'])
@@ -77,7 +78,17 @@ def grouped_rounds(config, services):
                 'expected two input groups with the configured replicates')
         wires=[[doc(ref) for ref in group] for group in pair]
         for group in wires:
-            common=[{k:v for k,v in w.items() if k!='seed'} for w in group]
+            replay=config.get('decode_replay',False)
+            require(type(replay) is bool and (not replay or paired),'replay requires a paired measurement')
+            allowed={'seed','max_tokens','vllm_xargs'} if replay else {'seed'}
+            if replay:
+                for w in group:
+                    actions=(w.get('vllm_xargs') or {}).get('decode_action_ids')
+                    require(isinstance(actions,list) and actions and len(actions)==w['max_tokens']
+                            and set(w['vllm_xargs'])=={'decode_action_ids'}
+                            and all(type(t) is int and t>=0 for t in actions)
+                            and w['top_logprobs']==2, 'invalid diagnostic action replay')
+            common=[{k:v for k,v in w.items() if k not in allowed} for w in group]
             require(all(x==common[0] for x in common) and len({w['seed'] for w in group})==len(group),
                     'expected byte-equivalent conditioning and distinct seeds within group')
             require(all(w['model']=='qwen3-omni-30b-a3b-instruct' and
@@ -123,15 +134,30 @@ def measure_grouped(config, root, plan):
             name=service['name'];before[name]=metrics(service['endpoint']);idle(before[name])
             save(directory/name/'BEFORE.json',dict(metrics=before[name]))
         started=time.monotonic()
-        with contextlib.ExitStack() as workers:
-            pools={s['name']:workers.enter_context(concurrent.futures.ThreadPoolExecutor(max_workers=concurrency))
-                   for s in services}
-            jobs={pools[s['name']].submit(contact,directory/s['name']/f'{g}-{i}',s['endpoint'],wire,
-                   config['request_timeout_seconds'],queued_at=started):(s['name'],g,i)
-                   for s in services for g,i,wire in roster[s['name']]}
-            rows=[]
-            for job in concurrent.futures.as_completed(jobs):
-                name,g,i=jobs[job];rows.append(dict(service=name,group=g,replicate=i,**job.result()))
+        admission = config.get('admission', 'continuous')
+        require(admission in ('continuous', 'group_drained') and
+                (admission == 'continuous' or arm.startswith('paired')), 'invalid grouped admission')
+
+        def measure_lane(service):
+            name = service['name']
+            requests = roster[name]
+            waves = [requests]
+            if admission == 'group_drained':
+                waves = [[item for item in requests if item[0] == group]
+                         for group in dict.fromkeys(item[0] for item in requests)]
+            lane_rows = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+                for wave in waves:
+                    jobs = {pool.submit(contact, directory/name/f'{g}-{i}', service['endpoint'], wire,
+                                        config['request_timeout_seconds'], queued_at=started): (g, i)
+                            for g, i, wire in wave}
+                    for job in concurrent.futures.as_completed(jobs):
+                        g, i = jobs[job]
+                        lane_rows.append(dict(service=name, group=g, replicate=i, **job.result()))
+            return lane_rows
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(services)) as lanes:
+            rows = [row for lane_rows in lanes.map(measure_lane, services) for row in lane_rows]
         elapsed=time.monotonic()-started
         by_service={}
         for service in services:
@@ -151,8 +177,8 @@ def measure_grouped(config, root, plan):
             per_service[name]=dict(requests=len(service_rows),completion_tokens=tokens,wall_seconds=seconds,
                                    output_tokens_per_second=tokens/seconds)
         reports.append(save(directory/'RESULT.json',dict(block=block,arm=arm,wall_seconds=elapsed,
-            concurrency_per_service=concurrency, requests_per_second=len(rows)/elapsed,
-            groups_per_minute=(240 if arm.startswith('paired') else 120)/elapsed,
+            concurrency_per_service=concurrency, admission=admission, requests_per_second=len(rows)/elapsed,
+            groups_per_minute=120*(len(services) if arm.startswith('paired') else 1)/elapsed,
             prompt_tokens=prompts,cached_tokens=int(sum(hits)),completion_tokens=sum(r['usage']['completion_tokens'] for r in rows),
             http_p50_seconds=statistics.median(r['elapsed_seconds'] for r in rows),metrics=by_service,
             per_service=per_service,
