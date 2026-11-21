@@ -19,6 +19,136 @@ def file_sha(path):
     return sha(path.read_bytes())
 
 
+def prepare_replayed_top1(pairs, activation, *, limits):
+    """Bind diagnostic argmax to matching natural production action evidence."""
+    import math
+
+    def observed(receipt):
+        raw = receipt['raw'].encode()
+        if receipt['status'] != 200 or sha(raw) != receipt['response_sha256']:
+            fail('HTTP response bytes differ')
+        body = json.loads(raw)
+        choice, = body['choices']
+        prompt = body['prompt_token_ids']
+        tokens = choice['token_ids']
+        items = choice['logprobs']['content']
+        if (body['model'] != 'qwen3-omni-30b-a3b-instruct' or not prompt or not tokens
+                or [x['token'] for x in items] != [f'token_id:{t}' for t in tokens]
+                or any(not math.isfinite(x['logprob']) or x['logprob'] == -9999
+                       or x['logprob'] > 0 for x in items)):
+            fail('incomplete raw action evidence')
+        return prompt, tokens, items
+
+    def wire_hash(wire):
+        return sha(json.dumps(wire, sort_keys=True, separators=(',', ':'),
+                              ensure_ascii=False).encode())
+
+    rows = []
+    for pair in pairs:
+        packet = pair['packet']
+        wire = pair['wire']
+        replay_wire = pair['replay_wire']
+        expected_replay = dict(wire, top_logprobs=2, max_tokens=len(replay_wire['vllm_xargs']['decode_action_ids']),
+                               vllm_xargs=replay_wire['vllm_xargs'])
+        expected_replay['cache_salt'] = replay_wire['cache_salt']
+        if (wire['messages'] != packet['wire']['messages']
+                or wire['top_logprobs'] != 0
+                or replay_wire != expected_replay
+                or set(replay_wire['vllm_xargs']) != {'decode_action_ids'}
+                or wire['temperature'] != 1 or wire['top_p'] != 1
+                or wire['chat_template_kwargs'] != {'enable_thinking': False}):
+            fail('natural and replay wire semantics differ')
+        for name, payload in [('natural', wire), ('replay', replay_wire)]:
+            intent = pair[name + '_intent']
+            if intent['wire_sha256'] != wire_hash(payload) or intent['automatic_retry']:
+                fail('request wire custody differs')
+        prompt, tokens, original = observed(pair['natural'])
+        replay_prompt, replay_tokens, diagnostic = observed(pair['replay'])
+        if (replay_prompt != prompt or replay_tokens != tokens
+                or replay_wire['vllm_xargs']['decode_action_ids'] != tokens
+                or [x['logprob'] for x in original] != [x['logprob'] for x in diagnostic]):
+            fail('diagnostic actions or probabilities differ from production')
+        argmax = []
+        for item in diagnostic:
+            candidates = item['top_logprobs']
+            if (len(candidates) < 2 or len({x['token'] for x in candidates}) != len(candidates)
+                    or any(not x['token'].startswith('token_id:') or not math.isfinite(x['logprob'])
+                           or x['logprob'] == -9999 for x in candidates)):
+                fail('missing raw top candidates')
+            ordered = sorted(candidates, key=lambda x: x['logprob'], reverse=True)
+            if ordered[0]['logprob'] == ordered[1]['logprob']:
+                fail('ambiguous top-1 tie requires raw engine ranks')
+            argmax.append(int(ordered[0]['token'].removeprefix('token_id:')))
+        rows.append(dict(lane=pair['lane'], packet=dict(packet, wire=wire, wire_sha256=wire_hash(wire)),
+                         prompt=prompt, tokens=tokens, logprobs=[x['logprob'] for x in original],
+                         raw_top1=argmax, adapter_sha=activation['weights_ref']['sha256'],
+                         publication_sha=activation['publication_ref']['sha256'],
+                         response=pair['natural']['response_sha256'],
+                         elapsed=pair['natural']['elapsed_seconds'], source_refs=pair['source_refs']))
+    if not rows or not (0 <= limits['token'] <= .01 and 0 <= limits['sequence'] <= .01
+                        and limits['max_argmax_flips'] == 0):
+        fail('invalid parity roster or limits')
+    return dict(schema='production-with-replayed-top1-parity-v1', rows=rows,
+                limits=limits, training_use=False)
+
+
+def review_replayed_top1(sealed, activation, checkpoint_ref, exit_receipt, rank_receipts, *, limits):
+    """Review the fixed FSDP8 same-action score against its admitted TP4 adapter."""
+    import math
+
+    if (sealed['schema'] != 'production-with-replayed-top1-parity-v1'
+            or sealed['training_use'] is not False or sealed['limits'] != limits
+            or not 0 <= limits['token'] <= .01 or not 0 <= limits['sequence'] <= .01
+            or limits['max_argmax_flips'] != 0):
+        fail('invalid replay comparator contract')
+    rows = sealed['rows']
+    if not 0 < len(rows) <= 8 or len({row['lane'] for row in rows}) != len(rows):
+        fail('invalid replay comparator roster')
+    if (exit_receipt['exit_code'] != 0 or exit_receipt['failure'] is not None
+            or exit_receipt['complete_ranks'] != 8 or len(rank_receipts) != 8):
+        fail('FSDP8 replay comparator did not complete')
+    checkpoint_path = Path(checkpoint_ref['path'])
+    checkpoint = read(checkpoint_path)
+    if (file_sha(checkpoint_path) != checkpoint_ref['sha256']
+            or checkpoint['world_size'] != 8
+            or checkpoint['step'] != checkpoint['clock']['successful_optimizer_steps']):
+        fail('FSDP8 replay comparator checkpoint differs')
+    adapter_sha = activation['weights_ref']['sha256']
+    adapter_member = 'lora_adapter/adapter_model.safetensors'
+    if (activation['fixture'] is not False or activation['base'] is not False
+            or activation['policy_version'] != 'checkpoint-sha256:' + adapter_sha
+            or checkpoint['ranks'][0]['files'][adapter_member] != adapter_sha
+            or sorted(worker['rank'] for worker in activation['workers']) != list(range(4))
+            or any(worker['compared_original_keys'] != len(checkpoint['resident_identity']['publication']['tensors'])
+                   for worker in activation['workers'])):
+        fail('replay comparator adapter differs from checkpoint')
+    maximum = {mode + '_' + key: 0.0 for mode in ('train', 'eval')
+               for key in ('max_abs', 'sequence_abs')}
+    for rank, score in enumerate(rank_receipts):
+        row = rows[rank % len(rows)]
+        if (score['rank'] != rank or score['restored_step'] != checkpoint['step']
+                or score['checkpoint_sha'] != checkpoint_ref['sha256']
+                or score['optimizer_updates'] != 0 or score['passed'] is not True
+                or score['lane'] != row['lane'] or score['response_sha'] != row['response']
+                or score['tokens'] != len(row['tokens']) or not row['tokens']
+                or row['adapter_sha'] != adapter_sha or score['observed_policy_artifact'] != adapter_sha
+                or row['publication_sha'] != activation['publication_ref']['sha256']):
+            fail('FSDP8 comparator scored another action or policy')
+        for mode in ('train', 'eval'):
+            if score[mode + '_top1_flips']:
+                fail('replay comparator top-1 changed')
+            for suffix, limit in (('max_abs', limits['token']), ('sequence_abs', limits['sequence'])):
+                key = mode + '_' + suffix
+                value = score[key]
+                if not math.isfinite(value) or not 0 <= value <= limit:
+                    fail('replay comparator probability differs')
+                maximum[key] = max(maximum[key], value)
+    return dict(passed=True, step=checkpoint['step'], ranks=8, requests=len(rows),
+                actions=sum(len(row['tokens']) for row in rows), top1_flips=0,
+                checkpoint_sha256=checkpoint_ref['sha256'], adapter_sha256=adapter_sha,
+                limits=limits, **maximum)
+
+
 def prepare(root, wire_path, original, output=None, *, lanes=None, expected_tensors=None):
     """Reduce the original immutable HTTP/worker evidence on CPU."""
     import torch
