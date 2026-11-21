@@ -38,16 +38,19 @@ def switch(c):
             assert Path(new.C['guard'])==guard
             assert new.C['host']=='127.0.0.1' and new.C['cards'] in ([0,1,2,3],[4,5,6,7])
             before=old.inspect(old.name(lane['old_attempt']))
-            assert before['State']['Running']
+            exited=terminal.get('exited_containers',{}).get(before['Name'].lstrip('/'))==before['Id']
+            assert before['State']['Running'] or exited and before['State']['Status']=='exited'
             assert not (Path(new.C['root'])/'runs'/lane['new_attempt']).exists()
             pre=Path(new.C['root'])/'runs'/lane['preflight']/'state/PREFLIGHT.json'
             assert json.loads(pre.read_bytes())['config_sha256']==hashlib.sha256((new.CODE/'config.json').read_bytes()).hexdigest()
-            with urllib.request.urlopen(f"http://127.0.0.1:{new.C['port']}/metrics",timeout=8) as response:
-                raw=response.read().decode()
-            for state in ('waiting','running'):
-                values=[float(row.rsplit(' ',1)[1]) for row in raw.splitlines()
-                        if row.startswith('vllm:num_requests_'+state+'{')]
-                assert values and all(v==0 for v in values),'active request'
+            raw=None
+            if before['State']['Running']:
+                with urllib.request.urlopen(f"http://127.0.0.1:{new.C['port']}/metrics",timeout=8) as response:
+                    raw=response.read().decode()
+                for state in ('waiting','running'):
+                    values=[float(row.rsplit(' ',1)[1]) for row in raw.splitlines()
+                            if row.startswith('vllm:num_requests_'+state+'{')]
+                    assert values and all(v==0 for v in values),'active request'
             rows.append((lane,before,new,raw,Path(old.C['root'])/'runs'/lane['old_attempt']/'state/EXIT.json'))
         retained=[]
         for n,lane in enumerate(c.get('retain_lanes',[])):
@@ -64,8 +67,9 @@ def switch(c):
             training_terminal_ref=pin(c['training_terminal']) if 'training_terminal' in c else None,
             source_boot=rows[0][2].C['host_boot_id'],retained=retained,started=time.time(),automatic_retry=False))
         for lane,before,new,_,predecessor in rows:
-            subprocess.run(['docker','stop','-t',str(new.C['stop_timeout_seconds']+15),before['Id']],
-                           check=True,timeout=new.C['stop_timeout_seconds']+25,capture_output=True)
+            if before['State']['Running']:
+                subprocess.run(['docker','stop','-t',str(new.C['stop_timeout_seconds']+15),before['Id']],
+                               check=True,timeout=new.C['stop_timeout_seconds']+25,capture_output=True)
             state=new.command(['docker','inspect','-f','{{json .State}}',before['Id']])
             assert json.loads(state)['Status']=='exited'
             save(root/f"STOPPED-{new.C['port']}.json",dict(container_id=before['Id'],state=json.loads(state),

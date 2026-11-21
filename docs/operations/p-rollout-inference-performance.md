@@ -14,7 +14,7 @@
 
 同项目 A3 CI 的 vLLM 0.33.0 使用 `quay.io/atlas-ci/vllm-ascend:v0.33.0-a3`，镜像摘要 `sha256:ec7cd7c98616d55500e21a17b63be3a99603d520087f41dc37b60ae6c75d0730`。0.33 上从 Runner V1 切换到 V2 后，纯文本长输出的并发 16 TPOT 从 117.63 ms 回到 48.76–51.55 ms。同期多模态文本输出均值仍在约 60–65 ms。[A3 CI 版本与运行日志](https://github.com/vllm-project/vllm-omni/issues/10037#issuecomment-6968740745)
 
-Qwen 模型团队的技术报告表 2 分别给出并发 1／4／6 时 **Thinker 75／63／53 tokens/s**；并发 1 的倒数约 **13.3 ms/token**。234 ms 则是音频理论首包时延。报告描述使用 vLLM、torch.compile 和 CUDA Graph，没有披露用于该表的 vLLM 版本或 commit。另查 [2025-09-22 首发 README 的安装命令](https://github.com/QwenLM/Qwen3-Omni/blob/ae5dbf9e734b7c72c1a70805cfb321b5fa3e9615/README.md#vllm-usage)：源码为 wangxiongts/vllm 的 qwen3_omni 分支，CUDA 预编译 wheel 为 vLLM **0.9.2**，wheel URL 中的构建提交为 a5dd03c1ebc5e4f56f3c9d3dc0436e9c582c978f。首发文档未锁分支提交，且当时公开安装路径尚不支持 Instruct 音频输出，不能把 0.9.2 当作表 2 的实测版本。[Qwen3-Omni 技术报告表 2](https://arxiv.org/html/2509.17765v1)
+Qwen 模型团队的技术报告表 2 分别给出并发 1／4／6 时 **Thinker 75／63／53 tokens/s**；并发 1 的倒数约 **13.3 ms/token**。234 ms 则是音频理论首包时延。报告确认使用 vLLM；torch.compile 与 CUDA Graph 明确用于 MTP 和 codec decoder。报告没有披露表 2 的 vLLM 版本、commit，也没有给出 Thinker 单独启图的收益。另查 [2025-09-22 首发 README 的安装命令](https://github.com/QwenLM/Qwen3-Omni/blob/ae5dbf9e734b7c72c1a70805cfb321b5fa3e9615/README.md#vllm-usage)：源码为 wangxiongts/vllm 的 qwen3_omni 分支，CUDA 预编译 wheel 为 vLLM **0.9.2**，wheel URL 中的构建提交为 a5dd03c1ebc5e4f56f3c9d3dc0436e9c582c978f。首发文档未锁分支提交，且当时公开安装路径尚不支持 Instruct 音频输出，不能把 0.9.2 当作表 2 的实测版本。[Qwen3-Omni 技术报告表 2](https://arxiv.org/html/2509.17765v1)
 
 当前 P 服务从原生 vLLM 的 HTTP 入口启动单个 Thinker，没有启动 `--omni` 多阶段管线。版本对照应以 0.33.0 + Ascend 对应 commit + Runner V2 为独立参考，检查 Thinker、TP4 LoRA、缓存和 raw logprob，再考虑迁移。上游跳过 Talker 的改动对只跑 Thinker 的路径没有同样的触发条件。
 
@@ -52,6 +52,10 @@ Qwen 模型团队的技术报告表 2 分别给出并发 1／4／6 时 **Thinker
 175 合并固定专家归属与权重读回后准备投影操作数。无探针、同机同输入的串行 ITL **5.426 → 1.272 秒/token（4.27 倍加速）**，每侧 20 个间隔。两侧 22 个 token 和所有行为 logprob 逐值相同；TTFT 44.78 → 48.22 秒，墙钟 198.12 → 125.17 秒。回执 `a6acaa3fb519`。该结果为上游 55.84 ms 的 22.8 倍，仍需 2.28 倍加速。并发 4 首次等待原 guard 时遇到另一候选无卡预检，未产生 STARTED 或请求意图；核实进程身份、服务空闲与零请求后，在同一 guard 加入有界等待，恢复该轮。并发 4 的 ITL 6.956 → 1.550 秒（82/78 个间隔），8 个请求的墙钟 242.60 → 119.20 秒；5 对 53 个动作逐值相同，3 对分叉，回执 `0003859d9c5d`。
 
 69 在组合路径中使用固定 32 个本地专家与 1 个哑专家，避免逐层构造动态大小的路由列表。串行 5.479 → **1.242 秒**（各 20 个间隔），22 个动作及 logprob 逐值相等；两条语音墙钟 197.61 → 121.52 秒，回执 `e96d6b89ed17`。并发 4 时 5.966 → 1.555 秒（78/83 个间隔），批次墙钟 208.00 → 124.36 秒；7 对共 76 个同序列动作逐值相等，1 对分叉，回执 `62476ad861f1`。串行与同机原算术相比加速 4.41 倍，距离验收线还差 2.22 倍。
+
+175 组合候选的独立诊断：同一块真实语音连续三个 DecodeOnly 步，rank 0 跨 48 层墙钟为 1.425／1.333／1.319 秒。all_gather_into_tensor 由原路径每步 5,040 次降至 48 次；分组矩阵乘每步 710／716／708 次，Python profiler 记录的自身时间为 327／331／329 ms，不能解释为 NPU 内核净耗时。诊断回执 `3fb3961a4693`，4/4 请求排空。
+
+首次分层图候选在预热 attention 后半段时，NPU 分配器预留地址空间失败（207001）。两条候选请求 HTTP 500，两条对照请求 200，没有有效候选 ITL。实际请求账本对账后原 guard 已释放。新候选让同一批大小的各层顺序复用图内存池，在 175 和 69 分别保留原算术对照；69 分开测首次捕图与同批大小的后续复用。
 
 # 本地实测口径
 

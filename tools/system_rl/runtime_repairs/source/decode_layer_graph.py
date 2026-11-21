@@ -4,8 +4,10 @@ from functools import wraps
 
 def validate(config):
     shapes = config.get('batch_sizes')
-    if set(config) != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
+    if set(config)-{'pool_mode'} != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
         raise ValueError('explicit graph batch sizes and free HBM reserve required')
+    if config.get('pool_mode','private') not in ('private','per_batch'):
+        raise ValueError('unknown graph pool mode')
     if not isinstance(shapes,list) or not shapes or any(type(n) is not int or not 1 <= n <= 8 for n in shapes) or sorted(set(shapes)) != shapes:
         raise ValueError('ordered unique decode batch sizes required')
 
@@ -29,6 +31,7 @@ def attach(worker, config):
     inv = inverse_frequencies(1000000.,128,device='cpu')
     slots = torch.arange(33,device=device,dtype=torch.long)
     graphs = {}
+    pools = {}
     positions_key = None
     trig = None
     def norm(x,w,eps=1e-6):
@@ -50,7 +53,7 @@ def attach(worker, config):
             outs.append(torch.where(mask,raw+delta*scale,raw))
         return torch.cat(outs,-1) if qkv else outs[0]
 
-    def capture(callback, inputs):
+    def capture(callback, inputs, pool):
         graph=torch.npu.NPUGraph()
         inputs=tuple(v.clone() for v in inputs)
         # Warm actual kernels before graph capture on its own stream.
@@ -58,7 +61,7 @@ def attach(worker, config):
         with torch.npu.stream(stream):
             callback(*inputs)
         stream.synchronize()
-        with torch.npu.graph(graph,stream=stream):
+        with torch.npu.graph(graph,stream=stream,pool=pool):
             output=callback(*inputs)
         def run(*values):
             for buf,value in zip(inputs,values,strict=True):
@@ -108,9 +111,14 @@ def attach(worker, config):
         free,_=torch.npu.mem_get_info()
         if free < config['reserve_bytes']:
             raise ValueError('decode graph free HBM reserve exceeded')
-        one=capture(before,(hidden,residual,cos,sin,mask))
+        # These segments replay serially in capture order for a fixed shape.
+        # Separate shapes may interleave; they must not borrow the same pool.
+        if config.get('pool_mode')=='per_batch' and n not in pools:
+            pools[n]=torch.npu.graph_pool_handle()
+        pool=pools.get(n)
+        one=capture(before,(hidden,residual,cos,sin,mask),pool)
         dummy=hidden.new_zeros((n,4096))
-        two=capture(after,(dummy,residual,mask))
+        two=capture(after,(dummy,residual,mask),pool)
         return one,two
 
     def wrap(i,layer):
@@ -145,4 +153,7 @@ def attach(worker, config):
 
     for i,layer in enumerate(text.layers):
         layer.forward=wrap(i,layer)
-    worker._clear_decode_graphs=graphs.clear
+    def clear():
+        graphs.clear()
+        pools.clear()
+    worker._clear_decode_graphs=clear
