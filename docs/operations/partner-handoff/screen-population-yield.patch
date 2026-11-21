@@ -1,0 +1,72 @@
+--- a/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/p_screen_yield.py
++++ b/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/p_screen_yield.py
+@@ -2,6 +2,58 @@
+ import argparse, collections, datetime, json, sqlite3
+ from pathlib import Path
+ from p_screen_status import write_status
++
++
++def population_forecast(cfg, progress):
++    """Estimate *both* domains, keeping preferential historical misses out of random strata."""
++    from recall_cpu_prepare import checked
++    cutoff = datetime.datetime.fromisoformat(progress['at']).timestamp()
++    root = Path(cfg['output'])
++    recall = json.loads((Path(cfg['recall'])/'RECALL-COMPLETE.json').read_bytes())
++    def lines(path):
++        with path.open() as f:
++            for line in f:
++                yield json.loads(line)
++    priority = {r['sample_id'] for r in lines(Path(cfg['history'])/'exploration-P-MISS.private.jsonl')
++                if r.get('valid', True) is True}
++    cells = collections.defaultdict(collections.Counter)
++    with sqlite3.connect((root/'p-screen.sqlite').as_uri()+'?mode=ro',uri=True) as db:
++        seen = dict(db.execute("select rid, rank=0 from calls where status='valid' and finished<=?",(cutoff,)))
++    for row in lines(checked(recall['p_gate_roster'])):
++        rid = row['reference_id']
++        domain = {'train_real':'real','train_synth':'synthetic'}[rid.split(':',1)[0]]
++        sid = 'slurp:train:'+row['source_id'].zfill(6)+':'+Path(row['recording']).stem
++        rank = row['rank']
++        cell = cells[domain,'priority' if sid in priority else 'random',
++                     '1' if rank==1 else '2-3' if rank<=3 else '4+']
++        cell['N'] += 1
++        if rid in seen:
++            cell['n'] += 1
++            cell['k'] += seen[rid]
++    if sum(v['n'] for v in cells.values()) != len(seen):
++        raise ValueError('screen observations outside gated TRAIN')
++    if sum(v['N'] for (_,p,_),v in cells.items() if p=='priority') != json.loads((root/'HISTORY.json').read_bytes())['incorrect']:
++        raise ValueError('historical priority set differs from actual dispatch')
++    strata=[]; totals={}
++    for domain in sorted(progress['quotas']):
++        estimate=0
++        for (d,group,rank),s in sorted(cells.items()):
++            if d != domain:continue
++            N,n,k=s['N'],s['n'],s['k']
++            projection=k+(N-n)*k/n if n else None
++            strata.append(dict(domain=d,priority=group,rank=rank,population=N,observed=n,errors=k,projected=projection))
++            estimate=None if estimate is None or projection is None else estimate+projection
++        totals[domain]=estimate
++    q=progress['quotas']; target=sum(domain['error'] for domain in q.values())
++    projection=sum(totals.values()) if all(v is not None for v in totals.values()) else None
++    minimum={d:max(0,sum(q[d].values())-sum(v['success'] for v in q.values())) for d in q}
++    return dict(snapshot=progress['at'],cutoff='observations ending on or before snapshot second',valid=len(seen),
++        historical_use='earlier misses define dispatch priority only; only actual current P outcomes counted',
++        scope='empirical projection; not an exhaustion proof, admission decision, or dispatch input',
++        strata=strata,projected_total_by_domain=totals,projected_total=projection,
++        exact_crossed_error_quota={d:q[d]['error'] for d in q},
++        minimum_errors_by_domain_if_only_margins_fixed=minimum,
++        minimum_total_errors_even_if_domain_mix_removed=target)
+ 
+ 
+ def analyze(cfg, progress):
+@@ -36,6 +88,8 @@
+ 
+ if __name__=='__main__':
+     p = argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--progress',type=Path,required=True)
+-    p.add_argument('--output',type=Path,required=True);a=p.parse_args()
+-    result=analyze(json.loads(a.config.read_bytes()),json.loads(a.progress.read_bytes()))
++    p.add_argument('--output',type=Path,required=True)
++    p.add_argument('--all-domains',action='store_true',help='condition on historical dispatch priority before projecting both domains')
++    a=p.parse_args()
++    result=(population_forecast if a.all_domains else analyze)(json.loads(a.config.read_bytes()),json.loads(a.progress.read_bytes()))
+     write_status(a.output,result);print(json.dumps(result,ensure_ascii=False))
