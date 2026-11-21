@@ -1,0 +1,21 @@
+--- a/tools/system_rl/runtime_repairs/stage_bounded_actor_step.py
++++ b/tools/system_rl/runtime_repairs/stage_bounded_actor_step.py
+@@ -86,10 +86,16 @@
+         raise ValueError('zero-gradient continuation chain is only valid for formal training')
+     overlay={'bounded_actor_step.py':d/'bounded_actor_step.py'}
+     if s.get('formal_sampled'):
++        # Use the deployed training role named by the paired release. Its
++        # filesystem layout can differ from the development source checkout.
++        # require_release_sources below authenticates the bytes actually staged.
++        role = Path(c['runtime_release']['roots']['training'])
++        if not role.is_absolute():
++            raise ValueError('absolute training release root required')
+         overlay.update({
+-            'formal_actor_receipt.py': d/'source/formal_actor_receipt.py',
++            'formal_actor_receipt.py': role/'formal_actor_receipt.py',
+             'launch_retained_hf_fsdp.py': d/'launch_retained_hf_fsdp.py',
+-            'pull_closed.py': d/'source/pull_closed.py',
++            'pull_closed.py': role/'pull_closed.py',
+         })
+     geometry=c.get('lora_row_geometry',old.get('lora_row_geometry'))
+     if geometry is not None or 'lora_row_geometry' in c:
