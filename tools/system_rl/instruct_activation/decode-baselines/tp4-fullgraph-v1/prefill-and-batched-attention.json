@@ -1,0 +1,129 @@
+{
+  "changes": {
+    "engine": {
+      "serve_args": {
+        "new": [
+          "--tensor-parallel-size",
+          "4",
+          "--enable-lora",
+          "--max-loras",
+          "1",
+          "--lora-dtype",
+          "float32",
+          "--max-lora-rank",
+          "16",
+          "--worker-extension-cls",
+          "ascend_fp32_worker.FP32LoRAWorkerExtension",
+          "--generation-config",
+          "vllm",
+          "--logprobs-mode",
+          "raw_logprobs",
+          "--default-chat-template-kwargs",
+          "{\"enable_thinking\":false}",
+          "--max-model-len",
+          "24576",
+          "--gpu-memory-utilization",
+          "0.55",
+          "--max-num-seqs",
+          "8",
+          "--enforce-eager",
+          "--no-async-scheduling",
+          "--enable-prefix-caching",
+          "--dtype",
+          "bfloat16",
+          "--limit-mm-per-prompt",
+          "{\"audio\":1,\"image\":0,\"video\":0}"
+        ],
+        "old": [
+          "--tensor-parallel-size",
+          "4",
+          "--enable-lora",
+          "--max-loras",
+          "1",
+          "--lora-dtype",
+          "float32",
+          "--max-lora-rank",
+          "16",
+          "--worker-extension-cls",
+          "ascend_fp32_worker.FP32LoRAWorkerExtension",
+          "--generation-config",
+          "vllm",
+          "--logprobs-mode",
+          "raw_logprobs",
+          "--default-chat-template-kwargs",
+          "{\"enable_thinking\":false}",
+          "--max-model-len",
+          "24576",
+          "--gpu-memory-utilization",
+          "0.6",
+          "--max-num-seqs",
+          "8",
+          "--enforce-eager",
+          "--no-async-scheduling",
+          "--enable-prefix-caching",
+          "--dtype",
+          "bfloat16",
+          "--limit-mm-per-prompt",
+          "{\"audio\":1,\"image\":0,\"video\":0}"
+        ]
+      }
+    },
+    "files": {
+      "parents/jev-system-rl/implementation/decode_layer_graph.py": {
+        "new": "7cbeb41ae3f9bef8cb3f60267486199193d78a7582d2698c98c14a349d01250b",
+        "old": "2a8f79f5747bc9bedeca14111417df2d53d3f72e31714e724a7e3aabf3bfcb38"
+      },
+      "parents/jev-system-rl/implementation/decode_tiled_attention.py": {
+        "new": "b5e219d0dadafdf3d0fcf448954085e60fc926dac4e2ddb47e66ac5360829ff8",
+        "old": null
+      },
+      "parents/jev-system-rl/implementation/local_activation.py": {
+        "new": "241c416bdbe76014df88afbfd5ee313aee2c17c4f29ed2f6e6496a110391253e",
+        "old": "56a734787207d19761aa8cbcb89c2c125e4dc35414541f6dc1fea4ba2b7734c0"
+      },
+      "parents/jev-system-rl/implementation/service_overlay.py": {
+        "new": "e33397e6b2338d39f8b82ad4e6acce79112c5ce52e63eb0ef9f956a996ca2224",
+        "old": "0a88ec27a4ebb789a0d8e12638cde663c6d431f27ae823ff14b6af00b437bb78"
+      }
+    },
+    "rows": {
+      "decode_attention_sha256": {
+        "new": "b5e219d0dadafdf3d0fcf448954085e60fc926dac4e2ddb47e66ac5360829ff8",
+        "old": null
+      },
+      "decode_layer_graph": {
+        "new": {
+          "batch_sizes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "capture_segments": "both",
+          "pool_mode": "per_batch",
+          "reserve_bytes": 2147483648,
+          "source_sha256": "7cbeb41ae3f9bef8cb3f60267486199193d78a7582d2698c98c14a349d01250b",
+          "tiled_attention_batch": 8,
+          "prefill_tile_rows": 128
+        },
+        "old": {
+          "batch_sizes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "capture_segments": "both",
+          "pool_mode": "per_batch",
+          "reserve_bytes": 2147483648,
+          "source_sha256": "2a8f79f5747bc9bedeca14111417df2d53d3f72e31714e724a7e3aabf3bfcb38"
+        }
+      }
+    }
+  },
+  "parent_sha256": "d7d638c141a3f245b72069739c490b5d7bf09a49f262c9df545fbc4c5d7f94d4"
+}

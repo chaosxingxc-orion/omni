@@ -360,6 +360,14 @@ def _prepare(config,output):
         refs[name]=pin(dst,target/'bundle/rpc'/name)
     if release=='decode_replay':
         shutil.copyfile(HERE/'decode_action_processor.py',impl/'decode_action_processor.py')
+        # The frozen formal overlay may implement an older diagnostic protocol.
+        # Check the actual composed packet together with its wire producer.
+        contract = read(HERE/'decode-replay-contract.json')
+        for name, path in [('wire', HERE/'decode_action_replay.py'),
+                           ('overlay', impl/'service_overlay.py'),
+                           ('processor', impl/'decode_action_processor.py')]:
+            if pin(path)['sha256'] != contract['sources'][name]:
+                raise ValueError('incompatible fixed-action replay component: ' + name)
     engine = {**replay['engine'], **engine_limits}
     assert engine['dtype']=='bfloat16' and engine['lora_dtype']=='float32'
     assert engine['enable_prefix_caching'] and engine['enable_lora'] and engine['enforce_eager'] and not engine['async_scheduling']
