@@ -14,7 +14,7 @@
 
 同项目 A3 CI 的 vLLM 0.33.0 使用 `quay.io/atlas-ci/vllm-ascend:v0.33.0-a3`，镜像摘要 `sha256:ec7cd7c98616d55500e21a17b63be3a99603d520087f41dc37b60ae6c75d0730`。0.33 上从 Runner V1 切换到 V2 后，纯文本长输出的并发 16 TPOT 从 117.63 ms 回到 48.76–51.55 ms。同期多模态文本输出均值仍在约 60–65 ms。[A3 CI 版本与运行日志](https://github.com/vllm-project/vllm-omni/issues/10037#issuecomment-6968740745)
 
-Qwen 模型团队的技术报告给出 234 ms 理论首包时延，描述使用 vLLM 和 CUDA Graph，并对 MTP、codec decoder 使用 torch.compile。报告没有披露用于该表的 vLLM 版本或 commit。首个音频包与 P 阶段的后续文本 token 间隔采用不同计时边界。[Qwen3-Omni 技术报告表 2](https://arxiv.org/html/2509.17765v1)
+Qwen 模型团队的技术报告表 2 分别给出并发 1／4／6 时 **Thinker 75／63／53 tokens/s**；并发 1 的倒数约 **13.3 ms/token**。234 ms 则是音频理论首包时延。报告描述使用 vLLM、torch.compile 和 CUDA Graph，没有披露用于该表的 vLLM 版本或 commit。另查 [2025-09-22 首发 README 的安装命令](https://github.com/QwenLM/Qwen3-Omni/blob/ae5dbf9e734b7c72c1a70805cfb321b5fa3e9615/README.md#vllm-usage)：源码为 wangxiongts/vllm 的 qwen3_omni 分支，CUDA 预编译 wheel 为 vLLM **0.9.2**，wheel URL 中的构建提交为 a5dd03c1ebc5e4f56f3c9d3dc0436e9c582c978f。首发文档未锁分支提交，且当时公开安装路径尚不支持 Instruct 音频输出，不能把 0.9.2 当作表 2 的实测版本。[Qwen3-Omni 技术报告表 2](https://arxiv.org/html/2509.17765v1)
 
 当前 P 服务从原生 vLLM 的 HTTP 入口启动单个 Thinker，没有启动 `--omni` 多阶段管线。版本对照应以 0.33.0 + Ascend 对应 commit + Runner V2 为独立参考，检查 Thinker、TP4 LoRA、缓存和 raw logprob，再考虑迁移。上游跳过 Talker 的改动对只跑 Thinker 的路径没有同样的触发条件。
 
@@ -27,11 +27,19 @@ Qwen 模型团队的技术报告给出 234 ms 理论首包时延，描述使用 
 | 去掉重复算子 | 1 | 5.487 → 5.561 s | 20 → 20 | 慢 1.4% | `8e1a4a36aed8` |
 | 去掉重复算子 | 4 | 7.158 → 7.126 s | 81 → 81 | 快 0.45% | `b709b3d982bf` |
 | 跳过空专家权重块 | 1 | 5.427 → 3.797 s | 20 → 20 | 快 30.0% | `e77c89fb8e35` |
+| 跳过空专家权重块 | 2 | 6.087 → 5.566 s | 78 → 82 | 快 8.6% | `8844dbcc1113` |
 | 跳过空专家权重块 | 4 | 5.989 → 5.685 s | 78 → 87 | 快 5.1% | `bf0479437dcc` |
+| 跳过空专家权重块 | 8 | 8.617 → 7.301 s | 86 → 87 | 快 15.3% | `85216179a372` |
 
 空专家串行轮两侧各生成 22 token，序列及 logprob 逐值相同。请求排队均小于 0.1 ms，平均首 token 为 44.30 → 43.84 秒，批次墙钟为 197.18 → 163.65 秒。两侧均命中 2,176/9,990 prefix token。并发 4 时，两侧各成功 8 请求，生成 86 → 95 token，5 对序列相同且 54 个动作 logprob 逐值相同，另 3 对序列分叉，批次墙钟为 219.95 → 231.64 秒。去掉重复算子两轮的 10 对序列和 111 个动作 logprob 全部一致。四轮共 40/40 个请求正常终止并排空。
 
-三个并发分叉发生在第 1、9、1 个输出位置。第 9 位置分叉前，8 个共享 token 的 logprob 逐值一致。并发轮的采样分叉先用同动作回放定位，后续更新态验收仍需覆盖缓存和 top-1。3.797 秒/间隔约为上游 55.84 ms/输出 token 的 68 倍。下一处优先核对每个 decode 步的专家权重搬运、投影 gather 与设备同步时间。
+补测并发 2／8 的 32/32 个真实请求已排空。两侧每轮各 8 个请求，批次墙钟分别为 373.58 → 346.76 秒、183.92 → 166.72 秒。同序列分别为 6/8 和 5/8 对，64 和 62 个同序列动作的 logprob 逐值一致。
+
+并发 4 的三个分叉发生在第 1、9、1 个输出位置。第 9 位置分叉前，8 个共享 token 的 logprob 逐值一致。并发轮的采样分叉先用同动作回放定位，后续更新态验收仍需覆盖缓存和 top-1。3.797 秒/间隔约为上游 55.84 ms/输出 token 的 68 倍。下一处优先核对每个 decode 步的专家权重搬运、投影 gather 与设备同步时间。
+
+69 单独以 rank 0 的 Python profiler 围住第 0 至 47 层，仅在实际 DecodeOnly 且各请求 query 长度为 1 时采样。连续三个单请求步骤，KV 长 4632／4633／4634；层间墙钟 5.800／5.828／5.837 秒。**每步**均观察到 5,040 次 distributed_c10d.all_gather_into_tensor 和 1,488 次 NPU grouped matmul 调用。all-gather 的 Python 函数自身耗时 0.597–0.617 秒；设备异步执行、同步等待和嵌套包装使 inclusive 时间不能相加，计数也不是链路带宽利用率。无探针实例的 ITL 仍为性能依据。
+
+活动专家压紧候选的首次实际激活拒绝新配置字段，候选两条请求 HTTP 500，未产生有效输出；对照请求已排空，失败回执保留。修复后在 GPU/NPU 模型加载前复用同一配置验证，重建候选通过无设备预检，进入原路径复验。
 
 # 本地实测口径
 

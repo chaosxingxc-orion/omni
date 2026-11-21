@@ -119,10 +119,10 @@ def main():
     local=config.get('local_activation')
     inbox=config.get('update_inbox')
     release=config.get('release_kind','precision')
-    require(release in ('formal','precision'),'unknown inference release kind')
-    if release=='formal':
+    require(release in ('formal','precision','decode_profile'),'unknown inference release kind')
+    if release in ('formal','decode_profile'):
         require(local and 'diagnostic_logits' not in local and not config.get('successor_ref'),
-                'formal inference requires the uninstrumented local activation bundle')
+                'local release requires the guarded activation bundle without diagnostic logits')
     if inbox:
         require(local and local['bounded_candidate'] is True and not config.get('successor_ref'),
                 'guarded local checkpoint inbox required')

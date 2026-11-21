@@ -69,7 +69,11 @@ def validate(spec):
         require(set(delta)=={'schema','parent_spec_ref','changes','options','training_admission'} and
                 delta['schema']=='omni-empty-expert-efficiency-delta-v1' and
                 delta['training_admission'] is False and
-                delta['options']=={'skip_empty_expert_chunks':True},'explicit unaccepted empty-expert optimization')
+                delta['options'].get('skip_empty_expert_chunks') is True and
+                set(delta['options']) in ({'skip_empty_expert_chunks'}, {'skip_empty_expert_chunks','packed_active_limit'}) and
+                ('packed_active_limit' not in delta['options'] or
+                 type(delta['options']['packed_active_limit']) is int and 1 <= delta['options']['packed_active_limit'] <= 32),
+                'explicit unaccepted expert transport optimization')
         parent=json.loads(checked(delta['parent_spec_ref']).read_text())
         require('efficiency_delta_ref' not in parent,'one explicit efficiency successor')
         validate(parent)
@@ -84,7 +88,7 @@ def validate(spec):
                     row['result_ref']==spec['sources'][name],'empty-expert source custody differs')
         require(all(spec['sources'][name]==parent['sources'][name] for name in FILES if name not in efficiency),
                 'unrelated arithmetic changed in efficiency successor')
-        config=dict(config,skip_empty_expert_chunks=True)
+        config=dict(config,**delta['options'])
     for name in FILES:
         ref=spec['sources'][name];p=checked(ref)
         expected=(efficiency[name]['result_ref']['sha256'] if name in efficiency else
@@ -99,6 +103,11 @@ def validate(spec):
         require(spec['original_operator_control'] is False and not efficiency,
                 'disable only original operator controls in this candidate')
         config=dict(config,preserve_original=False)
+    if config.get('packed_active_limit'):
+        runtime_spec=importlib.util.spec_from_file_location('packed_family_check',sources['family_runtime.py'])
+        runtime=importlib.util.module_from_spec(runtime_spec)
+        runtime_spec.loader.exec_module(runtime)
+        runtime.validate_config(config)
     return config,sources
 
 

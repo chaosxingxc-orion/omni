@@ -24,3 +24,5 @@ This is the parameterized successor to the sealed single-instance Instruct activ
 使用 `formal_decode_candidate` 在同一入口生成独立性能候选。可配置 `without_original_controls` 去掉原算子对照，或设置 `skip_empty_experts` 跳过四个专家均无 token 的块，并在 `empty_expert_sources` 提供已封闭的效率差量 JSON。在原 guard 下先预检并排空请求。单实例切换时在 cutover 配置中用 `retain_lanes` 引用继续运行的对照实例。候选的训练准入由更新态精度与缓存复验决定。
 
 用同一个 `measure_existing_services.py` 运行配对压测，复用发布包中提供 `io_utils` 的 Python 路径。配置 `grouped_blocks` 为两条真实输入及各自的请求引用，`round_order` 用 `["paired"]` 或 `["paired", "paired_warm"]`，`grouped_concurrency` 指定每侧并发。两侧提交同一批请求，每个并发档有独立 cache salt。结果保存引擎 ITL 的总时长及间隔数，以及首 token、排队和每侧输出 token 吞吐。
+
+性能诊断单独设 `release_kind: decode_profile` 和 `decode_profile: {"rank":0,"steps":3}`，只在指定 rank 的纯 decode 记录有界 Python 调用；正式包不含 profiler。另一可选候选 `formal_decode_candidate: pack_active_experts` 复用 empty_expert_sources，通过 `packed_active_limit`（1–32）限制每次压紧的专家数量；活动专家过多时沿用原分块。仅用无探针同机对照评价 ITL，正式采样仍须通过更新态精度回放。

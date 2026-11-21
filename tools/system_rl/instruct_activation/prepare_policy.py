@@ -48,9 +48,16 @@ def checkpoint_dirs(root, logical=None):
 
 def prepare(config,output):
     release=config.get('release_kind','precision')
-    if release not in ('precision','formal'):
-        raise ValueError('explicit release kind must be precision or formal')
-    formal=release=='formal'
+    if release not in ('precision','formal','decode_profile'):
+        raise ValueError('unknown release kind')
+    profiling = release == 'decode_profile'
+    profile = config.get('decode_profile')
+    if profiling != ('decode_profile' in config) or profiling and (
+            not isinstance(profile, dict) or set(profile) != {'rank', 'steps'} or
+            type(profile['rank']) is not int or profile['rank'] not in range(4) or
+            type(profile['steps']) is not int or not 1 <= profile['steps'] <= 32):
+        raise ValueError('bounded decode profiling requires a separate release, rank and step count')
+    formal=release in ('formal','decode_profile')
     if formal and any(key in config for key in ('prefix_trace','logits_selection','successor_checkpoint_bundle')):
         raise ValueError('precision collection settings cannot enter a formal bundle')
     engine_limits = config.get('formal_engine_limits', {})
@@ -63,10 +70,14 @@ def prepare(config,output):
     implementation=Path(config.get('implementation_sources',runtime.parent/'implementation'))
     candidate = config.get('formal_decode_candidate')
     if 'formal_decode_candidate' in config and (not formal or
-            candidate not in ('without_original_controls','skip_empty_experts')):
+            candidate not in ('without_original_controls','skip_empty_experts','pack_active_experts')):
         raise ValueError('select one supported formal decode candidate')
-    if ('empty_expert_sources' in config) != (candidate == 'skip_empty_experts'):
+    if ('empty_expert_sources' in config) != (candidate in ('skip_empty_experts','pack_active_experts')):
         raise ValueError('empty expert source closure is required only for the empty expert candidate')
+    packed_limit = config.get('packed_active_limit')
+    if ('packed_active_limit' in config) != (candidate == 'pack_active_experts') or (
+            candidate == 'pack_active_experts' and (type(packed_limit) is not int or not 1 <= packed_limit <= 32)):
+        raise ValueError('packed active experts require a bounded explicit limit')
     output.mkdir(mode=0o700)
     inputs=Path(config['inputs'])
     target=Path(config['remote_root'])
@@ -138,7 +149,7 @@ def prepare(config,output):
         shutil.copyfile(validator,impl/'family_precision.py')
     if candidate == 'without_original_controls':
         spec['original_operator_control']=False
-    if candidate == 'skip_empty_experts':
+    if candidate in ('skip_empty_experts','pack_active_experts'):
         efficiency=bundle/'efficiency'
         efficiency.mkdir()
         approved=read(config['empty_expert_sources'])
@@ -159,11 +170,14 @@ def prepare(config,output):
                 raise ValueError('empty expert source does not match sealed parent: '+name)
             destination=efficiency/name
             shutil.copyfile(source,destination)
+            if candidate == 'pack_active_experts' and name in ('family_runtime.py','moe_family_runtime.py'):
+                shutil.copyfile(runtime/'source'/name,destination)
             result=pin(destination,target/'bundle/efficiency'/name)
             changes[name]=dict(parent_ref=row['parent_ref'],result_ref=result)
             spec['sources'][name]=result
         delta=efficiency/'EFFICIENCY-DELTA.json'
-        write(delta,dict(approved,parent_spec_ref=pin(parent,target/'bundle/efficiency'/parent.name),
+        options=dict(approved['options'],**({'packed_active_limit':packed_limit} if packed_limit else {}))
+        write(delta,dict(approved,options=options,parent_spec_ref=pin(parent,target/'bundle/efficiency'/parent.name),
                          changes=changes))
         spec['efficiency_delta_ref']=pin(delta,target/'bundle/efficiency'/delta.name)
     if candidate:
@@ -223,6 +237,14 @@ def prepare(config,output):
                                  "import sys as _sys\n"
                                  "from rollout_logits_rpc import install_named_extension as _extend\n"
                                  "_extend(_sys.modules[__name__])\n")
+            if profiling:
+                with dst.open('a') as stream:
+                    stream.write('\n' + (HERE/'decode_profile.py').read_text() + '\n')
+                    stream.write('def install_profiled_rows(self, rows):\n'
+                                 '    receipt = install_rows(self, rows)\n'
+                                 f'    attach_decode_profile(self, {profile!r})\n'
+                                 '    return receipt\n'
+                                 'NamedWorkerRPCMixin.omni_local_install_rows = install_profiled_rows\n')
         refs[name]=pin(dst,target/'bundle/rpc'/name)
     engine = {**replay['engine'], **engine_limits}
     assert engine['dtype']=='bfloat16' and engine['lora_dtype']=='float32'
