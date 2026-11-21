@@ -63,14 +63,16 @@ def prepare(config,output):
     engine_limits = config.get('formal_engine_limits', {})
     if (not isinstance(engine_limits, dict)
             or ('formal_engine_limits' in config and not formal)
-            or set(engine_limits) - {'max_num_seqs', 'max_num_batched_tokens'}
-            or any(type(value) is not int or value <= 0 for value in engine_limits.values())):
+            or set(engine_limits) - {'max_num_seqs', 'max_num_batched_tokens', 'gpu_memory_utilization'}
+            or any(type(v) is not int or v <= 0 for k,v in engine_limits.items() if k!='gpu_memory_utilization')
+            or 'gpu_memory_utilization' in engine_limits and not (
+                type(engine_limits['gpu_memory_utilization']) is float and 0 < engine_limits['gpu_memory_utilization'] < 1)):
         raise ValueError('formal_engine_limits requires supported positive integer limits in a formal release')
     runtime=Path(config.get('runtime_sources',D))
     implementation=Path(config.get('implementation_sources',runtime.parent/'implementation'))
     candidate = config.get('formal_decode_candidate')
     if 'formal_decode_candidate' in config and (not formal or
-            candidate not in ('without_original_controls','skip_empty_experts','pack_active_experts')):
+            candidate not in ('without_original_controls','skip_empty_experts','pack_active_experts','cache_frozen_projections','decode_expert_owners','direct_projections','owners_direct_projections')):
         raise ValueError('select one supported formal decode candidate')
     if ('empty_expert_sources' in config) != (candidate in ('skip_empty_experts','pack_active_experts')):
         raise ValueError('empty expert source closure is required only for the empty expert candidate')
@@ -78,6 +80,15 @@ def prepare(config,output):
     if ('packed_active_limit' in config) != (candidate == 'pack_active_experts') or (
             candidate == 'pack_active_experts' and (type(packed_limit) is not int or not 1 <= packed_limit <= 32)):
         raise ValueError('packed active experts require a bounded explicit limit')
+    direct = candidate in ('direct_projections','owners_direct_projections')
+    cache_projections = direct or candidate == 'cache_frozen_projections'
+    if ('frozen_projection_cache' in config) != cache_projections:
+        raise ValueError('frozen projection cache requires its own candidate and budget')
+    expert_owners = candidate in ('decode_expert_owners','owners_direct_projections')
+    if ('decode_expert_owners' in config) != expert_owners:
+        raise ValueError('expert owner placement requires an explicit cache capacity')
+    if 'decode_layer_graph' in config and (candidate != 'owners_direct_projections' or config['decode_expert_owners'].get('static_routes') is not True):
+        raise ValueError('decode graph requires static expert owners and verified projections')
     output.mkdir(mode=0o700)
     inputs=Path(config['inputs'])
     target=Path(config['remote_root'])
@@ -202,6 +213,41 @@ def prepare(config,output):
         mod.validate(config['lora_row_geometry'])
         shutil.copyfile(source,impl/source.name)
         grouped['lora_row_geometry']=dict(config['lora_row_geometry'],source_sha256=pin(source)['sha256'])
+    if cache_projections:
+        import importlib.util
+        cache_source = runtime/'source/frozen_projection_cache.py'
+        spec_cache = importlib.util.spec_from_file_location('frozen_projection_cache',cache_source)
+        cache_helper = importlib.util.module_from_spec(spec_cache)
+        spec_cache.loader.exec_module(cache_helper)
+        cache_helper.validate(config['frozen_projection_cache'])
+        if not all(grouped.get(site+'_base_layers')==list(range(48)) for site in ('q','o')) or replay['kv_layers']!=list(range(48)):
+            raise ValueError('prepacked layout requires complete grouped Q/K/V/O consumers')
+        shutil.copyfile(cache_source,impl/cache_source.name)
+        grouped['frozen_projection_cache'] = dict(config['frozen_projection_cache'],source_sha256=pin(cache_source)['sha256'])
+    if direct:
+        geometry = grouped.get('lora_row_geometry',{})
+        if geometry.get('site')!='qkvo_lora_a' or geometry.get('algorithm')!='grouped_bf16' or geometry.get('layers')!=list(range(48)):
+            raise ValueError('verified grouped Q/K/V/O LoRA A geometry required')
+        projection_source=runtime/'source/decode_projection_runtime.py'
+        shutil.copyfile(projection_source,impl/projection_source.name)
+        grouped['decode_projection_runtime']=pin(projection_source)['sha256']
+    if expert_owners:
+        import importlib.util
+        owner_source=runtime/'source/decode_expert_owners.py'
+        spec_owner=importlib.util.spec_from_file_location('decode_expert_owners',owner_source)
+        owner_helper=importlib.util.module_from_spec(spec_owner)
+        spec_owner.loader.exec_module(owner_helper)
+        owner_helper.validate(config['decode_expert_owners'])
+        shutil.copyfile(owner_source,impl/owner_source.name)
+        grouped['decode_expert_owners']=dict(config['decode_expert_owners'],source_sha256=pin(owner_source)['sha256'])
+    if 'decode_layer_graph' in config:
+        graph_source=runtime/'source/decode_layer_graph.py'
+        graph_spec=importlib.util.spec_from_file_location('decode_layer_graph',graph_source)
+        graph_helper=importlib.util.module_from_spec(graph_spec)
+        graph_spec.loader.exec_module(graph_helper)
+        graph_helper.validate(config['decode_layer_graph'])
+        shutil.copyfile(graph_source,impl/graph_source.name)
+        grouped['decode_layer_graph']=dict(config['decode_layer_graph'],source_sha256=pin(graph_source)['sha256'])
     write(bundle/'ROWS.json',{**{name:replay[name] for name in row_keys},**grouped})
     rpc=bundle/'rpc'
     rpc.mkdir()
@@ -237,6 +283,14 @@ def prepare(config,output):
                                  "import sys as _sys\n"
                                  "from rollout_logits_rpc import install_named_extension as _extend\n"
                                  "_extend(_sys.modules[__name__])\n")
+            if direct:
+                with dst.open('a') as stream:
+                    stream.write('\n_verified_readback = NamedWorkerRPCMixin.omni_sync_worker_readback\n'
+                                 'def readback_projection_operand(self, *args, **kwargs):\n'
+                                 '    receipt = _verified_readback(self, *args, **kwargs)\n'
+                                 '    self._projection_adapter_verified(receipt)\n'
+                                 '    return receipt\n'
+                                 'NamedWorkerRPCMixin.omni_sync_worker_readback = readback_projection_operand\n')
             if profiling:
                 with dst.open('a') as stream:
                     stream.write('\n' + (HERE/'decode_profile.py').read_text() + '\n')

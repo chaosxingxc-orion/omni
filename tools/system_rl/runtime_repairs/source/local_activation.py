@@ -34,6 +34,16 @@ def prepare(config, rpc_root):
     os.environ['PYTHONPATH']=root+':'+os.environ['PYTHONPATH']
 
 
+def is_decode(rows):
+    from vllm.forward_context import get_forward_context
+    meta = get_forward_context().attn_metadata
+    if not isinstance(meta, dict) or not meta:
+        return False
+    entry = next(iter(meta.values()))
+    return (str(entry.attn_state).split('.')[-1] == 'DecodeOnly'
+            and list(entry.actual_seq_lengths_q) == list(range(1, rows + 1)))
+
+
 def install_rows(worker, rows):
     from dependencies import register_locations
     from retained_action_replay import install_rows as attach
@@ -53,6 +63,20 @@ def install_rows(worker, rows):
                 text=worker.model_runner.get_model().language_model.model
                 setattr(worker,'_omni_'+site+'_base',attach_base(text,layers,side='vl',projections=(site+'_proj',)))
                 grouped[site+'_grouped_layers']=layers
+        if 'frozen_projection_cache' in row_config:
+            import hashlib, frozen_projection_cache
+            settings = dict(row_config['frozen_projection_cache'])
+            require(hashlib.sha256(Path(frozen_projection_cache.__file__).read_bytes()).hexdigest() == settings.pop('source_sha256'),
+                    'frozen projection cache source changed')
+            grouped['frozen_projection_cache'] = frozen_projection_cache.attach(worker,settings)
+        if 'decode_projection_runtime' in row_config:
+            import hashlib, decode_projection_runtime
+            require(hashlib.sha256(Path(decode_projection_runtime.__file__).read_bytes()).hexdigest()
+                    == row_config['decode_projection_runtime'], 'direct projection implementation changed')
+            from family_precision import ATTR
+            family = getattr(worker.model_runner.get_model(), ATTR)['config']
+            decode_projection_runtime.attach(worker,family)
+            grouped['decode_projection_runtime'] = row_config['decode_projection_runtime']
         if 'lora_row_geometry' in row_config:
             import hashlib,lora_row_precision
             spec=dict(row_config['lora_row_geometry'])
@@ -60,6 +84,19 @@ def install_rows(worker, rows):
                     'LoRA row precision source changed')
             worker._omni_lora_geometry=lora_row_precision.attach(worker.model_runner.get_model().language_model.model,spec)
             grouped['lora_row_geometry']=row_config['lora_row_geometry']
+        if 'decode_expert_owners' in row_config:
+            import hashlib, decode_expert_owners
+            settings=dict(row_config['decode_expert_owners'])
+            require(hashlib.sha256(Path(decode_expert_owners.__file__).read_bytes()).hexdigest()==settings.pop('source_sha256'),
+                    'expert owner implementation changed')
+            grouped['decode_expert_owners']=decode_expert_owners.attach(worker,settings)
+        if 'decode_layer_graph' in row_config:
+            import hashlib, decode_layer_graph
+            settings=dict(row_config['decode_layer_graph'])
+            require(hashlib.sha256(Path(decode_layer_graph.__file__).read_bytes()).hexdigest()==settings.pop('source_sha256'),
+                    'decode graph implementation changed')
+            decode_layer_graph.attach(worker,settings)
+            grouped['decode_layer_graph']=settings
     return dict(rank=rank, family=precision, **grouped)
 
 
@@ -67,12 +104,18 @@ async def install_precision(engine, server, local):
     from service_overlay import awaited
     spec_ref=server['named_rpc_overlay']['precision_ref']
     rows=doc(local['rows_ref'])
-    require(set(rows)-{'q_base_layers','o_base_layers','lora_row_geometry'}==set(ROW_ARGS),'expected complete retained precision composition')
+    require(set(rows)-{'q_base_layers','o_base_layers','lora_row_geometry','frozen_projection_cache','decode_expert_owners','decode_projection_runtime','decode_layer_graph'}==set(ROW_ARGS),'expected complete retained precision composition')
     result=await awaited(engine.collective_rpc('omni_local_install_rows',timeout=240,args=(dict(
         precision=doc(spec_ref), locations=doc(local['locations_ref']), rows=rows),)))
     require(sorted(r['rank'] for r in result)==list(range(4)) and
             all(r['family']==result[0]['family'] and r.get('lora_row_geometry')==rows.get('lora_row_geometry') and all(r.get(k+'_grouped_layers',[])==rows.get(k+'_base_layers',[]) for k in ('q','o'))
                 for r in result), 'FOUR_TP_PRECISION_WORKERS')
+    if 'decode_expert_owners' in rows:
+        require(all(r.get('decode_expert_owners')==dict(layers=48,experts_per_rank_per_layer=32,
+                    bytes=48*(32+int(rows['decode_expert_owners'].get('static_routes',False)))*2*(2048*1536+768*2048)) for r in result),'all TP4 expert owners required')
+    if 'frozen_projection_cache' in rows:
+        require(all(r.get('frozen_projection_cache')==dict(matrices=192,bytes=48*(1280*2048+2048*1024)*4*2) for r in result),
+                'all four workers must retain the complete frozen projection cache')
     save(Path(server['overlay_root'])/'PRECISION.json',dict(specification_ref=spec_ref,
         rows_ref=local['rows_ref'],workers=result,actual_device_execution=True,
         updated_parity_required=True))

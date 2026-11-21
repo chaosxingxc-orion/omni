@@ -26,3 +26,5 @@ This is the parameterized successor to the sealed single-instance Instruct activ
 用同一个 `measure_existing_services.py` 运行配对压测，复用发布包中提供 `io_utils` 的 Python 路径。配置 `grouped_blocks` 为两条真实输入及各自的请求引用，`round_order` 用 `["paired"]` 或 `["paired", "paired_warm"]`，`grouped_concurrency` 指定每侧并发。两侧提交同一批请求，每个并发档有独立 cache salt。结果保存引擎 ITL 的总时长及间隔数，以及首 token、排队和每侧输出 token 吞吐。
 
 性能诊断单独设 `release_kind: decode_profile` 和 `decode_profile: {"rank":0,"steps":3}`，只在指定 rank 的纯 decode 记录有界 Python 调用；正式包不含 profiler。另一可选候选 `formal_decode_candidate: pack_active_experts` 复用 empty_expert_sources，通过 `packed_active_limit`（1–32）限制每次压紧的专家数量；活动专家过多时沿用原分块。仅用无探针同机对照评价 ITL，正式采样仍须通过更新态精度回放。
+
+四卡 decode 可分别比较 `cache_frozen_projections`（仅冻结基座 Q/K/V/O）、`direct_projections`（在每次 LoRA 权重读回成功后准备投影操作数）、`decode_expert_owners`（固定每卡 32 个完整专家）及 `owners_direct_projections`（组合）。在配置的 `frozen_projection_cache`、`decode_expert_owners` 中分别指定整数 `budget_bytes`、`reserve_bytes`，后者另指定 `transfer_experts`（32 的正因数）。通过 `formal_engine_limits.gpu_memory_utilization` 分配引擎与驻留专家的 HBM，固定 KV/prefix 启用。只有纯 decode 使用专家归属和预备投影快速路径，prefill 保留原算术；权重缓存只在原 guard 和四 rank 真实权重验证下建立。所有运行结果仍须分别做速度和精度验收。

@@ -232,7 +232,17 @@ def run(config_path):
     with contextlib.ExitStack() as stack:
         for guard in sorted(config['guards']):
             lock=stack.enter_context(Path(guard).open('rb'))
-            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            wait=config.get('guard_wait_seconds',0)
+            require(type(wait) is int and 0<=wait<=3600,'bounded guard wait required')
+            deadline=time.monotonic()+wait
+            while True:
+                try:
+                    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    remaining=deadline-time.monotonic()
+                    if remaining<=0:raise
+                    time.sleep(min(2,remaining))
         require(not (root/'STARTED.json').exists(),'measurement already started; no replay')
         for service in config['services']:
             service_identity(service);idle(metrics(service['endpoint']))
