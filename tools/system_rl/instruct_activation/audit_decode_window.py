@@ -75,7 +75,10 @@ def audit(root, reference_ms, factor):
                             factor=ms/reference_ms,within_target=ms<=reference_ms*factor,
                             matched=len(same),same_token_and_score=sum(left[k]==right[k] for k in same),
                             matched_actions=sum(len(left[k][0]) for k in same)))
-    return dict(result_sha256=final_ref['sha256'],drained_sha256=drain_ref['sha256'],reference_ms=reference_ms,
+    candidate, = [s for s in config['services'] if s['name']=='candidate']
+    return dict(result_sha256=final_ref['sha256'],drained_sha256=drain_ref['sha256'],
+                candidate_container=candidate['container'], source_boot=config['source_boot'],
+                run_config_sha256=started['config_ref']['sha256'],reference_ms=reference_ms,
                 limit_factor=factor,rounds=reports,all_rounds_within_target=all(r['within_target'] for r in reports),
                 precision_acceptance=False)
 

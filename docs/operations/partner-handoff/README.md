@@ -1,5 +1,7 @@
 # Omni System RL 合作交接 · P 节点 LoRA 训推校准
 
+当前 TP4 decode 基线是 `tp4-batched-decode-v2`。新实验从该锁继承；复现旧精度实验保留原版本。见[性能回执与适用范围](../p-rollout-inference-performance.md)。
+
 P 节点在同一严格确定性 FSDP8 谱系完成三次 optimizer 更新。每步使用两组 TRAIN 录音和 8 条轨迹，三步分别有 86、98、91 个动作，全局 loss 分别为 0.6874986886978149、0.8127936070072792、0.8128709792945301。每步 8 个 rank 正常退出。第 3 步 checkpoint 保留原 Adam、scheduler、RNG 状态，Clock 为 3，累计消费 6 组。 两套 TP4 均已在线，依次在常驻基础模型中热切到第 2、3 步 LoRA。第 3 步切换确认卸载旧 adapter、重置缓存，每实例四个 rank 各读回 384 个张量。两条新权重语音请求共 20 个动作。从第 3 步恢复的 FSDP8 在训练与评估模式下，最大单 token 差、整段 logprob 差及全词表 top-1 翻转均为 0。正式 TRAIN 和 DEV 评测仍待完成。 [三步与部署验收](../system-rl-training-topology.md)。
 
 新增：[LoRA 更新态训推偏差排查与复用指南](lora-parity-playbook.md)。包含原失败请求的根因、排查顺序、两端配置及验收命令。

@@ -52,18 +52,30 @@ def prepare(config, output):
     parent = config.get('decode_parent')
     if not parent and ('decode_layer_graph' not in config or config.get('release_kind') != 'formal'):
         return _prepare(config, output)
-    from decode_lineage import verify
+    from decode_lineage import digest, verify
     if not parent:
         raise ValueError('formal decode graph preparation requires decode_parent with lock and declaration')
     if output.exists():
         raise FileExistsError(output)
-    lock = Path(parent['lock'])
+    if ('current' in parent) == ('lock' in parent):
+        raise ValueError('select one current performance baseline or an explicit historical lock')
+    if 'current' in parent:
+        catalog = Path(parent['current'])
+        record = read(catalog)
+        version = record['version']
+        if not isinstance(version,str) or not version or Path(version).name != version or version in ('.','..'):
+            raise ValueError('invalid current decode version')
+        lock = catalog.parent / version / 'LOCK.json'
+        if digest(lock) != record['lock_sha256'] or read(lock)['version'] != version:
+            raise ValueError('current decode baseline identity mismatch')
+    else:
+        lock = Path(parent['lock'])
     declaration = read(parent['declaration'])
     with tempfile.TemporaryDirectory(dir=output.parent) as staging:
         packet = Path(staging) / 'packet'
         # Supply the measured runtime sources for unchanged helpers, and only
         # take explicitly declared changes from the candidate source directory.
-        from decode_lineage import digest, snapshot
+        from decode_lineage import snapshot
         frozen = Path(parent['packet'])
         lock_record = read(lock)
         manifest = lock.with_name('packet-files.json')
