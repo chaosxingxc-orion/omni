@@ -81,7 +81,7 @@ class ServiceOverlay:
                     not getattr(params, 'structured_outputs', None) and
                     not getattr(params, 'stop', None) and not getattr(params, 'stop_token_ids', None) and
                     not getattr(params, 'allowed_token_ids', None) and not getattr(params, 'bad_words', None) and
-                    getattr(params, 'logprobs', None) == 0, 'TRANSFORMED_DISTRIBUTION')
+                    getattr(params, 'logprobs', None) == (2 if getattr(overlay,'decode_replay',False) else 0), 'TRANSFORMED_DISTRIBUTION')
             context['generate_observations'].append(dict(adapter_id=None if lora is None else lora.lora_int_id, sampling=actual))
             return old_generate(*args, **kwargs)
 
@@ -204,6 +204,12 @@ class ServiceOverlay:
             call_ref=doc(pin(registration))['call_ref']
             require(doc(call_ref)['wire_sha256']==wire_sha,'REGISTERED_WIRE_IDENTITY')
             self.register(call_ref)
+        if getattr(self,'decode_replay',False):
+            require(call_ref is None and wire.get('return_token_ids') is True and wire.get('top_logprobs')==2
+                    and wire.get('logprobs') is True and wire.get('stream') is False
+                    and set(wire.get('vllm_xargs') or {})=={'decode_action_ids'}, 'diagnostic replay wires only')
+        elif 'decode_action_ids' in (wire.get('vllm_xargs') or {}):
+            raise ValueError('forced actions require an isolated replay release')
         if call_ref is not None:
             intent = self.root/('PROBE-INTENT-'+wire_sha+'.json')
             require(not intent.exists(), 'EXISTING_HTTP_PROBE_INTENT_RECONCILE_NO_REPLAY')

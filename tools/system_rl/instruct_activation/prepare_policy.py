@@ -48,7 +48,7 @@ def checkpoint_dirs(root, logical=None):
 
 def prepare(config,output):
     release=config.get('release_kind','precision')
-    if release not in ('precision','formal','decode_profile'):
+    if release not in ('precision','formal','decode_profile','decode_replay'):
         raise ValueError('unknown release kind')
     profiling = release == 'decode_profile'
     profile = config.get('decode_profile')
@@ -57,7 +57,7 @@ def prepare(config,output):
             type(profile['rank']) is not int or profile['rank'] not in range(4) or
             type(profile['steps']) is not int or not 1 <= profile['steps'] <= 32):
         raise ValueError('bounded decode profiling requires a separate release, rank and step count')
-    formal=release in ('formal','decode_profile')
+    formal=release in ('formal','decode_profile','decode_replay')
     if formal and any(key in config for key in ('prefix_trace','logits_selection','successor_checkpoint_bundle')):
         raise ValueError('precision collection settings cannot enter a formal bundle')
     engine_limits = config.get('formal_engine_limits', {})
@@ -247,6 +247,12 @@ def prepare(config,output):
         graph_spec.loader.exec_module(graph_helper)
         graph_helper.validate(config['decode_layer_graph'])
         shutil.copyfile(graph_source,impl/graph_source.name)
+        if 'tiled_attention_batch' in config['decode_layer_graph']:
+            if replay['tiled_layers']!=list(range(48)):
+                raise ValueError('packed attention requires all 48 layers on the absolute tile contract')
+            helper=runtime/'source/decode_tiled_attention.py'
+            shutil.copyfile(helper,impl/helper.name)
+            grouped['decode_attention_sha256']=pin(helper)['sha256']
         grouped['decode_layer_graph']=dict(config['decode_layer_graph'],source_sha256=pin(graph_source)['sha256'])
     write(bundle/'ROWS.json',{**{name:replay[name] for name in row_keys},**grouped})
     rpc=bundle/'rpc'
@@ -300,6 +306,8 @@ def prepare(config,output):
                                  '    return receipt\n'
                                  'NamedWorkerRPCMixin.omni_local_install_rows = install_profiled_rows\n')
         refs[name]=pin(dst,target/'bundle/rpc'/name)
+    if release=='decode_replay':
+        shutil.copyfile(HERE/'decode_action_processor.py',impl/'decode_action_processor.py')
     engine = {**replay['engine'], **engine_limits}
     assert engine['dtype']=='bfloat16' and engine['lora_dtype']=='float32'
     assert engine['enable_prefix_caching'] and engine['enable_lora'] and engine['enforce_eager'] and not engine['async_scheduling']
@@ -318,6 +326,8 @@ def prepare(config,output):
             '--gpu-memory-utilization',str(engine['gpu_memory_utilization']),'--max-num-seqs',str(engine['max_num_seqs']),
             '--enforce-eager','--no-async-scheduling','--enable-prefix-caching','--dtype',engine['dtype'],
             '--limit-mm-per-prompt','{"audio":1,"image":0,"video":0}']
+        if release=='decode_replay':
+            serving.extend(['--logits-processors','decode_action_processor:ReplayActions'])
         if 'max_num_batched_tokens' in engine_limits:
             serving.extend(['--max-num-batched-tokens', str(engine_limits['max_num_batched_tokens'])])
         c=dict(original,name=original['name']+'-rl',root=str(target/('lane-'+lane)),

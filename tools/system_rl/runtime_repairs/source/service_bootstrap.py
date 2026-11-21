@@ -119,8 +119,8 @@ def main():
     local=config.get('local_activation')
     inbox=config.get('update_inbox')
     release=config.get('release_kind','precision')
-    require(release in ('formal','precision','decode_profile'),'unknown inference release kind')
-    if release in ('formal','decode_profile'):
+    require(release in ('formal','precision','decode_profile','decode_replay'),'unknown inference release kind')
+    if release in ('formal','decode_profile','decode_replay'):
         require(local and 'diagnostic_logits' not in local and not config.get('successor_ref'),
                 'local release requires the guarded activation bundle without diagnostic logits')
     if inbox:
@@ -202,6 +202,7 @@ def main():
                     if local:
                         pending.expected_base_model_path=local['model']
                         pending.bounded_candidate=local['bounded_candidate']
+                        pending.decode_replay=release=='decode_replay'
                     else:
                         execution=doc(config['execution_ref'])
                         request=doc(execution['request_ref'])
@@ -270,6 +271,7 @@ def main():
     api_server.init_app_state=init
     api_server.build_app=build
     parsed=parse_service_args(cli,argv)
+    require((parsed.logits_processors or [])==(['decode_action_processor:ReplayActions'] if release=='decode_replay' else []),'unexpected sampling processor')
     from engine_api import engine_kwargs
     parsed.lora_dtype=engine_kwargs(dict(lora_dtype=parsed.lora_dtype,max_loras=parsed.max_loras,
         fully_sharded_loras=parsed.fully_sharded_loras,worker_extension_cls=parsed.worker_extension_cls))['lora_dtype']

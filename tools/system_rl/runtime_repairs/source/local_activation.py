@@ -95,6 +95,10 @@ def install_rows(worker, rows):
             settings=dict(row_config['decode_layer_graph'])
             require(hashlib.sha256(Path(decode_layer_graph.__file__).read_bytes()).hexdigest()==settings.pop('source_sha256'),
                     'decode graph implementation changed')
+            if 'tiled_attention_batch' in settings:
+                import decode_tiled_attention
+                require(hashlib.sha256(Path(decode_tiled_attention.__file__).read_bytes()).hexdigest()==row_config['decode_attention_sha256'],
+                        'decode attention implementation changed')
             decode_layer_graph.attach(worker,settings)
             grouped['decode_layer_graph']=settings
     return dict(rank=rank, family=precision, **grouped)
@@ -104,7 +108,7 @@ async def install_precision(engine, server, local):
     from service_overlay import awaited
     spec_ref=server['named_rpc_overlay']['precision_ref']
     rows=doc(local['rows_ref'])
-    require(set(rows)-{'q_base_layers','o_base_layers','lora_row_geometry','frozen_projection_cache','decode_expert_owners','decode_projection_runtime','decode_layer_graph'}==set(ROW_ARGS),'expected complete retained precision composition')
+    require(set(rows)-{'q_base_layers','o_base_layers','lora_row_geometry','frozen_projection_cache','decode_expert_owners','decode_projection_runtime','decode_layer_graph','decode_attention_sha256'}==set(ROW_ARGS),'expected complete retained precision composition')
     result=await awaited(engine.collective_rpc('omni_local_install_rows',timeout=240,args=(dict(
         precision=doc(spec_ref), locations=doc(local['locations_ref']), rows=rows),)))
     require(sorted(r['rank'] for r in result)==list(range(4)) and

@@ -4,12 +4,17 @@ from functools import wraps
 
 def validate(config):
     shapes = config.get('batch_sizes')
-    if set(config)-{'pool_mode','capture_segments'} != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
+    if set(config)-{'pool_mode','capture_segments','prefill_tile_rows','tiled_attention_batch'} != {'batch_sizes','reserve_bytes'} or type(config['reserve_bytes']) is not int or config['reserve_bytes'] <= 0:
         raise ValueError('explicit graph batch sizes and free HBM reserve required')
     if config.get('pool_mode','private') not in ('private','per_batch'):
         raise ValueError('unknown graph pool mode')
     if config.get('capture_segments','both') not in ('both','before','after'):
         raise ValueError('unknown graph segments')
+    if 'tiled_attention_batch' in config and (type(config['tiled_attention_batch']) is not int or not 1<=config['tiled_attention_batch']<=8):
+        raise ValueError('explicit tiled decode attention batch limit required')
+    tile=config.get('prefill_tile_rows')
+    if 'prefill_tile_rows' in config and (type(tile) is not int or not 16<=tile<=512 or tile%16):
+        raise ValueError('prefill tile must be a multiple of 16 in [16,512]')
     if not isinstance(shapes,list) or not shapes or any(type(n) is not int or not 1 <= n <= 8 for n in shapes) or sorted(set(shapes)) != shapes:
         raise ValueError('ordered unique decode batch sizes required')
 
@@ -25,6 +30,9 @@ def attach(worker, config):
 
     validate(config)
     text = worker.model_runner.get_model().language_model.model
+    if 'tiled_attention_batch' in config:
+        from decode_tiled_attention import install
+        install(text, config['tiled_attention_batch'])
     rank = worker.rank
     owners = worker._decode_owner_weights
     scale = worker._decode_projection_scale
@@ -75,7 +83,7 @@ def attach(worker, config):
             return output
         return run
 
-    def build(i,n,hidden,residual,cos,sin,mask):
+    def build(i,n,hidden,residual,cos,sin,mask,*,eager=False):
         ref=text.layers[i]
         attention=ref.self_attn
         gu,down,runner=owners[i]
@@ -113,6 +121,8 @@ def attach(worker, config):
             y=grouped(torch.nn.functional.silu(first)*second,down,counts)
             rows=torch.empty_like(y).index_copy_(0,order,y)
             return torch.where(own[:,None],rows,0),w,total
+        if eager:
+            return before,after
         free,_=torch.npu.mem_get_info()
         if free < config['reserve_bytes']:
             raise ValueError('decode graph free HBM reserve exceeded')
@@ -133,7 +143,18 @@ def attach(worker, config):
         def forward(positions,hidden_states,residual):
             nonlocal trig,positions_key
             n=len(hidden_states)
-            if n not in config['batch_sizes'] or not is_decode(n) or (residual is None)!=(i==0):
+            pure = is_decode(n) if n in config['batch_sizes'] else False
+            tile = config.get('prefill_tile_rows')
+            if not pure and tile:
+                from vllm.forward_context import get_forward_context
+                meta=get_forward_context().attn_metadata
+                entry=meta.get(layer.self_attn.attn.layer_name) if isinstance(meta,dict) else None
+                state=str(getattr(entry,'attn_state','')).split('.')[-1]
+                tiled=(state in ('PrefillNoCache','PrefillCacheHit','ChunkedPrefill','DecodeOnly')
+                       and entry.num_actual_tokens==n and n>0)
+            else:
+                tiled=False
+            if (not pure and not tiled) or (residual is None)!=(i==0):
                 return old(positions,hidden_states,residual)
             if i==0:
                 c,s=tables(positions,inv,sections=[24,20,20],output_dtype=hidden_states.dtype,compute_device=str(device))
@@ -144,6 +165,39 @@ def attach(worker, config):
             p=layer.self_attn.qkv_proj.punica_wrapper
             mask=(p._token_lora_indices[:n]==0)[:,None] if not p.no_lora else torch.zeros((n,1),device=device,dtype=torch.bool)
             rs=hidden_states if residual is None else residual
+            if tiled:
+                # Split only positionwise arithmetic; attention still receives the original
+                # complete batch, block tables and positions. Reuse grouped BF16 operands.
+                # Bound closure/cache size: fixed full tiles plus a per-call tail.
+                def helpers(lo,hi):
+                    size=hi-lo
+                    key=('tile',i,size)
+                    if key in graphs:
+                        return graphs[key]
+                    pair=build(i,size,hidden_states[lo:hi],rs[lo:hi],trig[0][lo:hi],
+                               trig[1][lo:hi],mask[lo:hi],eager=True)
+                    if size==tile:
+                        graphs[key]=pair
+                    return pair
+                pieces=[]
+                totals=[]
+                afters=[]
+                for lo in range(0,n,tile):
+                    hi=min(lo+tile,n)
+                    one,two=helpers(lo,hi)
+                    q,k,v,total=one(hidden_states[lo:hi],rs[lo:hi],trig[0][lo:hi],trig[1][lo:hi],mask[lo:hi])
+                    pieces.append((q,k,v))
+                    totals.append(total)
+                    afters.append(two)
+                q,k,v=(torch.cat(items,dim=0) for items in zip(*pieces,strict=True))
+                full=gather(layer.self_attn.attn(q,k,v).contiguous(),dim=1)
+                routed=[];weights=[];new_residual=[]
+                for j,lo in enumerate(range(0,n,tile)):
+                    hi=min(lo+tile,n)
+                    local,w,total=afters[j](full[lo:hi],totals[j],mask[lo:hi])
+                    routed.append(local);weights.append(w);new_residual.append(total)
+                rows=reduce(torch.cat(routed,dim=0)).reshape(n,8,2048)
+                return (rows*torch.cat(weights,dim=0)[:,:,None]).sum(dim=1),torch.cat(new_residual,dim=0)
             if (i,n) not in graphs:
                 graphs[i,n]=build(i,n,hidden_states,rs,*trig,mask)
             one,two=graphs[i,n]
