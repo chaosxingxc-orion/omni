@@ -1,5 +1,7 @@
 # Omni System RL 合作交接 · P 节点 LoRA 训推校准
 
+正式 P 窗口从配置指定的同一只读发布路径进入，供训练侧打开的源文件可按角色发布到逻辑目录。原路径在 CPU 上复现投递失败；修复后生产者与训练侧文件摘要一致。恢复模块沿用 Clock 3 实际使用的版本，原缺失接口已在固定镜像复验。见[入口与投递补丁](formal-actor-source-namespace.patch)。这些是启动检查；实际正式更新以 optimizer 回执为准。
+
 正式 rollout 可用配置项 `formal_rollout.official_index_cache_root` 复用官方 TRAIN 标注索引。指定 cohort 之外的本地持久目录；原索引按源文件身份独立建库并复核所取行。见[对应版本的实现补丁](formal-train-index-cache.patch)。固定镜像、两域共四条标签的独立进程实测：每窗口建库 4.45 秒；首次预热 4.40 秒，后续读取 0.16 秒；重建读取从 103,543,164 字节降至零，26,578,944 字节的 SQLite 文件不进入窗口清单。耗时仅为 CPU 标注绑定。
 
 正式采样版的续训启动器若从开发树的 `source/` 目录找不到回执模块，可使用[发布目录修复补丁](formal-actor-release-paths.patch)。补丁适用于含正式 actor 分支、启动器 SHA-256 为 `a4dec2f4cedbfc75eb60f40d10bad93a760bdb7988dbc7216103e86e6f6b8fcb` 的版本；先用 `git apply --check` 核对。模块从配置的 training release 根读取，原训推源码双重摘要检查保持生效。固定镜像还需能只读访问发布仓库引用的 Git 对象库。恢复 Clock 3 的只读启动检查已通过，未执行参数更新。

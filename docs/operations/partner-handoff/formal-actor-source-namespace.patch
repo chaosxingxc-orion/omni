@@ -1,0 +1,49 @@
+--- a/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/stage_sampled_actor_release.py
++++ b/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/stage_sampled_actor_release.py
+@@ -60,6 +60,12 @@
+     assert custody.name==logical.parents[1].name and sha(custody/logical.relative_to(logical.parents[1]))==initial['sha256']
+     files={'overlays/'+rel:Path(m['release'])/'tree/parents'/rel for rel in actor['capture_mounts']['overlays']}
+     assert all(sha(p)==actor['capture_mounts']['overlays'][n[len('overlays/'):]] for n,p in files.items())
++    # Some generated documents carry the original logical source name. Supply
++    # the exact verified overlay at that name in this new, immutable actor tree.
++    for role in m.get('actor_logical_source_roles', []):
++        rel=actor['generation']['runtime']['sources'][role]
++        assert not Path(rel).is_absolute() and '..' not in Path(rel).parts
++        files['cold/'+rel]=files['overlays/'+rel]
+     for p in custody.rglob('*'):
+         if p.is_file():
+             assert p.resolve()==p
+--- /dev/null
++++ b/delivery/system-rl-transition-v1/jev-system-rl/rl-ready-window-configuration/run_sampled_iteration.py
+@@ -0,0 +1,31 @@
++"""Start the existing iteration controller in its cross-host source namespace."""
++import argparse
++import hashlib
++import json
++import os
++from pathlib import Path
++import sys
++
++
++def launch(manifest, config):
++    local = json.loads(manifest.read_bytes())
++    release = Path(local['release'])
++    bind = local['iteration_entry']
++    root = Path(bind['logical_root'])
++    relative = Path(bind['source'])
++    if not root.is_absolute() or not relative.parts or relative.is_absolute() or '..' in relative.parts:
++        raise ValueError('invalid iteration source binding')
++    entry = root/relative
++    if (not entry.samefile(release/'tree/parents'/relative)
++            or not os.statvfs(entry).f_flag & os.ST_RDONLY
++            or hashlib.sha256(entry.read_bytes()).hexdigest() != bind['sha256']):
++        raise ValueError('iteration entry differs from its read-only selected release')
++    os.execv(sys.executable, [sys.executable, '-B', str(entry), '--config', str(config)])
++
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser()
++    parser.add_argument('--manifest', type=Path, required=True)
++    parser.add_argument('--config', type=Path, required=True)
++    args = parser.parse_args()
++    launch(args.manifest, args.config)
