@@ -2,6 +2,14 @@
 
 P 筛样的可达性报告按真实/合成和正确意图召回排名估算全池错例，历史优先派发的错例单列，避免将优先队列的高错例率外推到整个 TRAIN。使用[报告补丁](screen-population-yield.patch)提供的 --all-domains；报告不改变采样配额、不触发运行。
 
+合成错例稀少时，可在前述补丁之后应用[有限总体上界补丁](screen-synthetic-error-bound.patch)。在装有 SciPy 的 CPU 环境，从脚本目录运行：
+
+```sh
+python p_screen_yield.py --config "$SCREEN_CONFIG" --progress "$SCREEN_PROGRESS" --output "$BOUND_REPORT" --synthetic-upper-confidence 0.95
+```
+
+仅使用原随机派发顺序中已全部返回的固定前缀。以各个 2 的幂和全量为观察点，校正多次观察，再按不放回抽样求单侧置信上界。一次实测：前 2,048 条中有 68 个错例，37,705 条合成候选的**错例总量**上界为 1,708（95%），配额为 2,311。解释依赖均匀洗牌和固定策略下样本的结果稳定；此报告不触发停机。
+
 正式 P 窗口从配置指定的同一只读发布路径进入，供训练侧打开的源文件可按角色发布到逻辑目录。原路径在 CPU 上复现投递失败；修复后生产者与训练侧文件摘要一致。恢复模块沿用 Clock 3 实际使用的版本，原缺失接口已在固定镜像复验。见[入口与投递补丁](formal-actor-source-namespace.patch)。这些是启动检查；实际正式更新以 optimizer 回执为准。
 
 正式 rollout 可用配置项 `formal_rollout.official_index_cache_root` 复用官方 TRAIN 标注索引。指定 cohort 之外的本地持久目录；原索引按源文件身份独立建库并复核所取行。见[对应版本的实现补丁](formal-train-index-cache.patch)。固定镜像、两域共四条标签的独立进程实测：每窗口建库 4.45 秒；首次预热 4.40 秒，后续读取 0.16 秒；重建读取从 103,543,164 字节降至零，26,578,944 字节的 SQLite 文件不进入窗口清单。耗时仅为 CPU 标注绑定。

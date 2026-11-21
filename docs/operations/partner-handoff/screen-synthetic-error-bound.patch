@@ -1,0 +1,88 @@
+--- a/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/p_screen_yield.py
++++ b/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/p_screen_yield.py
+@@ -1,5 +1,5 @@
+ """Estimate screened errors by original gold retrieval rank using a dated snapshot."""
+-import argparse, collections, datetime, json, sqlite3
++import argparse, collections, datetime, hashlib, json, random, sqlite3
+ from pathlib import Path
+ from p_screen_status import write_status
+ 
+@@ -86,10 +86,77 @@
+                 projected_error_total=sum(v['projected_errors'] for v in strata) if all(v['observed'] for v in strata) else None)
+ 
+ 
++def upper_total(N, n, k, alpha):
++    """Invert an exact one-sided hypergeometric tail over finite-population totals."""
++    from scipy.stats import hypergeom
++    if not (0 < alpha < 1 and 0 <= k <= n <= N and n > 0):
++        raise ValueError('invalid finite population or tail')
++    low, high = k, N-n+k
++    while low < high:
++        mid = (low+high+1)//2
++        if hypergeom.cdf(k,N,mid,n) >= alpha:
++            low = mid
++        else:
++            high = mid-1
++    return low
++
++
++def synthetic_bound(cfg, progress, confidence):
++    """Use a full fixed prefix of the original seeded permutation, never arrival order."""
++    from recall_cpu_prepare import checked
++    if not 0 < confidence < 1:
++        raise ValueError('confidence must be between zero and one')
++    root=Path(cfg['output']);recall=json.loads((Path(cfg['recall'])/'RECALL-COMPLETE.json').read_bytes())
++    gate=recall['p_gate_roster'];ids={'real':[], 'synthetic':[]}
++    with Path(cfg['history'],'exploration-P-MISS.private.jsonl').open() as f:
++        priority={r['sample_id'] for r in map(json.loads,f) if r.get('valid',True) is True}
++    with Path(checked(gate)).open() as f:
++        for row in map(json.loads,f):
++            rid=row['reference_id']
++            domain={'train_real':'real','train_synth':'synthetic'}[rid.split(':',1)[0]]
++            if domain=='synthetic':
++                sid='slurp:train:'+row['source_id'].zfill(6)+':'+Path(row['recording']).stem
++                if sid in priority:
++                    raise ValueError('synthetic dispatch has a priority stratum')
++            ids[domain].append(rid)
++    rng=random.Random(cfg['sampling']['seed'])
++    for domain,values in ids.items():
++        if len(values)!=recall['hits_by_domain']['train_'+('real' if domain=='real' else 'synth')] or len(set(values))!=len(values):
++            raise ValueError('duplicate or missing gate IDs')
++        values.sort();rng.shuffle(values)
++    # The live scheduler pops from the end. Any priority reordering in real
++    # occurs after its shuffle and does not consume RNG state.
++    order=ids['synthetic'][::-1];N=len(order)
++    cutoff=datetime.datetime.fromisoformat(progress['at']).timestamp()
++    with sqlite3.connect((root/'p-screen.sqlite').as_uri()+'?mode=ro',uri=True) as db:
++        seen=dict(db.execute("""select rid, rank=0 from calls where domain='synthetic'
++            and status='valid' and finished<=?""",(cutoff,)))
++    prefix=next((i for i,rid in enumerate(order) if rid not in seen),N)
++    looks=sorted({1<<i for i in range(N.bit_length())}|{N})
++    n=max((v for v in looks if v<=prefix),default=0)
++    # Simultaneous over all listed looks, including if request durations
++    # depend on the outcome. No unreturned sample contributes a label.
++    alpha=(1-confidence)/len(looks)
++    k=sum(seen[rid] for rid in order[:n])
++    upper=upper_total(N,n,k,alpha) if n else None
++    q=progress['quotas'];target=q['synthetic']['error']
++    return dict(snapshot=progress['at'],gate_roster_sha256=gate['sha256'],seed=cfg['sampling']['seed'],
++        domain='synthetic',population=N,complete_permutation_prefix=prefix,analysis_prefix=n,
++        prefix_sha256=hashlib.sha256(('\n'.join(order[:n])+'\n').encode()).hexdigest() if n else None,
++        prefix_actual_errors=k,looks=looks,confidence=confidence,per_look_alpha=alpha,
++        upper_total_errors=upper,quota=target,quota_above_bound=None if upper is None else target>upper,
++        minimum_errors_if_only_margins_fixed=max(0,sum(q['synthetic'].values())-sum(v['success'] for v in q.values())),
++        scope='design-based upper bound for this population assuming uniform shuffle and fixed P outcomes; not proof of exhaustion or a stop rule')
++
++
+ if __name__=='__main__':
+     p = argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--progress',type=Path,required=True)
+     p.add_argument('--output',type=Path,required=True)
+     p.add_argument('--all-domains',action='store_true',help='condition on historical dispatch priority before projecting both domains')
++    p.add_argument('--synthetic-upper-confidence',type=float,help='one-sided family confidence across completed powers of two and census')
+     a=p.parse_args()
+-    result=(population_forecast if a.all_domains else analyze)(json.loads(a.config.read_bytes()),json.loads(a.progress.read_bytes()))
++    if a.all_domains and a.synthetic_upper_confidence is not None:p.error('select one report')
++    cfg,progress=json.loads(a.config.read_bytes()),json.loads(a.progress.read_bytes())
++    result=(synthetic_bound(cfg,progress,a.synthetic_upper_confidence) if a.synthetic_upper_confidence is not None
++            else (population_forecast if a.all_domains else analyze)(cfg,progress))
+     write_status(a.output,result);print(json.dumps(result,ensure_ascii=False))
