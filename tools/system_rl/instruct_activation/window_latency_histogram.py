@@ -43,7 +43,8 @@ def audit(root):
             out.append(dict(lane=lane,block=round_['block'],round_sha256=ref['sha256'],
               itl=summary(before,after,'inter_token_latency_seconds',gaps),
               decode=summary(before,after,'request_decode_time_seconds',len(requests)),
-              scheduled_tokens_per_step=summary(before,after,'iteration_tokens_total')))
+              # Output-side prompt + generation accounting; not SchedulerOutput's token budget.
+              reported_iteration_tokens=summary(before,after,'iteration_tokens_total')))
     return out
 
 if __name__=='__main__':
