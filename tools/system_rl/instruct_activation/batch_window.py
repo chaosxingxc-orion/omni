@@ -20,7 +20,7 @@ def analyze(cfgfile,goldfile,parser):
             service,=[v for v in c['services'] if v['name']==name]
             require(n<=width and len(rr['input_refs'])%n==0,'batch not concurrently admitted')
             rows=[x for x in rr['requests'] if x['service']==name]
-            prev=-1; waves=[]
+            prev=-1; waves=[]; generation=[]
             for g in range(len(rr['input_refs'])//n):
                 rs=sorted((x for x in rows if x['group']==g),key=lambda x:x['replicate'])
                 require([x['replicate'] for x in rs]==list(range(n)),'missing batch member')
@@ -38,6 +38,12 @@ def analyze(cfgfile,goldfile,parser):
                     intent=doc(pin(Path(x['receipt_ref']['path']).with_name('INTENT.json')))
                     require(intent['wire_sha256']==hashlib.sha256(canonical(wire)).hexdigest()
                             and hashlib.sha256(raw['raw'].encode()).hexdigest()==raw['response_sha256'],'unmatched receipt')
+                    max_tokens=wire.get('max_completion_tokens')
+                    if max_tokens is None:
+                        max_tokens=wire.get('max_tokens')
+                    generation.append(dict(max_tokens=max_tokens,min_tokens=wire.get('min_tokens',0),
+                                           ignore_eos=wire.get('ignore_eos',False),reason=choice['finish_reason'],
+                                           **{k:x['usage'][k] for k in ('completion_tokens','prompt_tokens','total_tokens')}))
                     label=labels[src['sha256']]
                     try:ranking=mod.parse(choice['message']['content'],label['ranking'],3)
                     except ValueError:ranking=[]
@@ -54,6 +60,9 @@ def analyze(cfgfile,goldfile,parser):
             require(len(rows)==len(waves)*n,'unexpected request')
             total=waves[-1]['last_http_s']-waves[0]['release_s']
             out.append(dict(lane=name,round_sha256=ref['sha256'],batches=waves,
+                output_budget={k:sorted({row[k] for row in generation}, key=str) for k in ('max_tokens','min_tokens','ignore_eos','reason')},
+                token_ranges={k:[min(row[k] for row in generation),max(row[k] for row in generation)]
+                              for k in ('completion_tokens','prompt_tokens','total_tokens')},
                 mean_batch_s=statistics.mean(w['release_to_last_s'] for w in waves),all_valid_batches=sum(w['valid']==n for w in waves),
                 valid=sum(w['valid'] for w in waves),requests=len(rows),wall_s=total,
                 requests_per_second=len(rows)/total,valid_per_second=sum(w['valid'] for w in waves)/total))
