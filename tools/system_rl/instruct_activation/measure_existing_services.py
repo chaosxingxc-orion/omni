@@ -145,7 +145,8 @@ def distinct_rounds(config, services):
                 all(type(k) is int and 1<=k<=32 for k in w.values()) for w in windows)), 'paired admission')
     for b,refs in enumerate(config['distinct_panels']):
         wires=[doc(ref) for ref in refs]
-        require(len(wires)>=2*(max(windows[b].values()) if windows else n) and len(wires)%n==0 and
+        minimum = n if replay else 2*(max(windows[b].values()) if windows else n)
+        require(len(wires)>=minimum and len(wires)%n==0 and
                 len({hashlib.sha256(canonical(w['messages'])).digest() for w in wires})==len(wires), 'distinct complete waves required')
         if replay:
             for wire in wires:

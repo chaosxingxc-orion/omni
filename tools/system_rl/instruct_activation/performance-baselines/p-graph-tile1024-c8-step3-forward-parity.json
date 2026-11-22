@@ -1,0 +1,42 @@
+{
+  "actions": 371,
+  "adapter": "56413c26a9ba62c1474081942cf2e4f64f772679a7ee9ff46eff2bb148b24e44",
+  "checkpoint": "70c7b419037760e8dc0e291410533c30dc274ba313e03b5292be4dbf73156673",
+  "full_vocab_observations": 1,
+  "hf_panel": "0628f18ad605048a647d8bdb2b0ebed5bd49ffb78cbf557bce51f371a7a2149e",
+  "limits": {
+    "max_argmax_flips": 0,
+    "sequence": 0.01,
+    "token": 0.01
+  },
+  "modes": {
+    "eval": {
+      "max_sequence_abs": 0.0,
+      "max_token_abs": 0.0,
+      "over_sequence": 0,
+      "over_token": 0,
+      "top1_flips": 0
+    },
+    "train": {
+      "max_sequence_abs": 0.0,
+      "max_token_abs": 0.0,
+      "over_sequence": 0,
+      "over_token": 0,
+      "top1_flips": 0
+    }
+  },
+  "natural_round": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+  "observer_round": "0b5702b3bc3615a5ffb666d75fc9255c73f05eb51047bbf2a602b9ea3cdc2c13",
+  "optimizer_updates": 0,
+  "passed": true,
+  "passed_requests": 32,
+  "production_rollout": false,
+  "replay_changed": 0,
+  "replay_round": "e0e6ce482fde355cd81d18e25cd8b04480d54af0ba6d141a287e19ed119ecdd4",
+  "requests": 32,
+  "result_sha256": "bacba71ca93108bda6f50eb47342c7e41b0574fc9b13776e192b9d0d48d7f49d",
+  "runtime": "17ec407b72c7a90b098ba7443e5a3c450c878d28f0437d7f2d01076ff1697e98",
+  "scope": "same-checkpoint natural audio and fixed 8-way batch; train/eval forward; zero optimizer updates",
+  "step": 3,
+  "unresolved_top1": 0
+}
