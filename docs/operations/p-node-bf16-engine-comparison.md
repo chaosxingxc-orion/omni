@@ -472,3 +472,5 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 候选 368 个自然动作中，298 个同历史动作与 25 条完整序列的 FSDP8 train/eval logprob 最大差均为零，70 个动作尚无同历史参考；未从这个子集推断独立 top‑1。已启动同 checkpoint 的独立回放和 FSDP8 全动作前向验收，正式 rollout 未切换。后续专家路由实现已验证能从这个新父版派生，尚未实测。[配对数据与训练覆盖](engine-profile-bf16/graph-wide-packed-qkv-cold-train.json)。
 
 在新基线上，step‑3 checkpoint 的八卡 FSDP 已对 32 条真实录音的 368 个自然动作完整打分。训练与评估模式的逐 token 和整段 logprob 最大绝对差均为 0；回放相对自然采样的概率改变 0/368。366 个非并列位置均无 top‑1 翻转；另 2 个并列位置在同一批，独立观察实例只补测该批，不重复训练前向。优化器更新 0 次，正式 rollout 未切换。[八卡完整概率与待解并列数](engine-profile-bf16/wide-tiles-replay-forward-public.json)。
+
+最终复核：对包含两处并列的原始 8 条完整批次做独立观测，四个 TP rank 均以相同完整词表顺序取 argmax，与八卡训练结果一致。32/32 条、368/368 个动作在 train/eval 下逐 token 和整段 logprob 最大差为 0，top‑1 翻转 0、未解位置 0。该结论限第 3 步 checkpoint、真实音频与固定 8 并发的前向；优化器更新 0 次，正式 rollout 未切换。专家路由候选从这个已验收版本继续比较；纯 decode 合并 Q/K/V 另已生成隔离副本，尚无实测收益。[最终精度回执](engine-profile-bf16/wide-packed-argmax-forward-public.json)。

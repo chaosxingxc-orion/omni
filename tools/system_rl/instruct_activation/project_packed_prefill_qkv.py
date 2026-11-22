@@ -61,7 +61,8 @@ def build(config):
     src, rp = root/'bundle'/rel, root/'bundle/ROWS.json'
     rows = doc(pin(rp))
     require(file_digest(src) == rows['decode_layer_graph']['source_sha256'], 'graph source drift')
-    src.write_text(edit(src.read_text()))
+    packed_source=edit(src.read_text())
+    src.write_text(packed_source)
     rows['decode_layer_graph']['source_sha256'] = file_digest(src)
     write_json(rp,rows)
     for lane in config['projection']['lanes']:
@@ -73,6 +74,27 @@ def build(config):
     require(not delta['engine'] and set(delta['files']) == {rel} and set(delta['rows']) == {'decode_layer_graph'},
             'unrelated runtime change')
     save(root/'PACKED-PREFILL-QKV.json',dict(parent=digest(parent),changes=delta))
+    if 'extend_to_decode_parent' in config:
+        # Isolate the small-batch decode branch. Packing has already been
+        # measured for prefill; the decode shapes need their own parity check.
+        immediate=snapshot(Path(config['extend_to_decode_parent']))
+        require(snapshot(root)==immediate,'decode trial must start at the exact packed runtime')
+        packed_source=once(packed_source,'if eager and i not in packed_prefill_weights:',
+                           'if i not in packed_prefill_weights:')
+        packed_source=once(packed_source,'packed_prefill_weights[i] if eager else None','packed_prefill_weights[i]')
+        compile(packed_source,rel,'exec')
+        src.write_text(packed_source)
+        rows['decode_layer_graph']['source_sha256']=file_digest(src)
+        write_json(rp,rows)
+        for lane in config['projection']['lanes']:
+            path=root/'bundle'/('SERVER-'+lane+'.json')
+            spec=doc(pin(path))
+            spec['local_activation']['rows_ref'].update(bytes=rp.stat().st_size,sha256=file_digest(rp))
+            write_json(path,spec)
+        child=changes(immediate,snapshot(root))
+        require(not child['engine'] and set(child['files'])=={rel} and set(child['rows'])=={'decode_layer_graph'},
+                'unrelated decode trial change')
+        save(root/'PACKED-DECODE-QKV.json',dict(immediate_parent=digest(immediate),changes=child))
 
 
 if __name__ == '__main__':
