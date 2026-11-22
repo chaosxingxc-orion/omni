@@ -39,6 +39,10 @@ def assess(c):
         perf = save(c['lock_output'], lock(lock_spec))
         save(c['decision'],dict(action='retain_for_full_precision',report=summary,performance_lock=perf))
         return
+    if enough or 'sibling_flow' not in c:
+        action = 'retain_for_divergence_analysis' if enough else 'no_promotion'
+        save(c['decision'],dict(action=action,report=summary,observed_accuracy_within_limits=accurate))
+        return
     flow = doc(c['sibling_flow'])
     cut = doc(pin(flow['cutover']))
     lane, = cut['lanes']
@@ -46,10 +50,6 @@ def assess(c):
     require(Path(lane['old_code']).parent==root and Path(cut['terminal'])==score/'DRAINED.json'
             and sibling==Path(c['sibling_proof']['path']).parent
             and doc(c['sibling_proof'])['parent']==digest(snapshot(parent)), 'unrelated fallback')
-    # Do not move away from a faster implementation with unexplained divergent arithmetic.
-    if enough and not accurate:
-        save(c['decision'],dict(action='retain_for_divergence_analysis',report=summary))
-        return
     save(c['decision'],dict(action='measure_sibling',report=summary,observed_accuracy_within_limits=accurate))
     run(flow)
 
