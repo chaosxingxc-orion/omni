@@ -502,3 +502,5 @@ KV 批量取页后只清零末页无效行，在四批新录音上为 6.778 秒/
 在真实八并发上，每步跨层共享 RoPE 和 LoRA mask 后为 6.609 秒/批，已验收基线为 6.579 秒。单条 decode 由 2.664 增至 2.718 秒。候选共 375 个动作，328 个共同历史动作及 28 个完整序列与训练和评估模式的 logprob 差为零。未达整批性能门槛。[候选测量](engine-profile-bf16/wide-decode-step-inputs-cold-train.json)
 
 四批诊断的收尾阶段共有 47 个纯 decode 步。剩 7 个请求时单步中位为 125.12 ms（7 步），剩 1 个时仍为 118.53 ms（15 步）。在剩 1 个请求的步中，七个抽样层的 attention/KV 设备区间每步合计平均 6.65 ms，随后 attention all-gather 为 6.26 ms。跨卡区间含等待其他 rank 的时间。[按剩余请求数分解](engine-profile-bf16/wide-packed-boundaries-widths.json)
+
+交错取 KV 页同时应用于 prefill 和纯 decode 后，四批的首条完整回复均提前，但只有一批提前收齐。平均 prefill 1.054→0.998 秒/请求，decode 2.664→2.830 秒/请求，整批 6.579→6.818 秒。318/374 个共同动作、27 个完整序列的训练和评估概率差零。未晋级；已隔离只改 prefill 的版本，逐函数核实纯 decode 与已验收基线相同。[交错取页结果](engine-profile-bf16/wide-kv-interleaved-cold-train.json)。

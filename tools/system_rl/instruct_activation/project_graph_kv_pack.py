@@ -98,7 +98,7 @@ def gather_zero_tail(cache, ids, invalid):
     return source
 
 
-def edit_interleaved(source, reference):
+def edit_interleaved(source, reference, *, include_decode):
     """Use the previously measured block-major gather on both dense FIA paths."""
     original = Path(reference['path'])
     require(pin(original) == reference, 'interleaved gather source changed')
@@ -106,11 +106,12 @@ def edit_interleaved(source, reference):
     helper, = [node for node in ast.parse(code).body
                if isinstance(node, ast.FunctionDef) and node.name == 'interleaved_pages']
     source = once(source, 'def page_plan(', ast.get_source_segment(code, helper) + '\n\n\ndef page_plan(')
-    source = once(source, '''            def gather_pages(cache):
+    if include_decode:
+        source = once(source, '''            def gather_pages(cache):
                 packed = cache.index_select(0, indices).flatten(0, 1)
                 return torch.where(valid, packed, 0)''', '''            packed_key, packed_value = (
                 torch.where(valid, plane, 0) for plane in interleaved_pages(kc, vc, indices))''')
-    source = once(source, 'key=gather_pages(kc), value=gather_pages(vc)', 'key=packed_key, value=packed_value')
+        source = once(source, 'key=gather_pages(kc), value=gather_pages(vc)', 'key=packed_key, value=packed_value')
     source = once(source, '''    def pack(cache):
         return torch.where(valid, cache.index_select(0, ids).flatten(0, 1), 0)''',
                   '''    packed_key, packed_value = (
@@ -122,7 +123,7 @@ def edit_interleaved(source, reference):
 
 def build(config):
     mode = config.get('kv_pack_mode', 'triton_pair')
-    require(mode in ('interleaved_pages', 'zero_tail_rows', 'triton_pair'), 'unknown KV packing mode')
+    require(mode in ('interleaved_pages', 'interleaved_prefill', 'zero_tail_rows', 'triton_pair'), 'unknown KV packing mode')
     if mode != 'triton_pair':
         from project_packed_prefill_qkv import build as packed
         packed(config)
@@ -138,8 +139,8 @@ def build(config):
     rows = doc(pin(rows_path))
     require(rows['decode_attention_sha256'] == file_digest(source), 'incorrect parent attention code')
     original = source.read_text()
-    if mode == 'interleaved_pages':
-        result = edit_interleaved(original, config['interleaved_reference'])
+    if mode in ('interleaved_pages', 'interleaved_prefill'):
+        result = edit_interleaved(original, config['interleaved_reference'], include_decode=mode=='interleaved_pages')
     elif mode == 'zero_tail_rows':
         result = edit_tail_clear(original)
     else:
