@@ -15,11 +15,14 @@ from report_batch_stage import report
 PREFILL = ('before_attention','attention_kv','attention_gather','post_attention',
            'expert_cat','expert_reduce','weighted_sum')
 DECODE = ('decode_before','decode_kv','decode_gather','decode_after','decode_reduce','decode_sum')
+ATTENTION_PARTS = ('decode_plan', 'decode_pack_query', 'decode_read_kv', 'decode_fia', 'decode_copy_result')
 
 
 def summarize(config, state, abi, lane):
     ledger = report(config, state, lane)
     layers = doc(pin(abi))['timed_layers']
+    attention_source = abi.parent/'bundle/parents/jev-system-rl/implementation/decode_tiled_attention.py'
+    timing_attention = attention_source.is_file() and "'decode_copy_result'" in attention_source.read_text()
     values = defaultdict(list)
     for path in state.glob('stages-*.jsonl'):
         events = [json.loads(line) for line in path.read_bytes().splitlines()]
@@ -44,6 +47,8 @@ def summarize(config, state, abi, lane):
         pure=len(s['decode'])==len(s['alloc'])
         phases=DECODE if pure else PREFILL
         expected={(i,p) for i in layers for p in phases}
+        if pure and timing_attention:
+            expected.update((i,p) for i in layers for p in ATTENTION_PARTS)
         require(all(set(x)==expected for x in ranks), f"incomplete step {s['step']}")
         for i,p in sorted(expected):
             device=[x[i,p]['device_ms'] for x in ranks]

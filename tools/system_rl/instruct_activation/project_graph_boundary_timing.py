@@ -50,6 +50,26 @@ def timed(source, layers):
     return source
 
 
+def time_decode_attention(source):
+    source = once(source, '    cached = {}', '    from vllm import prefill_timing as timing\n    cached = {}')
+    source = once(source, '            n = len(query)', '            stamp = timing.start(index)\n            n = len(query)')
+    source = once(source, '            def gather_pages(cache):',
+                  "            timing.end(index, 'decode_plan', stamp)\n            def gather_pages(cache):")
+    def mark(line, phase):
+        return ('            stamp = timing.start(index)\n' + line +
+                "\n            timing.end(index, " + repr(phase) + ", stamp)")
+    line = '            q = query.new_zeros((n * 128, 8, 128)).index_copy_(0, query_rows, query)'
+    source = once(source, line, mark(line, 'decode_pack_query'))
+    source = once(source, 'query=q, key=gather_pages(kc), value=gather_pages(vc)', 'query=q, key=packed_key, value=packed_value')
+    line = '            result = torch_npu.npu_fused_infer_attention_score('
+    source = once(source, line, mark('            packed_key, packed_value = gather_pages(kc), gather_pages(vc)',
+                                      'decode_read_kv') + '\n            stamp = timing.start(index)\n' + line)
+    line = '            output.copy_(result.reshape_as(q).index_select(0, query_rows))'
+    source = once(source, line, "            timing.end(index, 'decode_fia', stamp)\n" + mark(line, 'decode_copy_result'))
+    compile(source, 'decode_tiled_attention.py', 'exec')
+    return source
+
+
 def build(spec):
     layers = spec['timed_layers']
     if not layers or layers != sorted(set(layers)) or any(type(i)!=int or i not in range(48) for i in layers):
@@ -88,6 +108,12 @@ def build(spec):
         compile(source,'decode_layer_graph.py','exec')
     target.write_text(source)
     rows['decode_layer_graph']['source_sha256']=digest(target)
+    if spec.get('time_decode_attention'):
+        path = target.with_name('decode_tiled_attention.py')
+        if rows['decode_attention_sha256'] != digest(path):
+            raise ValueError('attention source differs')
+        path.write_text(time_decode_attention(path.read_text()))
+        rows['decode_attention_sha256'] = digest(path)
     save(rp,rows)
     server=root/'bundle'/('SERVER-'+lane+'.json')
     cfg=read(server)

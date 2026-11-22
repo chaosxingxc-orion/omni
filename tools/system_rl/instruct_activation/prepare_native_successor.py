@@ -47,6 +47,13 @@ def stage(c):
         run.setdefault('phase_specs',{})[phase]=save(r/(phase+'-restored.local.json'),cfg)
     run['start_receipts'][control]=get(old,'-restored-run.local.json')['start_receipts'][control]
     meas=put('-restored-run.local.json',run)
+    if c.get('diagnostic_only'):
+        require('native_diagnostic' not in c, 'diagnostic successor expects a scored candidate')
+        flow=get(new,'-flow.local.json')
+        flow.update(cutover=switch['path'],measure=meas['path'],
+                    after_no_promotion=str(r/(old+'-native-DECISION.json')))
+        put('-conditional-flow.local.json',flow)
+        return
     spec=get(old,'-parent-trained-report.local.json')
     spec.update(candidate_config=path('-latency/CONFIG.local.json'),historical_score=path('-score'),output=path('-cold-train.json'))
     report=put('-parent-trained-report.local.json',spec)
