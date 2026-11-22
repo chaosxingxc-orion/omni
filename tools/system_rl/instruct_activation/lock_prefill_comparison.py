@@ -39,7 +39,17 @@ def lock(c):
     base, new = snapshot(p), snapshot(b)
     delta = changes(base, new)
     engine_delta = c.get('expected_engine_delta', {})
-    if c.get('change_scope') == 'scheduler_only':
+    if 'components' in c:
+        manifest = doc(c['components'])
+        require(Path(c['components']['path']) == b/'COMPONENTS.json' and
+                manifest['parent'] == digest(base) and manifest['changes'] == delta and
+                not delta['engine'] and len(manifest['components']) == 2 and
+                all(not component['engine'] and len(component['files']) == len(component['rows']) == 1
+                    for component in manifest['components']) and
+                all(len(delta[key]) == 2 and
+                    delta[key] == manifest['components'][0][key] | manifest['components'][1][key]
+                    for key in ('files','rows')), 'unrelated component change')
+    elif c.get('change_scope') == 'scheduler_only':
         require(set(engine_delta) == {'serve_args'} and delta['engine'] == engine_delta
                 and not delta['files'] and not delta['rows'], 'unrelated scheduler trial change')
     else:

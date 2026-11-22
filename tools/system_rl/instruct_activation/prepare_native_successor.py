@@ -76,6 +76,9 @@ def stage(c):
         flow['after_no_promotion']=str(r/(old+'-native-DECISION.json'))
         put('-conditional-flow.local.json',flow)
     ls.pop('change_scope',None)
+    ls.pop('components',None)
+    if 'prefill_page_component' in src:
+        ls['components']=pin(r/new/'COMPONENTS.json')
     ls.update(candidate=spec['candidate_config'],candidate_packet=path(''),version=c['version'],
               expected_engine_delta={},changed_file=c['changed_file'],changed_row=c['changed_row'])
     lock=put('-native-lock.local.json',ls)
