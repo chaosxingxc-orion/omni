@@ -82,7 +82,20 @@ def submit_screen(x,root,timeout,rid,domain,port,*,binding=None,timing=None):
         timing.update(prepare=prepared-started,intent=sent-prepared,http=received-sent,parse_and_commit=end-received,total=end-started,prompt=response['usage']['prompt_tokens'],completion=response['usage']['completion_tokens'])
     return status,rank,err,raw[:600] if status=='http_failure' else None
 
+def validate_screen_layout(c):
+    expected=c.get('required_lanes_by_host')
+    if expected is None:return
+    actual={name:len(host['local_ports']) for name,host in c['hosts'].items()}
+    if not expected or any(type(n) is not int or n<1 for n in expected.values()) or actual!=expected:
+        raise ValueError(f'screen host allocation differs: expected {expected}, configured {actual}')
+    for host in c['hosts'].values():
+        lanes=doc(host['profile'])['lanes'].values()
+        cards=[card for lane in lanes for card in lane['cards']]
+        if len(lanes)!=len(host['local_ports']) or len(set(cards))!=len(cards):
+            raise ValueError('screen profile lane count or device assignment differs')
+
 def run(c):
+    validate_screen_layout(c)
     root=Path(c['output']); lock=(root/'SCREEN.guard').open('a+');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     db=sqlite3.connect(root/'p-screen.sqlite');db.row_factory=sqlite3.Row
     db.execute('pragma journal_mode=WAL');db.execute('pragma synchronous=FULL')
