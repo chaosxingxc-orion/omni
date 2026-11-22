@@ -1,0 +1,257 @@
+{
+  "both_lanes_audio_cold": false,
+  "cache": {
+    "a": {
+      "mm_hits": 0.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0
+    },
+    "b": {
+      "mm_hits": 32.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0
+    }
+  },
+  "cold_native_comparison": {
+    "candidate": {
+      "batch_s": [
+        8.1545097399503,
+        7.580300870002247,
+        6.846682769944891,
+        6.586828910047188
+      ],
+      "lane": "a",
+      "mean_batch_s": 7.292080572486157,
+      "mean_decode_seconds": 2.9754373284267785,
+      "mean_prefill_seconds": 1.1974693343763647,
+      "mean_queue_seconds": 1.845186086873582,
+      "mean_ttft_seconds": 3.55556458234787,
+      "mm_hits": 0.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0,
+      "requests": 32,
+      "round_sha256": "242fd37ec0169af7c21d52d1d11bd4ec13ff9d02494869a24d577ede78f5d09d",
+      "valid": 24
+    },
+    "gap_s": 1.7874842424935196,
+    "native": {
+      "batch_s": [
+        5.999246129998937,
+        5.538530930061825,
+        5.401062949909829,
+        5.079545309999958
+      ],
+      "lane": "b",
+      "mean_batch_s": 5.504596329992637,
+      "mean_decode_seconds": 2.33515138968869,
+      "mean_prefill_seconds": 0.9771480103008798,
+      "mean_queue_seconds": 1.4279484343860531,
+      "mean_ttft_seconds": 2.8036192432045937,
+      "mm_hits": 0.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0,
+      "requests": 32,
+      "round_sha256": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+      "valid": 28
+    },
+    "separate_windows": true
+  },
+  "historical_hf": {
+    "common": 50,
+    "complete": 4,
+    "max_action_abs": 0.0,
+    "max_sequence_abs": 0.0,
+    "requests": 5,
+    "top1_observed": false
+  },
+  "itl": [
+    {
+      "lane": "a",
+      "n": 351,
+      "over_half": 92,
+      "p50": [
+        0.1,
+        0.15
+      ],
+      "p95": [
+        0.5,
+        0.75
+      ]
+    },
+    {
+      "lane": "b",
+      "n": 342,
+      "over_half": 0,
+      "p50": [
+        0.025,
+        0.05
+      ],
+      "p95": [
+        0.3,
+        0.4
+      ]
+    }
+  ],
+  "paired": {
+    "batches": [
+      {
+        "batch": 0,
+        "candidate_first_s": 6.944809489999898,
+        "candidate_s": 8.1545097399503,
+        "candidate_tokens": 98,
+        "parent_first_s": 7.148142050020397,
+        "parent_s": 8.48760133003816,
+        "parent_tokens": 98,
+        "saved_s": 0.3330915900878608
+      },
+      {
+        "batch": 1,
+        "candidate_first_s": 5.712599730002694,
+        "candidate_s": 7.580300870002247,
+        "candidate_tokens": 101,
+        "parent_first_s": 5.917366230045445,
+        "parent_s": 7.834927969961427,
+        "parent_tokens": 97,
+        "saved_s": 0.25462709995917976
+      },
+      {
+        "batch": 2,
+        "candidate_first_s": 5.845785729936324,
+        "candidate_s": 6.846682769944891,
+        "candidate_tokens": 94,
+        "parent_first_s": 6.14719184988644,
+        "parent_s": 7.354271429940127,
+        "parent_tokens": 90,
+        "saved_s": 0.5075886599952355
+      },
+      {
+        "batch": 3,
+        "candidate_first_s": 5.598843910032883,
+        "candidate_s": 6.586828910047188,
+        "candidate_tokens": 90,
+        "parent_first_s": 6.1307134800590575,
+        "parent_s": 6.88815578003414,
+        "parent_tokens": 86,
+        "saved_s": 0.30132686998695135
+      }
+    ],
+    "candidate_round": "242fd37ec0169af7c21d52d1d11bd4ec13ff9d02494869a24d577ede78f5d09d",
+    "candidate_valid": 24,
+    "mean_batch_saved_s": 0.34915855500730686,
+    "output_actions": {
+      "candidate_tokens": 383,
+      "common": 318,
+      "common_max_abs": 0.0,
+      "identical_sequences": 26,
+      "parent_tokens": 371,
+      "sequence_max_abs": 0.0
+    },
+    "parent_round": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+    "parent_valid": 27,
+    "per_request": {
+      "mean_decode_seconds": [
+        3.1416609853076807,
+        2.9754373284267785
+      ],
+      "mean_prefill_seconds": [
+        1.2635693765660108,
+        1.1974693343763647
+      ],
+      "mean_queue_seconds": [
+        1.6930027224880178,
+        1.845186086873582
+      ],
+      "mean_ttft_seconds": [
+        3.662625126540661,
+        3.55556458234787
+      ]
+    },
+    "prefix": [
+      67456.0,
+      153422.0
+    ],
+    "relative_batch_reduction": 0.04569397046495005
+  },
+  "train": {
+    "actions": 383,
+    "candidate_round": "242fd37ec0169af7c21d52d1d11bd4ec13ff9d02494869a24d577ede78f5d09d",
+    "candidate_top1_observed": false,
+    "common_actions": 318,
+    "complete_sequences": 26,
+    "limits": {
+      "max_argmax_flips": 0,
+      "sequence": 0.01,
+      "token": 0.01
+    },
+    "modes": {
+      "eval": {
+        "max_action_abs": 0.0,
+        "max_complete_sequence_abs": 0.0,
+        "over_sequence": 0,
+        "over_token": 0
+      },
+      "train": {
+        "max_action_abs": 0.0,
+        "max_complete_sequence_abs": 0.0,
+        "over_sequence": 0,
+        "over_token": 0
+      }
+    },
+    "reference_hf_panel": "0628f18ad605048a647d8bdb2b0ebed5bd49ffb78cbf557bce51f371a7a2149e",
+    "reference_proof": "3b9e693d5e356c407c91defb57af8909279b3285628082ca43b7df9647121b7e",
+    "requests": 32,
+    "step": 3,
+    "training_admission": false,
+    "unscored_actions": 65
+  },
+  "windows": [
+    {
+      "lane": "a",
+      "mean_batch_s": 7.292080572486157,
+      "requests": 32,
+      "round_sha256": "242fd37ec0169af7c21d52d1d11bd4ec13ff9d02494869a24d577ede78f5d09d",
+      "token_ranges": {
+        "completion_tokens": [
+          10,
+          20
+        ],
+        "prompt_tokens": [
+          4164,
+          5614
+        ],
+        "total_tokens": [
+          4175,
+          5627
+        ]
+      },
+      "valid": 24,
+      "valid_per_second": 0.8223355924378606
+    },
+    {
+      "lane": "b",
+      "mean_batch_s": 4.5404489200154785,
+      "requests": 32,
+      "round_sha256": "242fd37ec0169af7c21d52d1d11bd4ec13ff9d02494869a24d577ede78f5d09d",
+      "token_ranges": {
+        "completion_tokens": [
+          10,
+          20
+        ],
+        "prompt_tokens": [
+          4164,
+          5614
+        ],
+        "total_tokens": [
+          4175,
+          5627
+        ]
+      },
+      "valid": 26,
+      "valid_per_second": 1.4302054477223503
+    }
+  ]
+}

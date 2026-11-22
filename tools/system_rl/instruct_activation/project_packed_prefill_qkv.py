@@ -49,8 +49,14 @@ def build(config):
     root = Path(config['projection']['target'])
     parent = snapshot(Path(config['qkv_parent']))
     proof = doc(config['qkv_parent_proof'])
-    require(proof['passed'] and digest(parent) == proof['runtime'] and snapshot(root) == parent,
-            'training-reviewed parent required')
+    require(proof['passed'] and digest(parent) == proof['runtime'], 'training-reviewed parent required')
+    before_packing = snapshot(root)
+    if before_packing != parent:
+        from copy import deepcopy
+        expected = deepcopy(parent)
+        expected['rows']['decode_layer_graph']['prefill_tile_rows'] = config['graph_tile_rows']
+        require(before_packing == expected and config['graph_tile_rows'] == config['combine_with_tile_rows'],
+                'combined candidate may change only the configured tile rows before packing')
     rel = 'parents/jev-system-rl/implementation/decode_layer_graph.py'
     src, rp = root/'bundle'/rel, root/'bundle/ROWS.json'
     rows = doc(pin(rp))

@@ -460,3 +460,5 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 混合步占总步时 62.2%，其中 31/35 步用满 2,048 个 token；纯 prefill 9/9 步用满。对四卡七个实际层，每步每层先取四卡设备流中位再按层相加：混合步后半段（输出投影、路由、专家计算和图输出复制）28.34 ms，attention 之前 17.68 ms，专家归约 13.26 ms，attention/KV 11.11 ms，attention 汇集 3.09 ms。纯 decode 的七层 attention/KV 为 7.47 ms、attention 汇集 5.21 ms。区间包含流等待，不将它们直接外推 48 层，也不把诊断版计时当作无桩性能。在这个批形下，长 token 间隔主要应从含 prefill 的步内计算排查。已准备两个独立实现：合并 Q/K/V 前段投影，以及只在捕图的完整 tile 上将专家 GEMM 限定为本卡实际选中的专家。
 
 [各步各层实测 CSV](engine-profile-bf16/locked-tile-boundaries-device.csv) · [统计分母与时延](engine-profile-bf16/locked-tile-boundaries-intervals.json)。跨轮冷音频原生比较现按两个窗口的全部预热/计时输入、实际提示、并发、已绑定 adapter、prefix 命中及 MM 查询/命中核对。单内核收集 K/V 与输出缓冲候选的冷音频原生参照均为 5.505 s/批，实测分别慢 5.316 / 2.327 s/批；两者与原生来自不同时间窗口，不能排除宿主状态波动。
+
+完整 1,024 行基线上，合并 Q/K/V 的本卡基座输出列和三组 LoRA A 投影后，四批均快，7.641→7.292 秒/批（−4.57%）。每请求 prefill 1.264→1.197、decode 3.142→2.975 秒，冷音频原生 5.505 秒/批。父/子有效输出 27/24（各 32 条），自然动作数 371/383；相同输入历史的 318 个动作和 26 条完整序列同 FSDP8 train/eval 的概率差均为零。另有 65 个动作未覆盖，候选独立 top‑1 未观测。未达 10% 性能晋级线；控制器已接续完整 tile 上的专家路由试验，并准备了 2,048 行结合 Q/K/V 投影的单独候选。[冷音频配对与训练概率](engine-profile-bf16/graph-packed-prefill-qkv-cold-train.json)。
