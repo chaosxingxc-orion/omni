@@ -36,6 +36,8 @@ def main(config):
                 time.sleep(5)
             pid=state['State']['Pid']
             service.update(pid=pid,start_ticks=int((Path('/proc')/str(pid)/'stat').read_text().rsplit(')',1)[1].split()[19]))
+        if 'start_receipts' in config:
+            seed['start_receipts']=config['start_receipts']
         path=root/phase/'CONFIG.local.json';save(path,seed);run(path)
         if phase==lazy.get('phase'):
             s,=[s for s in seed['services'] if s['name']==lazy['lane']]
