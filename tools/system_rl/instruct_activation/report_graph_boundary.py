@@ -108,8 +108,16 @@ def capture_tail(ledger,state):
     batches={}
     for batch,(lo,hi) in sorted(spans.items()):
         matched=[]
+        overlap_ms=0.; kinds=defaultdict(float); tail_steps=[]
         for step in ledger['steps']:
             if step['batch']!=batch: continue
+            ms=max(0,min(hi,step['end_ns'])-max(lo,step['start_ns']))/1e6
+            if ms:
+                kind='decode' if len(step['decode'])==len(step['alloc']) else 'mixed' if step['decode'] else 'prefill'
+                kinds[kind]+=ms
+                overlap_ms+=ms
+                tail_steps.append(dict(step=step['step'],kind=kind,width=len(step['alloc']),
+                                       outputs=sum(step['out'].values()),overlap_ms=ms))
             ranks=result[step['step']]
             require(len(ranks)==4 and all(r['shapes']==ranks[0]['shapes'] for r in ranks),'inconsistent first builds')
             if ranks[0]['shapes']:
@@ -117,7 +125,11 @@ def capture_tail(ledger,state):
                     shapes=sorted({n for _,n in ranks[0]['shapes']}),
                     build_ms=statistics.median(r['build_ms'] for r in ranks),
                     tail_build_ms=statistics.median(r['tail_build_ms'] for r in ranks)))
-        batches[batch]=dict(server_first_to_last_ms=(hi-lo)/1e6,steps_with_builds=matched)
+        elapsed=(hi-lo)/1e6
+        require(overlap_ms<=elapsed+1e-6,'overlapping serving steps')
+        batches[batch]=dict(server_first_to_last_ms=elapsed,steps_with_builds=matched,
+                            engine_step_overlap_ms=dict(kinds),outside_steps_ms=elapsed-overlap_ms,
+                            tail_steps=tail_steps)
     return dict(round=ledger['round_sha256'],batches=batches,ranks=rank_count,
                 scope='worker host wall intervals intersected with first-to-last server send; median across TP ranks')
 

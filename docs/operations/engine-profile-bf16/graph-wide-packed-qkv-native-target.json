@@ -1,0 +1,14 @@
+{
+  "runtime": "772a09d33e629e6f6533810647a6fcbc3fca49d29f3379dfc023bbf1c12858dc",
+  "step": 3,
+  "round": "47157a9cf9499315ccabfa3c816bcbec454557aefecc8051c574a28887c2802f",
+  "native_round": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+  "requests": 32,
+  "actions": 368,
+  "candidate_s": 6.579279837489594,
+  "native_s": 5.504596329992637,
+  "max_batch_s": 6.055055962991902,
+  "still_to_save_s": 0.5242238744976921,
+  "relative_excess": 0.19523384514889464,
+  "within_target": false
+}

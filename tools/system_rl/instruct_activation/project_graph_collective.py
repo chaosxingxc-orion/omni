@@ -55,6 +55,46 @@ def edit(source):
 
 
 def build(spec):
+    if spec.get('collective_scope')=='pure_decode':
+        from project_packed_prefill_qkv import build as pack
+        pack(spec)
+        root=Path(spec['projection']['target'])
+        before=snapshot(Path(spec['collective_parent']))
+        if snapshot(root)!=before or digest_state(before)!=read(Path(spec['parent_lock']))['runtime_sha256']:
+            raise ValueError('wrong decode capture parent')
+        rel='parents/jev-system-rl/implementation/decode_layer_graph.py'
+        source=root/'bundle'/rel
+        rp=root/'bundle/ROWS.json'
+        rows=read(rp)
+        graph=rows['decode_layer_graph']
+        if digest(source)!=graph['source_sha256'] or graph['capture_segments']!='both':
+            raise ValueError('expected measured two-segment graph')
+        src=source.read_text()
+        anchor='        two=capture(after,(dummy,residual,mask),pool) if segments!=\'before\' else after'
+        src=once(src,anchor,'''        # Retain the original arithmetic and collective order. Capture gather,
+        # routed GEMMs, reduce and the weighted sum as one decode segment.
+        def complete(local_attention,res,adapter_mask):
+            full=gather(local_attention.contiguous(),dim=1)
+            local,w,total=after(full,res,adapter_mask)
+            rows=reduce(local).reshape(n,8,2048)
+            return (rows*w[:,:,None]).sum(dim=1),total
+        two=capture(complete,(dummy[:,:1024].contiguous(),residual,mask),pool)''')
+        start=src.index('            full=gather(attention_output.contiguous(),dim=1)')
+        end=src.index('            return out,total',start)+len('            return out,total')
+        src=once(src,src[start:end],'''            out,total=two(attention_output,total,mask)
+            return out.clone(),total.clone()''')
+        compile(src,rel,'exec');source.write_text(src)
+        graph['source_sha256']=digest(source)
+        save(rp,rows)
+        for lane in spec['projection']['lanes']:
+            p=root/'bundle'/('SERVER-'+lane+'.json'); cfg=read(p)
+            cfg['local_activation']['rows_ref'].update(sha256=digest(rp),bytes=rp.stat().st_size)
+            save(p,cfg)
+        delta=changes(before,snapshot(root))
+        if delta['engine'] or set(delta['files'])!={rel} or set(delta['rows'])!={'decode_layer_graph'}:
+            raise ValueError('unrelated decode change')
+        save(root/'COLLECTIVE-GRAPH.json',dict(immediate_parent=digest_state(before),scope='pure_decode',changes=delta))
+        return
     setting=spec['collective_graph']
     if set(setting)!={'rows','capture_budget_bytes'}:
         raise ValueError('expected capture shape and budget')

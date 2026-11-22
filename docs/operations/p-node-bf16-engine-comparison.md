@@ -483,3 +483,7 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 将已验收的 prefill Q/K/V 合并计算单独扩展到纯 decode 图：收齐四批 7.150、6.247、6.415、6.127 秒，均值 6.485 对父版 6.579，只有第二批改善。单请求 prefill 1.058 对 1.054、decode 2.694 对 2.664，ITL 中位仍 100–150 ms。有效输出 25/32，候选 379 个自然动作中 303 个共同历史动作、25 整段 train/eval 差零，76 动作及独立 top‑1 未覆盖。未晋级；已在同一已验收父版上开始独立测试单分块消除重复拼接。[纯 decode 合并投影](engine-profile-bf16/wide-decode-packed-qkv-cold-train.json)。
 
 单分块保留原有图输出副本与 BF16 归约，仅省去 Q/K/V、专家输出及残差的单元素拼接。四批为两快两慢，均值 6.754 s/批，对训练已验收的父版 6.579 s；单请求 prefill 1.045 s，decode 2.802 s，有效输出 26/32。322/375 个共同动作与 27 条完整序列在 FSDP8 train/eval logprob 差零，未测独立 top‑1。未晋级。后继独立诊断使用已验收父版，记录各层首次 decode 建图区间及它们与批次收尾的重叠。[单分块候选结果](engine-profile-bf16/wide-single-piece-cold-train.json)。
+
+按原生 vLLM 的 110% 批时延审查，当前锁定基线在真实 8 并发下比上版省 13.90%（7.641→6.579 秒/批），比匹配冷音频原生 5.505 秒/批慢 19.52%。两组使用相同输入和 adapter，在不同窗口测量，均有效 28/32。以本次原生窗口为参照，10% 容差为 6.055 秒/批，尚需省 0.524 秒/批。step‑3 的 32 条、368 个动作通过八卡训练和评估模式的全量前向验收。[性能判定](engine-profile-bf16/graph-wide-packed-qkv-native-target.json) · [精度回执](engine-profile-bf16/wide-packed-argmax-forward-public.json)。
+
+独立诊断实例的 4 批真实录音中，首条至末条完整响应的服务端发送间隔累计 5.758 秒，其中 5.737 秒（99.64%）落在纯 decode 调度步。首次宽度 8 建图落在首批首条完整响应前，与四批收尾重叠均为零。52 个纯 decode 步的时延中位数为 123.5 ms。这个比例描述诊断实例自身的收尾时间，对原生的时延差距仍用无桩窗口衡量。[发送与调度步交集](engine-profile-bf16/wide-packed-boundaries-tail.json) · [步耗时](engine-profile-bf16/wide-packed-boundaries-times.json)。

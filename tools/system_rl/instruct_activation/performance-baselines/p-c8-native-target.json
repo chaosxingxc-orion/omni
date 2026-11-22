@@ -1,0 +1,1 @@
+{"metric":"mean_batch_s","width":8,"max_relative_excess":0.10,"reference":"matched_cold_native","require_full_train_eval_forward":true}
