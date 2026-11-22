@@ -47,7 +47,12 @@ def qualify(c):
     stage_spec = doc(c['train_template'])
     stage_spec.update(panel_source=str(source),target=c['train_target'])
     resume = c.get('resume_before_first_request')
-    if resume is None:
+    staged = c.get('resume_before_cutover')
+    if staged:
+        require(resume is None and staged == pin(Path(c['train_target'])/'PANEL-SOURCE.json')
+                and not (root/('cutover-'+diagnostic.name)).exists()
+                and not (diagnostic/'rounds').exists(), 'cutover or replay has already started')
+    if resume is None and not staged:
         stage(stage_spec)
     else:
         sealed = doc(pin(Path(c['train_target'])/'PANEL-SOURCE.json'))
@@ -207,6 +212,45 @@ def close_tied_wave(c):
     subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('review_prefill_panel.py')),spec['path']],check=True)
 
 
+def finish_native(c):
+    """Seal a matched cold performance lock together with its full training proof."""
+    from review_native_target import review as review_target
+    from decode_lineage import snapshot
+    from io_utils import digest
+    decision = doc(c['decision'])
+    require(decision['action'] == 'retain_for_full_precision', 'candidate did not pass performance')
+    lock = doc(decision['performance_lock'])
+    cfg = doc(c['qualify'])
+    packet = Path(cfg['packet'])
+    replay_packet = Path(cfg['diagnostic'])
+    require(cfg['decision'] == c['decision']['path'] and replay_packet.parent == packet.parent
+            and digest(snapshot(packet)) == lock['runtime_sha256'], 'different qualification or packet')
+    reviewed = replay_packet.with_name(replay_packet.name+'-forward-public.json')
+    deadline = time.monotonic() + cfg['wait_seconds']
+    while not reviewed.exists():
+        require(time.monotonic() < deadline, 'training proof has not been sealed')
+        time.sleep(5)
+    proof = doc(pin(reviewed))
+    if not proof['passed'] and proof['unresolved_top1'] and not proof['replay_changed'] and all(
+            m['over_token'] == m['over_sequence'] == m['top1_flips'] == 0 for m in proof['modes'].values()):
+        observer = dict(c['observer'])
+        observer.update(handoff=pin(replay_packet.with_name(replay_packet.name+'-hf-handoff.local.json')),
+                        initial_review=str(replay_packet.with_name(replay_packet.name+'-review.local.json')),
+                        replay_seed=pin(replay_packet.with_suffix('.json')), replay_project=cfg['replay_project'],
+                        replay_run=pin(replay_packet.with_name(replay_packet.name+'-run.local.json')),
+                        wait_seconds=cfg['wait_seconds'])
+        close_tied_wave(observer)
+        reviewed = packet.with_name(observer['packet_name']+'-forward-public.json')
+        proof = doc(pin(reviewed))
+    require(proof['runtime'] == lock['runtime_sha256'], 'different trained runtime')
+    ls = doc(pin(cfg['lock_config']))
+    result = review_target(doc(ls['native_target']), doc(decision['report']), proof)
+    require(result['within_target'], 'matching performance target missed')
+    save(c['output'], dict(version=lock['version'],performance_lock=decision['performance_lock'],
+                           training=pin(reviewed), review=result, production_rollout=False))
+
+
 if __name__ == '__main__':
     config=doc(pin(sys.argv[1]))
-    (close_tied_wave if config.get('operation')=='close_tied_wave' else qualify)(config)
+    {'qualify':qualify, 'close_tied_wave':close_tied_wave, 'finish_native':finish_native}[
+        config.get('operation','qualify')](config)
