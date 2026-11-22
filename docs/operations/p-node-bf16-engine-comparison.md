@@ -497,3 +497,8 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 KV 批量取页后只清零末页无效行，在四批新录音上为 6.778 秒/批，原已验收基线为 6.579 秒。每条请求的 decode 由 2.664 增至 2.771 秒。与训练端可比的 305/380 个动作、24 条完整序列在 train/eval 下概率差均为零。控制器按整批时延保留父版。[候选测量](engine-profile-bf16/wide-kv-tail-clear-cold-train.json)
 
 已验收基线和匹配冷原生在第二批中都由同一条 20-token 回复最后返回。从首条到末条完整回复分别耗时 1.949 和 0.890 秒，两者相差 1.059 秒。其余三批最后返回的请求不同。[按批对照](engine-profile-bf16/graph-wide-packed-qkv-paired-tail.json)
+
+
+在真实八并发上，每步跨层共享 RoPE 和 LoRA mask 后为 6.609 秒/批，已验收基线为 6.579 秒。单条 decode 由 2.664 增至 2.718 秒。候选共 375 个动作，328 个共同历史动作及 28 个完整序列与训练和评估模式的 logprob 差为零。未达整批性能门槛。[候选测量](engine-profile-bf16/wide-decode-step-inputs-cold-train.json)
+
+四批诊断的收尾阶段共有 47 个纯 decode 步。剩 7 个请求时单步中位为 125.12 ms（7 步），剩 1 个时仍为 118.53 ms（15 步）。在剩 1 个请求的步中，七个抽样层的 attention/KV 设备区间每步合计平均 6.65 ms，随后 attention all-gather 为 6.26 ms。跨卡区间含等待其他 rank 的时间。[按剩余请求数分解](engine-profile-bf16/wide-packed-boundaries-widths.json)

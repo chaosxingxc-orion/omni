@@ -136,6 +136,37 @@ def capture_tail(ledger,state):
                 scope='worker host wall intervals intersected with first-to-last server send; median across TP ranks')
 
 
+def tail_by_width(ledger, tail, rows, layers):
+    require(ledger['round_sha256'] == tail['round'], 'tail belongs to a different run')
+    intervals = defaultdict(dict)
+    for row in rows:
+        if row['kind'] == 'decode':
+            key = row['layer'], row['phase']
+            step = intervals[row['step']]
+            require(key not in step, 'duplicate decode interval')
+            step[key] = row['device_median_ms']
+    expected = {(i, p) for i in layers for p in DECODE}
+    ledger_steps = {s['step']:s for s in ledger['steps']}
+    groups = defaultdict(list)
+    seen = set()
+    for batch in tail['batches'].values():
+        for span in batch['tail_steps']:
+            if span['kind'] != 'decode':
+                continue
+            i = span['step']
+            require(i not in seen and set(intervals[i]) == expected, 'missing or repeated decode step')
+            seen.add(i)
+            step = ledger_steps[i]
+            require(len(step['alloc']) == len(step['decode']) == span['width'], 'decode width differs')
+            groups[span['width']].append((span, step['ms']['total'], intervals[i]))
+    return dict(round=tail['round'], layers=layers, ranks=tail['ranks'], widths={
+        width: dict(steps=len(items), median_step_ms=statistics.median(ms for _,ms,_ in items),
+                    tail_overlap_ms=sum(span['overlap_ms'] for span,_,_ in items),
+                    mean_sampled_layer_sum_ms={
+                        phase:statistics.mean(sum(device[i, phase] for i in layers) for _,_,device in items)
+                        for phase in DECODE}) for width,items in sorted(groups.items())})
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('config','state','abi'):
@@ -143,17 +174,22 @@ if __name__=='__main__':
     parser.add_argument('lane')
     parser.add_argument('--summary',type=Path)
     parser.add_argument('--capture-tail',type=Path)
+    parser.add_argument('--tail-widths',type=Path)
     args=parser.parse_args()
     rows=summarize(args.config,args.state,args.abi,args.lane)
-    if args.summary or args.capture_tail:
+    if args.summary or args.capture_tail or args.tail_widths:
         ledger=report(args.config,args.state,args.lane)
     if args.summary:
         save(args.summary,aggregate(ledger,rows,doc(pin(args.abi))['timed_layers']))
-    if args.capture_tail:
+    if args.capture_tail or args.tail_widths:
         require('decode_graph_first_build' in
                 (args.abi.parent/'bundle/parents/jev-system-rl/implementation/decode_layer_graph.py').read_text(),
                 'cannot count builds without instrumentation')
-        save(args.capture_tail,capture_tail(ledger,args.state))
+        tail = capture_tail(ledger,args.state)
+        if args.capture_tail:
+            save(args.capture_tail,tail)
+        if args.tail_widths:
+            save(args.tail_widths,tail_by_width(ledger,tail,rows,doc(pin(args.abi))['timed_layers']))
     w=csv.DictWriter(sys.stdout,fieldnames=rows[0],lineterminator='\n')
     w.writeheader()
     w.writerows(rows)
