@@ -504,3 +504,5 @@ KV 批量取页后只清零末页无效行，在四批新录音上为 6.778 秒/
 四批诊断的收尾阶段共有 47 个纯 decode 步。剩 7 个请求时单步中位为 125.12 ms（7 步），剩 1 个时仍为 118.53 ms（15 步）。在剩 1 个请求的步中，七个抽样层的 attention/KV 设备区间每步合计平均 6.65 ms，随后 attention all-gather 为 6.26 ms。跨卡区间含等待其他 rank 的时间。[按剩余请求数分解](engine-profile-bf16/wide-packed-boundaries-widths.json)
 
 交错取 KV 页同时应用于 prefill 和纯 decode 后，四批的首条完整回复均提前，但只有一批提前收齐。平均 prefill 1.054→0.998 秒/请求，decode 2.664→2.830 秒/请求，整批 6.579→6.818 秒。318/374 个共同动作、27 个完整序列的训练和评估概率差零。未晋级；已隔离只改 prefill 的版本，逐函数核实纯 decode 与已验收基线相同。[交错取页结果](engine-profile-bf16/wide-kv-interleaved-cold-train.json)。
+
+只在 prefill 交错读取 KV 页，纯 decode 保持已验收实现。四批均提前收齐，各省 0.029、0.112、0.313、0.303 秒；均值从 6.579 降至 6.390 秒（−2.88%），单请求 prefill 1.054→1.005 秒，decode 2.664→2.646 秒，超过 0.5 秒的后续 token 间隔从 7/336 降到 0/340。相同输入与缓存条件下，独立冷音频原生为 5.505 秒/批；候选仍慢 16.08%，距离 10% 线还差 0.335 秒/批。有效输出 27/32；372 个动作中 337 个同历史动作、28 个完整序列与 FSDP8 train/eval 概率差零，其余 35 个动作和独立 top‑1 未验收。保留已有工程基线。[四批配对与精度覆盖](engine-profile-bf16/wide-kv-interleaved-prefill-cold-train.json)。
