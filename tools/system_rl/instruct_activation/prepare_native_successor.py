@@ -20,6 +20,21 @@ def stage(c):
                  lane=c['lane'],preflight=c['preflight'],batch_size=c['width']))
     prior=get(old,'-restored-switch.local.json')
     cut=get(new,'-switch.local.json');cut['retain_lanes']=prior['retain_lanes']
+    if 'native_diagnostic' in c:
+        diagnostic = Path(c['native_diagnostic'])
+        owner = doc(pin(diagnostic/'CUTOVER.json'))
+        require(owner['guard'] == cut['guard'] and owner['retain_lanes'] == cut['retain_lanes'],
+                'different diagnostic guard or control')
+        active, = owner['lanes']
+        slot, = cut['lanes']
+        require(active['old_code'] == slot['old_code'] and active['old_attempt'] == slot['old_attempt'],
+                'diagnostic did not replace predecessor')
+        slot.update(old_code=active['new_code'], old_attempt=active['new_attempt'])
+        measured = doc(pin(diagnostic/'MEASUREMENT.json'))
+        latency = r/measured['phases'][-1]
+        cut.pop('after_score')
+        cut.update(terminal=str(latency/'rounds/DRAINED.json'), after_iterations=pin(diagnostic/'ITERATIONS.json'),
+                   diagnostic_lane=c['lane'], diagnostic_receipt=pin(measured['start_receipts'][c['lane']]))
     switch=put('-restored-switch.local.json',cut)
     control=c['control_lane']
     run=get(new,'-run.local.json')
@@ -38,8 +53,9 @@ def stage(c):
     flow=get(new,'-flow.local.json')
     flow.update(cutover=switch['path'],measure=meas['path'],parent_forward_report=report)
     put('-restored-flow.local.json',flow)
-    flow['after_no_promotion']=str(r/(old+'-native-DECISION.json'))
-    put('-conditional-flow.local.json',flow)
+    if 'native_diagnostic' not in c:
+        flow['after_no_promotion']=str(r/(old+'-native-DECISION.json'))
+        put('-conditional-flow.local.json',flow)
     ls=get(old,'-native-lock.local.json')
     ls.pop('change_scope',None)
     ls.update(candidate=spec['candidate_config'],candidate_packet=path(''),version=c['version'],

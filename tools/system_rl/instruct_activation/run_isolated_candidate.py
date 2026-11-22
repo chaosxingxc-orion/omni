@@ -29,6 +29,24 @@ def run(c):
         while not(source.is_file() and terminal.is_file()):
             require(time.monotonic()<until,'predecessor not sealed');time.sleep(3)
         require(doc(pin(terminal))['guards_releasable'] and doc(pin(source))['rows'],'invalid predecessor')
+    elif 'after_iterations' in cut:
+        from cutover import load
+        from io_utils import digest
+        lane, = cut['lanes']
+        old = load(lane['old_code'], 'diagnostic_owner')
+        previous = Path(lane['old_code']).parent
+        require(Path(cut['after_iterations']['path']).parent == previous, 'wrong diagnostic owner')
+        cfg = doc(pin(terminal.parent.parent/'CONFIG.local.json'))
+        result = doc(pin(terminal.parent/'RESULT.json'))
+        rr, = result['rounds']
+        arm, = [s for s in cfg['services'] if s['name'] == cut['diagnostic_lane']]
+        state = old.inspect(old.name(lane['old_attempt']))
+        proof = doc(cut['after_iterations'])
+        require(arm['container'] == old.name(lane['old_attempt']) and arm['pid'] == state['State']['Pid']
+                and state['State']['Running'] and state['Id'] == doc(cut['diagnostic_receipt'])['container_id']
+                and Path(cfg['output']) == terminal.parent and result['passed']
+                and doc(pin(terminal))['guards_releasable'] and not list(terminal.parent.rglob('UNKNOWN.json'))
+                and rr['sha256'] == proof['round_sha256'] and proof['rows'], 'unrelated diagnostic result')
     elif 'after_forward' in cut:
         from cutover import load
         from decode_lineage import snapshot

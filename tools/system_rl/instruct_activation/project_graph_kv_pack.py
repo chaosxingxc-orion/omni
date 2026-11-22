@@ -121,9 +121,30 @@ def edit_interleaved(source, reference, *, include_decode):
     return source
 
 
+def edit_single_query(source):
+    """Pack only live KV rows. Each decode query attends its entire live prefix."""
+    lo = source.index('    ends = list(accumulate(n * 128 for n in counts))')
+    hi = source.index('    return ids, valid, query_rows, ends', lo) + len('    return ids, valid, query_rows, ends')
+    source = once(source, source[lo:hi], '''    positions = torch.cat([torch.arange(length, device=table.device) for length in lengths])
+    pages = torch.cat([ids[start:start + count].repeat_interleave(128)[:length]
+                       for start, count, length in zip([0, *accumulate(counts[:-1])], counts, lengths, strict=True)])
+    return pages, positions.remainder(128), list(accumulate(lengths))''')
+    lo = source.index('            indices, valid, query_rows, ends = cached[identity]')
+    hi = source.index('            return output', lo)
+    source = once(source, source[lo:hi], '''            pages, offsets, ends = cached[identity]
+            result = torch_npu.npu_fused_infer_attention_score(
+                query=query.contiguous(), key=kc[pages, offsets], value=vc[pages, offsets],
+                input_layout='TND', sparse_mode=0, actual_seq_lengths=list(range(1, n + 1)),
+                actual_seq_lengths_kv=ends, num_heads=8, num_key_value_heads=1, scale=impl.scale)[0]
+            output.copy_(result.reshape_as(query))
+''')
+    compile(source, 'decode_tiled_attention.py', 'exec')
+    return source
+
+
 def build(config):
     mode = config.get('kv_pack_mode', 'triton_pair')
-    require(mode in ('interleaved_pages', 'interleaved_prefill', 'zero_tail_rows', 'triton_pair'), 'unknown KV packing mode')
+    require(mode in ('interleaved_pages', 'interleaved_prefill', 'zero_tail_rows', 'single_query', 'triton_pair'), 'unknown KV packing mode')
     if mode != 'triton_pair':
         from project_packed_prefill_qkv import build as packed
         packed(config)
@@ -141,6 +162,8 @@ def build(config):
     original = source.read_text()
     if mode in ('interleaved_pages', 'interleaved_prefill'):
         result = edit_interleaved(original, config['interleaved_reference'], include_decode=mode=='interleaved_pages')
+    elif mode == 'single_query':
+        result = edit_single_query(original)
     elif mode == 'zero_tail_rows':
         result = edit_tail_clear(original)
     else:
