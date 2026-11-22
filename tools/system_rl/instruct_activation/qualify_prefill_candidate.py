@@ -40,7 +40,14 @@ def qualify(c):
     require(actions['round']['sha256']==perf['paired']['candidate_round'], 'wrong natural responses')
     stage_spec = doc(c['train_template'])
     stage_spec.update(panel_source=str(source),target=c['train_target'])
-    stage(stage_spec)
+    resume = c.get('resume_before_first_request')
+    if resume is None:
+        stage(stage_spec)
+    else:
+        sealed = doc(pin(Path(c['train_target'])/'PANEL-SOURCE.json'))
+        require(sealed['source']==pin(source) and sealed['reference']==stage_spec['template_config']
+                and not (Path(c['train_target'])/'STOP-INTENT.json').exists(),
+                'different staged training panel or handoff already started')
     train = pin(Path(c['train_target'])/'TRAIN.local.json')
     engine = doc(pin(diagnostic/('lane-'+lane)/'config.json'))
     cp = root/('cutover-'+diagnostic.name)
@@ -63,8 +70,24 @@ def qualify(c):
     run.update(phases=[diagnostic.name],activate_on_first_warmup=dict(lane=lane,phase=diagnostic.name),
                start_receipts={lane:start})
     runp = save(root/(diagnostic.name+'-run.local.json'),run)
-    replay(dict(cutover=cutp['path'],lock_config=c['lock_config'],lock_output=d['performance_lock']['path'],
-                measurement=runp['path']))
+    # Exercise the actual imported planner before any expensive service cutover.
+    from run_engine_comparison import main as measure
+    from measure_existing_services import distinct_rounds
+    plan = list(distinct_rounds(rr,rr['services']))
+    require(len(plan)==1 and rr['decode_replay'] is True, 'isolated replay planner required')
+    if resume is None:
+        replay(dict(cutover=cutp['path'],lock_config=c['lock_config'],lock_output=d['performance_lock']['path'],
+                    measurement=runp['path']))
+    else:
+        cfg_ref = pin(diagnostic/'CONFIG.local.json')
+        active = doc(cfg_ref)
+        require(resume['config']==cfg_ref and resume['start']==pin(start)
+                and active['start_receipts']==run['start_receipts']
+                and active['services'][0]['container']==s['container']
+                and not Path(rr['output']).exists(), 'cannot resume after request intent or identity change')
+        # The normal driver checks the live container ID, PID/start ticks, idle
+        # metrics and guard. Immutable CONFIG must still match the resolved seed.
+        measure(run)
     ctrl, = old['retain_lanes']
     b = c['control_lane']
     handoff=dict(rounds=str(diagnostic/'rounds'),train_config=train,wait_seconds=c['wait_seconds'],
@@ -79,5 +102,105 @@ def qualify(c):
     subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('review_prefill_panel.py')),out['path']],check=True)
 
 
+def close_tied_wave(c):
+    """Reuse the completed eight-rank forward; observe only the original tied wave."""
+    from cutover import load
+    from decode_action_replay import choice
+    from io_utils import digest
+    from project_replay_argmax import project
+    from review_prefill_panel import raw_winner
+    from run_engine_comparison import main as measure
+    handoff=doc(c['handoff'])
+    cfg=doc(handoff['train_config'])
+    rounds=Path(handoff['rounds'])
+    require(doc(pin(rounds/'DRAINED.json'))['guards_releasable'] and
+            not list(rounds.rglob('UNKNOWN.json')), 'replay not drained')
+    rr,=doc(pin(rounds/'RESULT.json'))['rounds']
+    run=doc(rr)
+    seed=doc(c['replay_seed'])
+    lane,=seed['services']
+    width,=seed['grouped_concurrency']
+    require(run['concurrency_per_service']=={lane['name']:width}
+            and seed['distinct_panels']==[run['input_refs']], 'not the original replay')
+    targets,groups={},set()
+    for r in run['requests']:
+        ids,items=choice(r['receipt_ref'])
+        pos=[j for j,item in enumerate(items) if raw_winner(item) is None]
+        if pos:
+            import json
+            prompt=json.loads(doc(r['receipt_ref'])['raw'])['prompt_token_ids']
+            key=digest([prompt,ids])
+            require(key not in targets,'duplicate tied history')
+            targets[key]=pos
+            groups.add(r['group'])
+    group,=groups  # Each observer spec covers one entire original wave.
+    root=rounds.parent.parent
+    proj=doc(c['replay_project'])
+    packet=root/c['packet_name']
+    require(packet.parent==root and Path(proj['projection']['target'])==rounds.parent,'wrong replay project')
+    proj.update(original_replay=str(rounds.parent),observe=save(root/(packet.name+'-targets.json'),targets))
+    proj['projection'].update(target=str(packet),attempt=c['attempt'])
+    if not packet.exists():
+        project(proj)
+    else:
+        from decode_lineage import changes,snapshot
+        prior=snapshot(rounds.parent)
+        delta=doc(pin(packet/'ARGMAX-DELTA.json'))
+        require(delta['parent']==digest(prior) and delta['observe']==proj['observe']
+                and changes(prior,snapshot(packet))==delta['changes']
+                and not (packet/'rounds').exists() and not (packet/'STARTED-A.json').exists(),
+                'existing observer requires reconciliation')
+    lane['container']=doc(pin(packet/('lane-'+lane['name'])/'config.json'))['name']+'-'+c['attempt']
+    seed.update(distinct_panels=[run['input_refs'][group*width:(group+1)*width]],
+                measurement_id=packet.name,output=str(packet/'rounds'))
+    save(root/(packet.name+'.json'),seed)
+    end=time.monotonic()+c['wait_seconds']
+    trainroot=Path(cfg['hot']).parent
+    initial=Path(c['initial_review'])
+    while not initial.is_file():
+        require(time.monotonic()<end,'initial review not sealed')
+        time.sleep(5)
+    review=doc(pin(initial))
+    require(review['hf']==handoff['train_config'] and Path(review['replay']).parent==rounds.parent,'wrong review')
+    public=Path(review['aggregate_output'])
+    while not public.is_file():
+        require(time.monotonic()<end,'initial audit not sealed')
+        time.sleep(3)
+    audit=doc(pin(public))
+    require(audit['replay_round']==rr['sha256'] and audit['replay_changed']==0
+            and audit['unresolved_top1']==sum(map(len,targets.values())) and all(
+            x['over_token']==x['over_sequence']==x['top1_flips']==0 for x in audit['modes'].values()),
+            'probability or top-1 mismatch needs independent localization')
+    stopped=doc(pin(trainroot/'INFERENCE-DRAINED.json'))
+    require({r['cid'] for r in stopped['stopped']}=={doc(pin(l['started']))['container_id'] for l in handoff['lanes']}
+            and doc(pin(trainroot/'STOP-INTENT.json'))['source']==pin(rounds/'DRAINED.json'),'unrelated handoff')
+    worker=doc(pin(Path(cfg['hot'])/'EXIT.json'))
+    require(worker['complete_ranks']==8 and worker['exit_code']==0,'training scoring incomplete')
+    service=load(packet/('lane-'+lane['name']),'observer')
+    ws,=json.loads(subprocess.check_output(['docker','inspect',worker['container_id']]))
+    require(service.C['host_boot_id']==cfg['boot_id'] and service.C['guard']==cfg['existing_guard']
+            and ws['Id']==worker['container_id'] and ws['Image']==cfg['image']
+            and ws['State']['Status']=='exited','training container still active or identity changed')
+    ctrl=handoff['restore_control']
+    control=load(ctrl['code'],'control')
+    state=control.inspect(control.name(ctrl['attempt']))
+    require(state['State']['Running'] and state['Id']==doc(pin(trainroot/'CONTROL-STARTED.json'))['container_id']
+            and sorted(service.C['cards']+control.C['cards'])==cfg['devices'],'unverified control restoration')
+    launch=[sys.executable,'-B',str(service.CODE/'launch.py')]
+    subprocess.run(launch+['check','--attempt',c['preflight']],check=True)
+    subprocess.run(launch+['start','--attempt',c['attempt'],'--preflight-attempt',c['preflight']],check=True)
+    state=service.inspect(lane['container'])
+    receipt=save(packet/'STARTED-A.json',dict(container_id=state['Id'],physical_devices=service.C['cards']))
+    m=doc(c['replay_run'])
+    m.update(phases=[packet.name],activate_on_first_warmup=dict(lane=lane['name'],phase=packet.name),
+             start_receipts={lane['name']:receipt['path']})
+    measure(m)
+    review.update(argmax_observer=dict(packet=str(packet),group_index=group,vocab_size=c['vocab_size']),
+                  output=str(root/(packet.name+'-full.json')),aggregate_output=str(root/(packet.name+'-forward-public.json')))
+    spec=save(root/(packet.name+'-review.local.json'),review)
+    subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('review_prefill_panel.py')),spec['path']],check=True)
+
+
 if __name__ == '__main__':
-    qualify(doc(pin(sys.argv[1])))
+    config=doc(pin(sys.argv[1]))
+    (close_tied_wave if config.get('operation')=='close_tied_wave' else qualify)(config)

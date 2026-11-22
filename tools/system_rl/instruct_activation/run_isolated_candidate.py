@@ -17,6 +17,32 @@ def run(c):
         while not(source.is_file() and terminal.is_file()):
             require(time.monotonic()<until,'predecessor not sealed');time.sleep(3)
         require(doc(pin(terminal))['guards_releasable'] and doc(pin(source))['rows'],'invalid predecessor')
+    elif 'after_forward' in cut:
+        from cutover import load
+        from decode_lineage import snapshot
+        from io_utils import digest
+        proof_path=Path(cut['after_forward'])
+        until=time.monotonic()+cut['wait_seconds']
+        while not proof_path.is_file():
+            require(time.monotonic()<until,'parent training precision not sealed');time.sleep(5)
+        proof=doc(pin(proof_path))
+        lane,=cut['lanes']
+        previous=Path(lane['old_code']).parent
+        observed=doc(pin(previous/'CONFIG.local.json'))
+        result=doc(pin(terminal.parent/'RESULT.json'))
+        rr,=result['rounds']
+        require(proof['passed'] and proof['optimizer_updates']==0 and proof['unresolved_top1']==0
+                and proof['observer_round']==rr['sha256'] and result['passed']
+                and doc(pin(terminal))['guards_releasable'] and not list(terminal.parent.rglob('UNKNOWN.json'))
+                and Path(observed['output'])==terminal.parent==previous/'rounds','unrelated observer')
+        require(proof['runtime']==digest(snapshot(Path(cut['parent_packet'])))==
+                doc(cut['candidate_delta'])['immediate_parent'] and
+                Path(cut['candidate_delta']['path']).parent==Path(lane['new_code']).parent,'different parent')
+        old=load(lane['old_code'],'observer_owner'); ctr,=observed['services']
+        state=old.inspect(old.name(lane['old_attempt']))
+        require(ctr['container']==old.name(lane['old_attempt'])
+                and state['Id']==doc(pin(observed['start_receipts'][ctr['name']]))['container_id']
+                and state['State']['Running'],'observer changed')
     else:
         from reconcile_failed_panel import inspect_window
         cfg=Path(cut['failed_window'])
@@ -31,6 +57,15 @@ def run(c):
     switch(cut)
     measure(doc(pin(c['measure'])))
     scores(doc(pin(c['scores'])))
+    if 'parent_forward_report' in c:
+        from report_prefill_candidate import report
+        from io_utils import save
+        spec=doc(c['parent_forward_report'])
+        spec.update(training_proof=pin(cut['after_forward']))
+        require(doc(spec['training_proof'])['natural_round']==
+                doc(pin(Path(spec['parent_config']).parent/'rounds'/'RESULT.json'))['rounds'][0]['sha256'],
+                'training reference does not match performance parent')
+        save(spec['output'],report(spec))
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('config',type=Path)

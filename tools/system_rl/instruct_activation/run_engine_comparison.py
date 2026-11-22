@@ -17,7 +17,12 @@ def main(config):
     if lazy:
         require(lazy['phase']==config['phases'][0], 'lazy activation only during discarded warm-up')
     for phase in config['phases']:
-        seed=json.loads((root/(phase+'.json')).read_bytes())
+        if 'phase_specs' in config:
+            from io_utils import doc
+            seed=doc(config['phase_specs'][phase])
+            require(seed['measurement_id']==phase,'different phase spec')
+        else:
+            seed=json.loads((root/(phase+'.json')).read_bytes())
         for service in seed['services']:
             while True:
                 require(time.monotonic()<deadline,'paired service readiness timeout')
