@@ -10,7 +10,17 @@ from project_screen_lanes import read, save as write_config
 
 
 def build(c):
-    build_tiles(c)
+    kind = c.get('replay_runtime', 'captured_tiles')
+    if kind == 'captured_tiles':
+        build_tiles(c)
+    elif kind == 'packed_qkv':
+        from project_packed_prefill_qkv import build as build_qkv
+        build_qkv(c)
+    elif kind == 'owner_routes':
+        from project_graph_owned_routes import build as build_routes
+        build_routes(c)
+    else:
+        raise ValueError('unsupported measured replay runtime')
     root = Path(c['projection']['target'])
     original = snapshot(Path(c['measured_candidate']))
     require(original == snapshot(root), 'replay would observe different arithmetic')

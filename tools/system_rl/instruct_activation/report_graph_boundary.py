@@ -8,7 +8,7 @@ from pathlib import Path
 import statistics
 import sys
 
-from io_utils import doc, pin, require
+from io_utils import doc, pin, require, save
 from report_batch_stage import report
 
 
@@ -55,12 +55,39 @@ def summarize(config, state, abi, lane):
     return out
 
 
+def aggregate(ledger, rows, layers):
+    kinds = {}
+    for kind in ('prefill', 'mixed', 'decode'):
+        selected = [row for row in rows if row['kind'] == kind]
+        indices = {row['step'] for row in selected}
+        steps = [step for step in ledger['steps'] if step['step'] in indices]
+        if not steps:
+            kinds[kind] = dict(steps=0, emitted=0, median_step_ms=None, total_step_s=0, phases_mean_ms={})
+            continue
+        phases = defaultdict(float)
+        for row in selected:
+            phases[row['phase']] += row['device_median_ms']
+        kinds[kind] = dict(steps=len(steps), emitted=sum(sum(s['out'].values()) for s in steps),
+                           median_step_ms=statistics.median(s['ms']['total'] for s in steps),
+                           total_step_s=sum(s['ms']['total'] for s in steps)/1000,
+                           phases_mean_ms={name:total/len(steps) for name,total in phases.items()})
+    require(sum(k['steps'] for k in kinds.values()) == len(ledger['steps']), 'incomplete step ledger')
+    return dict(round=ledger['round_sha256'],sampled_layers=layers,step_kinds=kinds,
+                missed_decodes=ledger['missed_already_generating'],totals_ms=ledger['totals_ms'],
+                intervals=len(rows))
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('config','state','abi'):
         parser.add_argument(name,type=Path)
     parser.add_argument('lane')
-    rows=summarize(**vars(parser.parse_args()))
+    parser.add_argument('--summary',type=Path)
+    args=parser.parse_args()
+    rows=summarize(args.config,args.state,args.abi,args.lane)
+    if args.summary:
+        ledger=report(args.config,args.state,args.lane)
+        save(args.summary,aggregate(ledger,rows,doc(pin(args.abi))['timed_layers']))
     w=csv.DictWriter(sys.stdout,fieldnames=rows[0],lineterminator='\n')
     w.writeheader()
     w.writerows(rows)

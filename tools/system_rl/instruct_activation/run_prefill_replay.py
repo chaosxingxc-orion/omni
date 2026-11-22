@@ -14,7 +14,10 @@ def run(c):
     lane, = cut['lanes']
     lock_config = doc(pin(c['lock_config']))
     parent = Path(lock_config['parent_packet'])
-    require(Path(cut['after_score']) == parent.with_name(parent.name+'-score')/'RESULT.json'
+    candidate = Path(lock_config['candidate_packet'])
+    owner = Path(lane['old_code']).parent
+    require(owner in (parent, candidate), 'cutover does not own a measured comparison lane')
+    require(Path(cut['after_score']) == owner.with_name(owner.name+'-score')/'RESULT.json'
             and Path(cut['terminal']) == Path(cut['after_score']).with_name('DRAINED.json'),
             'comparison parent does not own preceding score')
     until = time.monotonic() + cut['wait_seconds']

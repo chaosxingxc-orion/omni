@@ -29,7 +29,11 @@ def report(cfg):
     deltas = [abs(d) for r in score['rows'] for d in r['deltas']]
     complete = [r['sequence_abs'] for r in score['rows'] if r['complete']]
     keys = ('lane','valid','requests','mean_batch_s','valid_per_second','round_sha256','token_ranges')
-    return dict(paired=pair, cache=cache, both_lanes_audio_cold=cold_comparable, windows=[{k:w[k] for k in keys} for w in windows],
+    cold = {}
+    if 'cold_native_config' in cfg:
+        from cold_native_window import compare
+        cold['cold_native_comparison'] = compare(cfg)
+    return dict(**cold, paired=pair, cache=cache, both_lanes_audio_cold=cold_comparable, windows=[{k:w[k] for k in keys} for w in windows],
                 itl=[dict(lane=v['lane'],n=v['itl']['n'],p50=v['itl']['p50_bounds'],p95=v['itl']['p95_bounds'],
                           over_half=sum(b['count'] for b in v['itl']['bins'] if b['lower']>=.5)) for v in hist],
                 train=training, historical_hf=dict(requests=len(score['rows']),common=len(deltas),

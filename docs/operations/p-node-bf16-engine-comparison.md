@@ -446,3 +446,17 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 [2,048 行配对与精度明细](engine-profile-bf16/graph-tile2048-performance-train.json) · [单内核收集 K/V 的明细](engine-profile-bf16/graph-kv-pack-performance-train.json)
 
 在相同 1,024 行基线上，专家输出直接写入最终连续切片的候选也完成了 32 条：每批 7.831 秒，比父版慢 2.49%，四批两快两慢。prefill 1.264→1.259 秒，decode 3.142→3.130 秒，均未出现实质收益；自然动作数 371→379，有效输出 27→25。候选 344/379 个动作、29 条完整序列的 FSDP8 train/eval logprob 差均为零；35 个动作未覆盖，未观测候选独立 top‑1。原生侧音频命中 32/32，不将该轮原生时延作为冷音频参照。下一轮直接在已通过精度验收的 1,024 行基线的独立副本上计时，分开纯 prefill、混合步和纯 decode 的层内耗时。[输出缓冲配对明细](engine-profile-bf16/graph-output-buffers-performance-train.json)。
+
+### 1,024 行锁定基线：哪段前向拖慢 decode
+
+独立诊断实例保留实际请求、8 并发、相同 step‑3 adapter。4 批 32 条真实录音共 97 个引擎步。97 步合计 31.248 秒，调度器执行 0.047 秒；已开始生成的请求漏调 0 次。分开三类调度步：
+
+| 步类型 | 步数 | 单步中位数 | 累计步时 |
+|---|---:|---:|---:|
+| 纯 prefill | 9 | 577 ms | 5.209 s |
+| 混合 prefill 和 decode | 35 | 584 ms | 19.437 s |
+| 纯 decode | 53 | 125 ms | 6.602 s |
+
+混合步占总步时 62.2%，其中 31/35 步用满 2,048 个 token；纯 prefill 9/9 步用满。对四卡七个实际层，每步每层先取四卡设备流中位再按层相加：混合步后半段（输出投影、路由、专家计算和图输出复制）28.34 ms，attention 之前 17.68 ms，专家归约 13.26 ms，attention/KV 11.11 ms，attention 汇集 3.09 ms。纯 decode 的七层 attention/KV 为 7.47 ms、attention 汇集 5.21 ms。区间包含流等待，不将它们直接外推 48 层，也不把诊断版计时当作无桩性能。在这个批形下，长 token 间隔主要应从含 prefill 的步内计算排查。已准备两个独立实现：合并 Q/K/V 前段投影，以及只在捕图的完整 tile 上将专家 GEMM 限定为本卡实际选中的专家。
+
+[各步各层实测 CSV](engine-profile-bf16/locked-tile-boundaries-device.csv) · [统计分母与时延](engine-profile-bf16/locked-tile-boundaries-intervals.json)。跨轮冷音频原生比较现按两个窗口的全部预热/计时输入、实际提示、并发、已绑定 adapter、prefix 命中及 MM 查询/命中核对。单内核收集 K/V 与输出缓冲候选的冷音频原生参照均为 5.505 s/批，实测分别慢 5.316 / 2.327 s/批；两者与原生来自不同时间窗口，不能排除宿主状态波动。
