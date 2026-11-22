@@ -128,7 +128,14 @@ def grouped_rounds(config, services):
 def distinct_rounds(config, services):
     """Paired comparison on different recordings, with roles crossed between panels."""
     width = config['grouped_concurrency']
-    require(len(width)==1 and type(width[0]) is int and width[0]>0 and len(services)==2, 'paired concurrency')
+    replay = config.get('decode_replay', False)
+    require(type(replay) is bool and len(width)==1 and type(width[0]) is int and width[0]>0
+            and (len(services)==1 if replay else len(services)==2), 'paired concurrency')
+    if replay:
+        require(config.get('admission')=='group_drained' and config['round_order']==['paired']
+                and config.get('admission_order') is None and width[0]<=8
+                and all(w=={services[0]['name']:width[0]} for w in config['lane_concurrency']),
+                'isolated fixed-action replay requires one lane and full waves')
     n=width[0]; modes=config.get('admission_order')
     windows=config.get('lane_concurrency')
     require(bool(config['measurement_id']) and (
@@ -140,6 +147,13 @@ def distinct_rounds(config, services):
         wires=[doc(ref) for ref in refs]
         require(len(wires)>=2*(max(windows[b].values()) if windows else n) and len(wires)%n==0 and
                 len({hashlib.sha256(canonical(w['messages'])).digest() for w in wires})==len(wires), 'distinct complete waves required')
+        if replay:
+            for wire in wires:
+                ids=(wire.get('vllm_xargs') or {}).get('decode_action_ids')
+                require(isinstance(ids,list) and ids and all(type(t) is int and t>=0 for t in ids)
+                        and wire['vllm_xargs']=={'decode_action_ids':ids} and wire['max_tokens']==len(ids)
+                        and wire['top_logprobs']==2 and wire['logprobs'] and wire['return_token_ids']
+                        and wire['n']==1 and not wire['stream'], 'incomplete fixed-action wire')
         salt=hashlib.sha256(canonical([config['measurement_id'],b])).hexdigest()
         require(all(w['model']=='qwen3-omni-30b-a3b-instruct' and 'cache_salt' not in w for w in wires),'unchanged business wires')
         panel=[(i//n,i%n,dict(w,cache_salt=salt)) for i,w in enumerate(wires)]
