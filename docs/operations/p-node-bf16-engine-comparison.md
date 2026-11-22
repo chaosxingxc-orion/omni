@@ -493,3 +493,7 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 按实际 core 调用边界拆分：已验收基线的 52 个纯 decode 步中位总时延 123.50 ms，等待 execute_model 的 future 返回为 118.03 ms，调用 sample_tokens 为 3.32 ms，调度为 0.21 ms。35 个混合步的对应数值为 488.00、319.05、166.84、0.53 ms。各项独立取中位，不相加；异步设备工作可能在后续同步边界完成，不能将 sample_tokens 墙钟全部归因于采样计算。[阶段统计](engine-profile-bf16/wide-packed-boundaries-core-intervals.json)。
 
 将每步 token 预算从 2,048 增为 4,096，32 条的平均排队从 1.396 降到 0.917 秒，但 prefill 从 1.054 增至 1.250 秒，decode 从 2.664 增至 2.775 秒，整批只从 6.579 降至 6.537 秒，距原生仍有 18.76%。在 279 个共同历史动作中，8 个与 FSDP8 的 logprob 差值超过 0.01；22 个完整可比序列中 2 个超限。train/eval 均复现，最大逐动作和整段差为 0.20884 / 0.35359。五条历史串行探针全部通过，不能替代实际并发下的验收。保留失败证据，该配置未采用；尚未定位首个数值分歧算子。[性能与精度](engine-profile-bf16/wide-packed-budget4096-cold-train.json)。
+
+KV 批量取页后只清零末页无效行，在四批新录音上为 6.778 秒/批，原已验收基线为 6.579 秒。每条请求的 decode 由 2.664 增至 2.771 秒。与训练端可比的 305/380 个动作、24 条完整序列在 train/eval 下概率差均为零。控制器按整批时延保留父版。[候选测量](engine-profile-bf16/wide-kv-tail-clear-cold-train.json)
+
+已验收基线和匹配冷原生在第二批中都由同一条 20-token 回复最后返回。从首条到末条完整回复分别耗时 1.949 和 0.890 秒，两者相差 1.059 秒。其余三批最后返回的请求不同。[按批对照](engine-profile-bf16/graph-wide-packed-qkv-paired-tail.json)

@@ -1,0 +1,64 @@
+"""Wire an isolated successor to an existing matched C8 panel and its retained control."""
+from pathlib import Path
+import sys
+from bind_cold_parent_panel import bind
+from derive_paired_study import prepare
+from io_utils import doc, pin, require, save
+
+
+def stage(c):
+    r=Path(c['root']).resolve(strict=True)
+    old,new=c['predecessor'],c['study']
+    require(all(Path(n).name==n and n not in ('.','..','') for n in (old,new)) and old!=new, 'bad study names')
+    def path(s): return str(r/(new+s))
+    def get(n,s): return doc(pin(r/(n+s)))
+    def put(s,v): return save(path(s),v)
+    src=get(new,'-project.local.json')
+    require(src['projection']['target']==path('') and src['projection']['attempt']==c['attempt'],'unexpected packet')
+    bind(dict(root=str(r),source_panel=old+'-panel',output_panel=new+'-panel'))
+    prepare(dict(root=str(r),predecessor=old,study=new,attempt=c['attempt'],
+                 lane=c['lane'],preflight=c['preflight'],batch_size=c['width']))
+    prior=get(old,'-restored-switch.local.json')
+    cut=get(new,'-switch.local.json');cut['retain_lanes']=prior['retain_lanes']
+    switch=put('-restored-switch.local.json',cut)
+    control=c['control_lane']
+    run=get(new,'-run.local.json')
+    for phase in run['phases']:
+        cfg=doc(pin(r/(phase+'.json')))
+        ctrl,=[s for s in cfg['services'] if s['name']==control]
+        prev,=[s for s in get(old,phase[len(new):]+'-restored.local.json')['services'] if s['name']==control]
+        require(ctrl['endpoint']==prev['endpoint'],'control endpoint drift')
+        ctrl['container']=prev['container']
+        run.setdefault('phase_specs',{})[phase]=save(r/(phase+'-restored.local.json'),cfg)
+    run['start_receipts'][control]=get(old,'-restored-run.local.json')['start_receipts'][control]
+    meas=put('-restored-run.local.json',run)
+    spec=get(old,'-parent-trained-report.local.json')
+    spec.update(candidate_config=path('-latency/CONFIG.local.json'),historical_score=path('-score'),output=path('-cold-train.json'))
+    report=put('-parent-trained-report.local.json',spec)
+    flow=get(new,'-flow.local.json')
+    flow.update(cutover=switch['path'],measure=meas['path'],parent_forward_report=report)
+    put('-restored-flow.local.json',flow)
+    flow['after_no_promotion']=str(r/(old+'-native-DECISION.json'))
+    put('-conditional-flow.local.json',flow)
+    ls=get(old,'-native-lock.local.json')
+    ls.pop('change_scope',None)
+    ls.update(candidate=spec['candidate_config'],candidate_packet=path(''),version=c['version'],
+              expected_engine_delta={},changed_file=c['changed_file'],changed_row=c['changed_row'])
+    lock=put('-native-lock.local.json',ls)
+    ac=get(old,'-native-assessment.local.json')
+    ac.update(lock=lock,report=report,lock_output=path('-native.lock.json'),decision=path('-native-DECISION.json'))
+    put('-native-assessment.local.json',ac)
+    replay=get(old,'-replay-project.local.json')
+    for k in ('verified_replay_packet','replay_source'): src[k]=replay[k]
+    src.update(replay_runtime=c['replay_runtime'],measured_candidate=path(''))
+    src['projection'].update(target=path('-replay'),attempt=c['replay_attempt'])
+    q=get(old,'-native-qualify.local.json')
+    q.update(packet=path(''),diagnostic=path('-replay'),old_switch=switch['path'],lock_config=lock['path'],
+             decision=ac['decision'],attempt=c['replay_attempt'],preflight=c['replay_preflight'],
+             restore_attempt=c['restore_attempt'],train_target=c['train_target'],
+             replay_project=put('-replay-project.local.json',src))
+    put('-native-qualify.local.json',q)
+
+
+if __name__=='__main__':
+    stage(doc(pin(sys.argv[1])))

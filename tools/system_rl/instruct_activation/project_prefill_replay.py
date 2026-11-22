@@ -19,6 +19,9 @@ def build(c):
     elif kind == 'owner_routes':
         from project_graph_owned_routes import build as build_routes
         build_routes(c)
+    elif kind == 'decode_step_inputs':
+        from project_decode_step_inputs import build as build_step_inputs
+        build_step_inputs(c)
     elif kind == 'kv_tail_clear':
         from project_graph_kv_pack import build as build_pack
         require(c['kv_pack_mode'] == 'zero_tail_rows', 'expected sparse tail clearing')
