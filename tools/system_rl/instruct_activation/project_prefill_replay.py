@@ -19,6 +19,10 @@ def build(c):
     elif kind == 'owner_routes':
         from project_graph_owned_routes import build as build_routes
         build_routes(c)
+    elif kind == 'single_piece':
+        from project_prefill_output_buffers import build as build_buffers
+        require(c['buffer_mode']=='single_piece','unexpected buffer implementation')
+        build_buffers(c)
     else:
         raise ValueError('unsupported measured replay runtime')
     root = Path(c['projection']['target'])
