@@ -1,0 +1,64 @@
+{
+  "id": "p-native-piecewise-c8-v1",
+  "scope": "P decode performance comparator only",
+  "production_rollout": false,
+  "model": "qwen3-omni-30b-a3b-instruct",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "serve_args": [
+    "--tensor-parallel-size",
+    "4",
+    "--enable-lora",
+    "--max-loras",
+    "1",
+    "--lora-dtype",
+    "bfloat16",
+    "--max-lora-rank",
+    "16",
+    "--generation-config",
+    "vllm",
+    "--logprobs-mode",
+    "raw_logprobs",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--max-model-len",
+    "24576",
+    "--gpu-memory-utilization",
+    "0.55",
+    "--max-num-seqs",
+    "8",
+    "--no-async-scheduling",
+    "--enable-prefix-caching",
+    "--dtype",
+    "bfloat16",
+    "--limit-mm-per-prompt",
+    "{\"audio\":1,\"image\":0,\"video\":0}",
+    "--lora-modules",
+    "{\"name\": \"checkpoint-sha256:56413c26a9ba62c1474081942cf2e4f64f772679a7ee9ff46eff2bb148b24e44\", \"path\": \"/activation/adapter\", \"base_model_name\": \"qwen3-omni-30b-a3b-instruct\"}",
+    "--profiler-config",
+    "{\"profiler\": \"torch\", \"torch_profiler_dir\": \"/runtime/work/perf-traces\", \"torch_profiler_with_stack\": true, \"ignore_frontend\": true, \"max_iterations\": 2}",
+    "--compilation-config",
+    "{\"cudagraph_mode\": \"PIECEWISE\", \"cudagraph_capture_sizes\": [1, 2, 3, 4, 5, 6, 7, 8]}"
+  ],
+  "asset_sha256": {
+    "adapter/adapter_config.json": "c80d2ec9c3abd516c38adf586dabdc10703cd7831f1599c9d0c9698681507c5d",
+    "adapter/adapter_model.safetensors": "56413c26a9ba62c1474081942cf2e4f64f772679a7ee9ff46eff2bb148b24e44",
+    "config.json": "c37297d52dec211d274f048c7d018eb9731aadd5ddb76e929fccd15542f6f569",
+    "launch.py": "840725a272d11bf6d0073e062048b9eefcd68e43590d1ef0b3597ea214df7f89",
+    "service.py": "56e16d721ef5bf15f3f4dfbbb06cb2548e2cbf5c694cce0dfb00c5be013e1889"
+  },
+  "projection_sha256": "0816d109211e81a8f1d91f6b9a742fa3bb0e45930e7b3934f71cae8c62a7a3b6",
+  "panels": {
+    "graph-latency": {
+      "config": "d7766737cba0e2b24f67b9ed0a266ffe7a283b49f02e85cdeab7ec6d9bf10533",
+      "round": "0d852c3af1c1f9ab2a3405e22a465dcccd82cb4282ea39211480ccbea78d2106"
+    },
+    "graph-rl-latency": {
+      "config": "640ee24e7765d0921b7b23eb9f83d434284320b44d6bf156c54b4617723e9036",
+      "round": "5bd043aeadaa3065360abcf88f6ac5c636fcd9902bb36a9814b6d6c6dcaba16b"
+    }
+  },
+  "probability_check": {
+    "passed": false,
+    "result_sha256": "a8d199cb081fe268cdf566a2b243c1891ec832fd6718df059e862904152b962d"
+  }
+}
