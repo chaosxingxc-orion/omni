@@ -94,13 +94,42 @@ def validate_screen_layout(c):
         if len(lanes)!=len(host['local_ports']) or len(set(cards))!=len(cards):
             raise ValueError('screen profile lane count or device assignment differs')
 
+def export_delta(db,root,x,counts):
+    statuses=dict(db.execute('select status,count(*) from calls group by status'))
+    assert sum(statuses.values())==len(x.gate) and set(statuses)<= {'valid','invalid'}
+    path=root/'P-DELTA-SCORED.private.jsonl'
+    records=[]
+    for r in db.execute("select rid,domain,rank,wire,raw from calls where status='valid' order by rid"):
+        row=x.gate[r['rid']]
+        records.append(dict(**row,p_rank=r['rank'],outcome='success' if r['rank'] else 'error',
+                            domain=r['domain'],wire_sha256=r['wire'],response_sha256=hashlib.sha256(r['raw']).hexdigest()))
+    put(path,b''.join((json.dumps(r,sort_keys=True)+'\n').encode() for r in records))
+    save(root/'COMPLETE.json',dict(finished=time.time(),first_request=db.execute('select min(issued) from calls').fetchone()[0],
+         screened=len(x.gate),statuses=statuses,valid=len(records),counts={str(k):v for k,v in counts.items()},
+         candidate_sha256=x.receipt['queue_sha256'],scored_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),scope='P screening delta'))
+
+
 def run(c):
     validate_screen_layout(c)
     root=Path(c['output']); lock=(root/'SCREEN.guard').open('a+');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     db=sqlite3.connect(root/'p-screen.sqlite');db.row_factory=sqlite3.Row
     db.execute('pragma journal_mode=WAL');db.execute('pragma synchronous=FULL')
     db.execute('create table if not exists calls(rid text primary key,domain text,lane text,issued real,finished real,status text,wire text,ranking text,raw blob,rank integer,error text)')
-    x=Inputs(c);s=c['sampling'];assert (s['scope'],s['node'],s['metric'])==('node','P','valid_P_top3')
+    s=c['sampling']
+    exhaust=s.get('completion')=='exhaust_queue'
+    if exhaust:
+        from p_screen_delta import DeltaInputs
+        x=DeltaInputs(c)
+        digest=hashlib.sha256(json.dumps(c,sort_keys=True).encode()).hexdigest()
+        identity=root/'RUN-IDENTITY.json'
+        if identity.exists():
+            assert doc(identity)['delta']==x.receipt, 'delta queue changed on resume'
+        else:
+            save(identity,dict(delta=x.receipt,config_sha256=digest))
+        save(root/'dispatch-configs'/(digest+'.json'),c)
+    else:
+        x=Inputs(c)
+    assert (s['scope'],s['node'],s['metric'])==('node','P','valid_P_top3')
     quotas={(d,o):n for o,total in apport(s['sample_count'],s['error_success']).items() for d,n in apport(total,s['domain_mix']).items()}
     history={}
     sid_to_rid={'slurp:train:'+r['source_id'].zfill(6)+':'+Path(r['recording']).stem:rid for rid,r in x.gate.items()}
@@ -121,7 +150,7 @@ def run(c):
     counts=collections.Counter()
     for r in db.execute("select domain,rank,count(*) n from calls where status='valid' group by domain,rank"):
         counts[r['domain'],'success' if r['rank'] else 'error']+=r['n']
-    def outstanding(d):return any(counts[d,o]<quotas[d,o] for o in ('success','error'))
+    def outstanding(d):return exhaust or any(counts[d,o]<quotas[d,o] for o in ('success','error'))
     ports=[];leases=[];requests=0;activation_checks={}
     bindings=c.get('model_bindings_by_port',{})
     if bindings:binding_table(db)
@@ -201,6 +230,9 @@ def run(c):
                             except (OSError,subprocess.SubprocessError) as exc:bad=str(exc)
                         free.extend([port]*returned.pop(port))
         if bad:raise RuntimeError(bad)
+        if exhaust:
+            export_delta(db,root,x,counts)
+            return
         if any(outstanding(d) for d in ids):raise ValueError('P population exhausted before quota')
         roster=[]
         for (domain,outcome),n in quotas.items():
