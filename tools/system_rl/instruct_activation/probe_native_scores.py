@@ -35,7 +35,7 @@ def prepare(paired, hf, output):
     return save(output,dict(cases=cases,limits=bundle['limits'],reference=pin(paired),hf=proofs))
 
 
-def compare(r, body, alias):
+def compare(r, body, alias, observe_top1=True):
     c, = body['choices']; ids=c['token_ids']; content=c['logprobs']['content']
     require(body['model']==alias and body['prompt_token_ids']==r['prompt'] and
             c['finish_reason'] in ('stop','length') and len(ids)==len(content)==body['usage']['completion_tokens']
@@ -45,12 +45,13 @@ def compare(r, body, alias):
         require(item['token']==f'token_id:{t}' and math.isfinite(item['logprob']) and item['logprob']!=-9999,
                 'invalid actual action probability')
         if i>=len(r['tokens']) or i!=len(diffs):continue
-        tops=item['top_logprobs']
-        # vLLM emits the sampled token and/or top candidates. Do not infer a unique argmax on ties.
-        require(tops and all(math.isfinite(k['logprob']) for k in tops),'missing raw top candidates')
-        winners = [x['token'] for x in tops if x['logprob']==max(k['logprob'] for k in tops)]
-        flips.append({'position':i,'winner_matches':winners==[f"token_id:{r['raw_top1'][i]}"],
-                      'tie':len(winners)>1})
+        if observe_top1:
+            tops=item['top_logprobs']
+            # vLLM emits the sampled token and/or top candidates. Do not infer a unique argmax on ties.
+            require(tops and all(math.isfinite(k['logprob']) for k in tops),'missing raw top candidates')
+            winners = [x['token'] for x in tops if x['logprob']==max(k['logprob'] for k in tops)]
+            flips.append({'position':i,'winner_matches':winners==[f"token_id:{r['raw_top1'][i]}"],
+                          'tie':len(winners)>1})
         if t==r['tokens'][i]:diffs.append(item['logprob']-r['logprobs'][i])
     return dict(lane=r['lane'],expected=len(r['tokens']),actual=len(ids),common=len(diffs),
                 complete=ids==r['tokens'],max_abs=max(map(abs,diffs),default=None),
@@ -90,14 +91,14 @@ def run(cfg):
         save(root/'STARTED.json',dict(cases=cfg['cases'],container=cid['Id'],training_use=False))
         def one(r):
             require(alias=='checkpoint-sha256:'+r['adapter_sha'],'wrong weights')
-            response=contact(root/r['lane'],s['endpoint'],dict(r['wire'],model=model,top_logprobs=2),
+            response=contact(root/r['lane'],s['endpoint'],dict(r['wire'],model=model,top_logprobs=0 if overlay else 2),
                              cfg['timeout_seconds'])
             body=json.loads(doc(response['receipt_ref'])['raw'])
-            return compare(r,body,model)
+            return compare(r,body,model,observe_top1=not overlay)
         try:
             with concurrent.futures.ThreadPoolExecutor(cfg['concurrency']) as pool:rows=list(pool.map(one,packet['cases']))
             save(root/'RESULT.json',dict(rows=rows,limits=packet['limits'],training_use=False,
-                    scope='natural generation, raw top-2 observer; same prompt and token history only'))
+                    scope='natural generation; same prompt and token history only',top_logprobs=0 if overlay else 2))
         finally:
             while True:
                 try:idle(metrics(s['endpoint']));break

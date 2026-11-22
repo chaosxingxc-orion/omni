@@ -1,10 +1,9 @@
 """Compare repeated actual scores for the identical multimodal input, history and action."""
 import argparse
-import itertools
 import json
 from collections import defaultdict
 from pathlib import Path
-from io_utils import canonical, digest, doc, pin, require
+from io_utils import digest, doc, pin, require
 from probe_native_scores import compare
 
 
@@ -18,9 +17,10 @@ def audit(root):
         folder=root/case['lane']; intent=doc(pin(folder/'INTENT.json')); resp=doc(pin(folder/'RESPONSE.json'))
         body=json.loads(resp['raw']); model=body['model']
         require(model in (case['wire']['model'],'checkpoint-sha256:'+case['adapter_sha']),'unexpected response model')
-        wire=dict(case['wire'],model=model,top_logprobs=2)
+        top=recorded.get('top_logprobs',2); require(top in (0,2),'unknown observation mode')
+        wire=dict(case['wire'],model=model,top_logprobs=top)
         require(intent['wire_sha256']==digest(wire) and resp['status']==200 and
-                compare(case,body,model)==original[case['lane']],'request or verified score drift')
+                compare(case,body,model,observe_top1=top==2)==original[case['lane']],'request or verified score drift')
         # Sampling seed chooses the action; compare raw probabilities only conditional on that same action.
         ident=(digest({k:v for k,v in wire.items() if k!='seed'}),case['adapter_sha'],digest(body['prompt_token_ids']))
         inputs.add(ident)

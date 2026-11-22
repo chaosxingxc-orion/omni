@@ -125,6 +125,29 @@ def grouped_rounds(config, services):
                 yield b,arm,groups,concurrency
 
 
+def distinct_rounds(config, services):
+    """Paired comparison on different recordings, with roles crossed between panels."""
+    width = config['grouped_concurrency']
+    require(len(width)==1 and type(width[0]) is int and width[0]>0 and len(services)==2, 'paired concurrency')
+    n=width[0]; modes=config.get('admission_order')
+    windows=config.get('lane_concurrency')
+    require(bool(config['measurement_id']) and (
+        modes is not None and sorted(modes)==['continuous','group_drained'] and windows is None or
+        modes is None and isinstance(windows,list) and len(windows)==len(config['distinct_panels'])
+        and all(set(w)=={s['name'] for s in services} and
+                all(type(k) is int and 1<=k<=32 for k in w.values()) for w in windows)), 'paired admission')
+    for b,refs in enumerate(config['distinct_panels']):
+        wires=[doc(ref) for ref in refs]
+        require(len(wires)>=2*(max(windows[b].values()) if windows else n) and len(wires)%n==0 and
+                len({hashlib.sha256(canonical(w['messages'])).digest() for w in wires})==len(wires), 'distinct complete waves required')
+        salt=hashlib.sha256(canonical([config['measurement_id'],b])).hexdigest()
+        require(all(w['model']=='qwen3-omni-30b-a3b-instruct' and 'cache_salt' not in w for w in wires),'unchanged business wires')
+        panel=[(i//n,i%n,dict(w,cache_salt=salt)) for i,w in enumerate(wires)]
+        for arm in config['round_order']:
+            require(arm in ('paired','paired_warm'),'paired cache windows')
+            yield b,arm,{v['name']:panel for v in services},windows[b] if windows else n
+
+
 def measure_grouped(config, root, plan):
     services=config['services']
     reports=[]
@@ -143,12 +166,19 @@ def measure_grouped(config, root, plan):
         def measure_lane(service):
             name = service['name']
             requests = roster[name]
+            if 'stock_adapter_alias' in service:
+                alias=service['stock_adapter_alias']
+                with urllib.request.urlopen(service['endpoint']+'/v1/models',timeout=8) as response:
+                    entries=json.load(response)['data']
+                require(any(x['id']==alias and x.get('parent')=='qwen3-omni-30b-a3b-instruct' for x in entries),'stock adapter not present')
+                requests=[(g,i,dict(w,model=alias)) for g,i,w in requests]
+            mode = config['admission_order'][(block+services.index(service))%2] if 'admission_order' in config else admission
             waves = [requests]
-            if admission == 'group_drained':
+            if mode == 'group_drained':
                 waves = [[item for item in requests if item[0] == group]
                          for group in dict.fromkeys(item[0] for item in requests)]
             lane_rows = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency[name] if isinstance(concurrency,dict) else concurrency) as pool:
                 for wave in waves:
                     jobs = {pool.submit(contact, directory/name/f'{g}-{i}', service['endpoint'], wire,
                                         config['request_timeout_seconds'], queued_at=started): (g, i)
@@ -158,8 +188,17 @@ def measure_grouped(config, root, plan):
                         lane_rows.append(dict(service=name, group=g, replicate=i, **job.result()))
             return lane_rows
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(services)) as lanes:
-            rows = [row for lane_rows in lanes.map(measure_lane, services) for row in lane_rows]
+        with contextlib.ExitStack() as controls:
+            if config.get('capture_device_trace') is True:
+                def control(s,command):
+                    req=urllib.request.Request(s['endpoint']+'/'+command,method='POST')
+                    with urllib.request.urlopen(req,timeout=config['request_timeout_seconds']) as r:
+                        require(r.status==200,command)
+                for s in services:
+                    control(s,'start_profile')
+                    controls.callback(control,s,'stop_profile')
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(services)) as lanes:
+                rows = [row for lane_rows in lanes.map(measure_lane, services) for row in lane_rows]
         elapsed=time.monotonic()-started
         by_service={}
         for service in services:
@@ -179,13 +218,13 @@ def measure_grouped(config, root, plan):
             per_service[name]=dict(requests=len(service_rows),completion_tokens=tokens,wall_seconds=seconds,
                                    output_tokens_per_second=tokens/seconds)
         reports.append(save(directory/'RESULT.json',dict(block=block,arm=arm,wall_seconds=elapsed,
-            concurrency_per_service=concurrency, admission=admission, requests_per_second=len(rows)/elapsed,
-            groups_per_minute=120*(len(services) if arm.startswith('paired') else 1)/elapsed,
+            concurrency_per_service=concurrency, admission=({s['name']:config['admission_order'][(block+i)%2] for i,s in enumerate(services)} if 'admission_order' in config else admission), requests_per_second=len(rows)/elapsed,
+            groups_per_minute=None if 'distinct_panels' in config else 120*(len(services) if arm.startswith('paired') else 1)/elapsed,
             prompt_tokens=prompts,cached_tokens=int(sum(hits)),completion_tokens=sum(r['usage']['completion_tokens'] for r in rows),
             http_p50_seconds=statistics.median(r['elapsed_seconds'] for r in rows),metrics=by_service,
             per_service=per_service,
             requests=sorted(rows,key=lambda r:(r['group'],r['replicate'])),
-            input_refs=config['grouped_blocks'][block])))
+            input_refs=(config['distinct_panels'] if 'distinct_panels' in config else config['grouped_blocks'])[block])))
     return reports
 
 
@@ -231,8 +270,9 @@ def run(config_path):
     require(config['schema']=='existing-service-efficiency-v1','config schema')
     require(config['source_boot']==Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'host changed')
     storage(root,1024**3)
-    grouped='grouped_blocks' in config
-    plan=list(grouped_rounds(config,config['services'])) if grouped else None
+    grouped='grouped_blocks' in config or 'distinct_panels' in config
+    require(not ('grouped_blocks' in config and 'distinct_panels' in config),'ambiguous panel selection')
+    plan=list((distinct_rounds if 'distinct_panels' in config else grouped_rounds)(config,config['services'])) if grouped else None
     cases=[] if grouped else config.get('cases') or [dict(id='default',wire_ref=config['wire_ref'])]
     require(grouped or cases and len({c['id'] for c in cases})==len(cases),'distinct configured case IDs')
     wires={}
