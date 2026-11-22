@@ -60,6 +60,9 @@ def build(spec):
     elif parent_kind == 'configured_tile_rows':
         from project_graph_tile_rows import build as make_tile_rows
         make_tile_rows(spec)
+    elif parent_kind == 'packed_qkv':
+        from project_packed_prefill_qkv import build as make_packed
+        make_packed(spec)
     else:
         raise ValueError('unknown timing parent kind')
     root=Path(spec['projection']['target'])
@@ -74,7 +77,16 @@ def build(spec):
     rows=read(rp)
     if digest(target)!=rows['decode_layer_graph']['source_sha256']:
         raise ValueError('layer source differs')
-    target.write_text(timed(target.read_text(),layers))
+    source=timed(target.read_text(),layers)
+    if spec.get('record_decode_graph_build') is True:
+        anchor='                graphs[i,n]=build(i,n,hidden_states,rs,*trig,mask)'
+        source=once(source,anchor,'''                from vllm import stage_clock
+                capture_start=stage_clock.now()
+'''+anchor+'''
+                stage_clock.emit('decode_graph_first_build',step=timing.current,layer=i,
+                                 rows=n,start=capture_start,end=stage_clock.now())''')
+        compile(source,'decode_layer_graph.py','exec')
+    target.write_text(source)
     rows['decode_layer_graph']['source_sha256']=digest(target)
     save(rp,rows)
     server=root/'bundle'/('SERVER-'+lane+'.json')

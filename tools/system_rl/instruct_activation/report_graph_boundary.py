@@ -77,17 +77,69 @@ def aggregate(ledger, rows, layers):
                 intervals=len(rows))
 
 
+def capture_tail(ledger,state):
+    """Measure first-build host time overlapping each batch's server response tail."""
+    requests=defaultdict(list)
+    for r in ledger['requests']:
+        requests[r['batch']].append(r['sent_ns'])
+    spans={batch:(min(ts),max(ts)) for batch,ts in requests.items()}
+    result=defaultdict(list)
+    rank_count=0
+    for path in sorted(state.glob('stages-*.jsonl')):
+        events=[json.loads(line) for line in path.read_bytes().splitlines()]
+        frames=[e for e in events if e['kind']=='worker_forward']
+        if not frames: continue
+        rank_count+=1
+        builds=defaultdict(list)
+        for e in events:
+            if e['kind']=='decode_graph_first_build':
+                require(e['start']<=e['end']<=e['t'],'invalid build interval')
+                builds[e['step']].append(e)
+        for step in ledger['steps']:
+            frame,=[f for f in frames if step['start_ns']<=f['start']<=f['t']<=step['end_ns']]
+            hits=sorted(builds[frame['start']],key=lambda e:e['start'])
+            require(all(frame['start']<=e['start']<=e['end']<=frame['t'] for e in hits)
+                    and all(a['end']<=b['start'] for a,b in zip(hits,hits[1:])),'unbound build time')
+            lo,hi=spans[step['batch']]
+            result[step['step']].append(dict(shapes=[(e['layer'],e['rows']) for e in hits],
+                build_ms=sum(e['end']-e['start'] for e in hits)/1e6,
+                tail_build_ms=sum(max(0,min(hi,e['end'])-max(lo,e['start'])) for e in hits)/1e6))
+    require(rank_count==4 and len(result)==len(ledger['steps']),'incomplete workers')
+    batches={}
+    for batch,(lo,hi) in sorted(spans.items()):
+        matched=[]
+        for step in ledger['steps']:
+            if step['batch']!=batch: continue
+            ranks=result[step['step']]
+            require(len(ranks)==4 and all(r['shapes']==ranks[0]['shapes'] for r in ranks),'inconsistent first builds')
+            if ranks[0]['shapes']:
+                matched.append(dict(step=step['step'],layers=len(ranks[0]['shapes']),
+                    shapes=sorted({n for _,n in ranks[0]['shapes']}),
+                    build_ms=statistics.median(r['build_ms'] for r in ranks),
+                    tail_build_ms=statistics.median(r['tail_build_ms'] for r in ranks)))
+        batches[batch]=dict(server_first_to_last_ms=(hi-lo)/1e6,steps_with_builds=matched)
+    return dict(round=ledger['round_sha256'],batches=batches,ranks=rank_count,
+                scope='worker host wall intervals intersected with first-to-last server send; median across TP ranks')
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('config','state','abi'):
         parser.add_argument(name,type=Path)
     parser.add_argument('lane')
     parser.add_argument('--summary',type=Path)
+    parser.add_argument('--capture-tail',type=Path)
     args=parser.parse_args()
     rows=summarize(args.config,args.state,args.abi,args.lane)
-    if args.summary:
+    if args.summary or args.capture_tail:
         ledger=report(args.config,args.state,args.lane)
+    if args.summary:
         save(args.summary,aggregate(ledger,rows,doc(pin(args.abi))['timed_layers']))
+    if args.capture_tail:
+        require('decode_graph_first_build' in
+                (args.abi.parent/'bundle/parents/jev-system-rl/implementation/decode_layer_graph.py').read_text(),
+                'cannot count builds without instrumentation')
+        save(args.capture_tail,capture_tail(ledger,args.state))
     w=csv.DictWriter(sys.stdout,fieldnames=rows[0],lineterminator='\n')
     w.writeheader()
     w.writerows(rows)

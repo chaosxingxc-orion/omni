@@ -9,6 +9,17 @@ from probe_after_cutover import main as scores
 
 def run(c):
     cut=doc(pin(c['cutover']))
+    if 'after_no_promotion' in c:
+        decision=Path(c['after_no_promotion'])
+        lane,=cut['lanes']
+        previous=Path(lane['old_code']).parent
+        require(decision==previous.with_name(previous.name+'-DECISION.json'),'decision from wrong study')
+        until=time.monotonic()+cut['wait_seconds']
+        while not decision.is_file():
+            require(time.monotonic()<until,'predecessor decision missing')
+            time.sleep(5)
+        if doc(pin(decision))['action']!='no_promotion':
+            return
     terminal=Path(cut['terminal'])
     if 'after_score' in cut:
         source=Path(cut['after_score'])
