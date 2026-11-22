@@ -61,8 +61,20 @@ def build(spec):
     layers=spec['timed_layers']
     if not layers or layers!=sorted(set(layers)) or any(type(i)!=int or not 0<=i<48 for i in layers):
         raise ValueError('expected unique layer IDs from the measured model')
-    trace_parent(spec)
     root=Path(spec['projection']['target'])
+    if 'performance_lock' in spec:
+        from project_prefill_dense_pages import build as build_dense
+        from project_stage_trace import bind
+        from decode_lineage import snapshot
+        from io_utils import digest as digest_state
+        parent=Path(spec['timing_parent'])
+        expected=read(Path(spec['performance_lock']))['runtime_sha256']
+        if digest_state(snapshot(parent)) != expected:
+            raise ValueError('profiling parent differs from the performance baseline')
+        build_dense(spec)
+        bind(spec,root,parent)
+    else:
+        trace_parent(spec)
     code=root/('lane-'+next(iter(spec['projection']['lanes'])))
     proj=code/'probes'; target=root/'bundle/parents/jev-system-rl/implementation/decode_layer_graph.py'
     rp=root/'bundle/ROWS.json';rows=read(rp)
