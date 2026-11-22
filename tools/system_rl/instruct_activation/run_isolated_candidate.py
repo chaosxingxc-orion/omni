@@ -61,7 +61,8 @@ def run(c):
         from report_prefill_candidate import report
         from io_utils import save
         spec=doc(c['parent_forward_report'])
-        spec.update(training_proof=pin(cut['after_forward']))
+        if 'after_forward' in cut:
+            spec.update(training_proof=pin(cut['after_forward']))
         require(doc(spec['training_proof'])['natural_round']==
                 doc(pin(Path(spec['parent_config']).parent/'rounds'/'RESULT.json'))['rounds'][0]['sha256'],
                 'training reference does not match performance parent')

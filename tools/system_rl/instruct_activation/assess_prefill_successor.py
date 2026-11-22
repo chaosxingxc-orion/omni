@@ -47,9 +47,10 @@ def assess(c):
     cut = doc(pin(flow['cutover']))
     lane, = cut['lanes']
     sibling = Path(lane['new_code']).parent
+    derivation=doc(c['sibling_proof'])
     require(Path(lane['old_code']).parent==root and Path(cut['terminal'])==score/'DRAINED.json'
             and sibling==Path(c['sibling_proof']['path']).parent
-            and doc(c['sibling_proof'])['parent']==digest(snapshot(parent)), 'unrelated fallback')
+            and derivation.get('immediate_parent',derivation.get('parent'))==digest(snapshot(parent)), 'unrelated fallback')
     save(c['decision'],dict(action='measure_sibling',report=summary,observed_accuracy_within_limits=accurate))
     run(flow)
 
