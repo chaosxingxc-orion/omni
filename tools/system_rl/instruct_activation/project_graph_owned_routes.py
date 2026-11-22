@@ -31,12 +31,23 @@ def edit(src):
 
 
 def build(config):
-    build_tiles(config)
+    if 'packed_route_parent' in config:
+        from project_packed_prefill_qkv import build as pack_qkv
+        pack_qkv(config)
+    else:
+        build_tiles(config)
     root = Path(config['projection']['target'])
     parent = snapshot(Path(config['route_parent']))
     proof = doc(config['route_parent_proof'])
-    require(proof['passed'] and digest(parent) == proof['runtime'] and snapshot(root) == parent,
-            'training-reviewed parent required')
+    require(proof['passed'] and digest(parent) == proof['runtime'], 'training-reviewed parent required')
+    previous = snapshot(root)
+    if 'packed_route_parent' in config:
+        candidate = Path(config['packed_route_parent'])
+        packed = doc(pin(candidate/'PACKED-PREFILL-QKV.json'))
+        require(packed['parent'] == digest(parent) and packed['changes'] == changes(parent, previous)
+                and previous == snapshot(candidate), 'different packed QKV parent')
+    else:
+        require(previous == parent, 'unexpected parent implementation')
     rel = 'parents/jev-system-rl/implementation/decode_layer_graph.py'
     src, rp = root/'bundle'/rel, root/'bundle/ROWS.json'
     rows = doc(pin(rp))
@@ -52,7 +63,7 @@ def build(config):
     delta = changes(parent,snapshot(root))
     require(not delta['engine'] and set(delta['files']) == {rel} and set(delta['rows']) == {'decode_layer_graph'},
             'unrelated runtime change')
-    save(root/'GRAPH-OWNED-ROUTES.json',dict(parent=digest(parent),changes=delta))
+    save(root/'GRAPH-OWNED-ROUTES.json',dict(parent=digest(parent),immediate_parent=digest(previous),changes=delta))
 
 
 if __name__ == '__main__':

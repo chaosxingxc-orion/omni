@@ -1,0 +1,154 @@
+{
+  "engine_change": {},
+  "hf_diagnostic": {
+    "common": 50,
+    "complete": 4,
+    "independent_top1_observed": false,
+    "max_sequence_delta": 0.0,
+    "max_token_delta": 0.0,
+    "requests": 5,
+    "result_sha256": "27ea61e38b142c98802507227bd7d90b4395574df9a8aa2180bbb136a7bafd4e"
+  },
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "implementation": {
+    "parents/jev-system-rl/implementation/decode_layer_graph.py": {
+      "new": "bf015939de728b472e646254f2cc2a3d052a9b5f4fed0cd1278330c838a20929",
+      "old": "21aff82f89b300d2d0f4232d7c306f3c90b9547e12da3167b1fb0286b384d903"
+    }
+  },
+  "limitations": "One panel. Retains sampling, no independent top-1 or formal training acceptance.",
+  "paired": {
+    "batches": [
+      {
+        "batch": 0,
+        "candidate_first_s": 6.055249930010177,
+        "candidate_s": 7.070190420025028,
+        "candidate_tokens": 91,
+        "parent_first_s": 7.148142050020397,
+        "parent_s": 8.48760133003816,
+        "parent_tokens": 98,
+        "saved_s": 1.4174109100131318
+      },
+      {
+        "batch": 1,
+        "candidate_first_s": 4.9381835899548605,
+        "candidate_s": 6.886700429953635,
+        "candidate_tokens": 97,
+        "parent_first_s": 5.917366230045445,
+        "parent_s": 7.834927969961427,
+        "parent_tokens": 97,
+        "saved_s": 0.9482275400077924
+      },
+      {
+        "batch": 2,
+        "candidate_first_s": 5.179262240068056,
+        "candidate_s": 6.296042129979469,
+        "candidate_tokens": 90,
+        "parent_first_s": 6.14719184988644,
+        "parent_s": 7.354271429940127,
+        "parent_tokens": 90,
+        "saved_s": 1.058229299960658
+      },
+      {
+        "batch": 3,
+        "candidate_first_s": 5.173689240007661,
+        "candidate_s": 6.064186370000243,
+        "candidate_tokens": 90,
+        "parent_first_s": 6.1307134800590575,
+        "parent_s": 6.88815578003414,
+        "parent_tokens": 86,
+        "saved_s": 0.8239694100338966
+      }
+    ],
+    "candidate_round": "47157a9cf9499315ccabfa3c816bcbec454557aefecc8051c574a28887c2802f",
+    "candidate_valid": 28,
+    "mean_batch_saved_s": 1.0619592900038697,
+    "output_actions": {
+      "candidate_tokens": 368,
+      "common": 298,
+      "common_max_abs": 0.0,
+      "identical_sequences": 25,
+      "parent_tokens": 371,
+      "sequence_max_abs": 0.0
+    },
+    "parent_round": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+    "parent_valid": 27,
+    "per_request": {
+      "mean_decode_seconds": [
+        3.1416609853076807,
+        2.6643039506343484
+      ],
+      "mean_prefill_seconds": [
+        1.2635693765660108,
+        1.0541685353018693
+      ],
+      "mean_queue_seconds": [
+        1.6930027224880178,
+        1.3958843425025407
+      ],
+      "mean_ttft_seconds": [
+        3.662625126540661,
+        3.1280592307448387
+      ]
+    },
+    "prefix": [
+      67456.0,
+      153422.0
+    ],
+    "relative_batch_reduction": 0.1389773664042132
+  },
+  "parent_runtime_sha256": "17ec407b72c7a90b098ba7443e5a3c450c878d28f0437d7f2d01076ff1697e98",
+  "policy_sha256": "fe0e4be930c8e6227c0ba214076651cc56cf4f060ba1538dcc9a92e240fe66bb",
+  "production_rollout": false,
+  "row_change": {
+    "decode_layer_graph": {
+      "new": {
+        "batch_sizes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "capture_segments": "both",
+        "pool_mode": "per_batch",
+        "prefill_graph": {
+          "capture_budget_bytes": 536870912,
+          "expandable_segments": false
+        },
+        "prefill_tile_rows": 2048,
+        "reserve_bytes": 2147483648,
+        "source_sha256": "bf015939de728b472e646254f2cc2a3d052a9b5f4fed0cd1278330c838a20929",
+        "tiled_attention_batch": 8
+      },
+      "old": {
+        "batch_sizes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "capture_segments": "both",
+        "pool_mode": "per_batch",
+        "prefill_graph": {
+          "capture_budget_bytes": 536870912,
+          "expandable_segments": false
+        },
+        "prefill_tile_rows": 1024,
+        "reserve_bytes": 2147483648,
+        "source_sha256": "21aff82f89b300d2d0f4232d7c306f3c90b9547e12da3167b1fb0286b384d903",
+        "tiled_attention_batch": 8
+      }
+    }
+  },
+  "runtime_sha256": "772a09d33e629e6f6533810647a6fcbc3fca49d29f3379dfc023bbf1c12858dc",
+  "scope": "P prefill engineering comparison, fixed batch of 8",
+  "version": "p-graph-wide-packed-qkv-c8-v1"
+}
