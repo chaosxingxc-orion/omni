@@ -180,12 +180,13 @@ def measure_grouped(config, root, plan):
             lane_rows = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency[name] if isinstance(concurrency,dict) else concurrency) as pool:
                 for wave in waves:
+                    released=time.monotonic()-started
                     jobs = {pool.submit(contact, directory/name/f'{g}-{i}', service['endpoint'], wire,
                                         config['request_timeout_seconds'], queued_at=started): (g, i)
                             for g, i, wire in wave}
                     for job in concurrent.futures.as_completed(jobs):
                         g, i = jobs[job]
-                        lane_rows.append(dict(service=name, group=g, replicate=i, **job.result()))
+                        lane_rows.append(dict(service=name, group=g, replicate=i, batch_release_from_round_seconds=released, **job.result()))
             return lane_rows
 
         with contextlib.ExitStack() as controls:
@@ -347,12 +348,25 @@ def run(config_path):
         finally:
             # On a lost response do not release a guard while generation may
             # still be running. No retry or replacement HTTP request is sent.
+            import sys
+            failed=sys.exc_info()[0] is not None
+            recovered=False
             while True:
                 try:
                     for service in config['services']:idle(metrics(service['endpoint']))
                     break
-                except Exception:time.sleep(10)
-            save(root/'DRAINED.json',dict(guards_releasable=True,finished_epoch=time.time()))
+                except Exception:
+                    if failed and 'start_receipts' in config and 'distinct_panels' in config:
+                        from reconcile_failed_panel import inspect_window
+                        try:
+                            outcome=inspect_window(config_path,config['start_receipts'])
+                        except Exception:
+                            pass  # Unknown or incomplete ledger: retain the guard.
+                        else:
+                            save(root/'DRAINED.json',outcome);recovered=True;break
+                    time.sleep(10)
+            if not recovered:
+                save(root/'DRAINED.json',dict(guards_releasable=True,finished_epoch=time.time()))
 
 
 if __name__=='__main__':

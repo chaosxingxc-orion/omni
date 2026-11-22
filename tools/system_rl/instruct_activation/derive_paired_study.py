@@ -40,6 +40,11 @@ def prepare(spec):
         s,=[s for s in d['services'] if s['name']==lane]
         if s['endpoint'].rsplit(':',1)[-1]!=str(engine['port']):raise ValueError('endpoint changed')
         s['container']=container
+        if 'batch_size' in spec:
+            width=spec['batch_size']
+            if type(width)!=int or width<1 or len(panel)%width or width>min(d['lane_concurrency'][0].values()):
+                raise ValueError('batch does not fit both lanes or panel')
+            d.update(grouped_concurrency=[width],admission='group_drained')
         result[suf]=d
     if used!=len(refs):raise ValueError('unused panel')
     cut=get('-switch.local.json')
