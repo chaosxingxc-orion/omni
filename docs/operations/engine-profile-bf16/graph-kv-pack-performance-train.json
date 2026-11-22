@@ -1,4 +1,19 @@
 {
+  "both_lanes_audio_cold": false,
+  "cache": {
+    "a": {
+      "mm_hits": 0.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0
+    },
+    "b": {
+      "mm_hits": 32.0,
+      "mm_queries": 32.0,
+      "prefix_hits": 67456.0,
+      "prefix_queries": 153422.0
+    }
+  },
   "historical_hf": {
     "common": 50,
     "complete": 4,
