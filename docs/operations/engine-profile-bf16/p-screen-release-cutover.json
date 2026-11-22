@@ -1,0 +1,74 @@
+{
+  "baseline": "p-wide-owned-ready-widths-c8-native-v1",
+  "runtime": "03f4a22d017d8c5bf6f591979d955014e979caf791cddfb9a17af41946fc474e",
+  "checkpoint": "checkpoint-sha256:56413c26a9ba62c1474081942cf2e4f64f772679a7ee9ff46eff2bb148b24e44",
+  "frozen_benchmark": {
+    "measured_batches": 4,
+    "batch_width": 8,
+    "qualified_mean_seconds": 6.038,
+    "native_mean_seconds": 5.505,
+    "excess_percent": 9.69,
+    "forward_train_eval_matched_actions": 375,
+    "recordings": 32,
+    "top1_flips": 0
+  },
+  "drain": {
+    "closed": 31926,
+    "inflight_closed": 16,
+    "unknown": 0
+  },
+  "cutover": {
+    "instances": 2,
+    "tensor_parallelism": 4,
+    "concurrency_per_instance": 8,
+    "adapter_activations_verified": 2,
+    "pre_generation_boot_refusals": 16,
+    "refused_recordings_resumed_valid": 16,
+    "consumer_wire_reconstruction_samples": 2
+  },
+  "measurement": {
+    "batch_clock": "first client ledger intent to last committed result in each lane batch",
+    "first_batch_seconds": [
+      21.127,
+      21.333
+    ],
+    "measured_lane_batches": 16,
+    "measured_valid_records": 128,
+    "mean_seconds_per_batch": 6.503,
+    "min_seconds_per_batch": 6.084,
+    "max_seconds_per_batch": 8.853,
+    "combined_window_seconds": 58.457,
+    "combined_valid_records_per_second": 2.19
+  },
+  "snapshot": {
+    "at": "2026-11-22T20:27:00+08:00",
+    "population": 81055,
+    "valid": 32187,
+    "valid_since_restart": 261,
+    "admitted": 2505,
+    "target": 5000,
+    "eligible": {
+      "real": {
+        "error": 1026,
+        "success": 422
+      },
+      "synthetic": {
+        "error": 479,
+        "success": 578
+      }
+    },
+    "quota": {
+      "real": {
+        "error": 1689,
+        "success": 422
+      },
+      "synthetic": {
+        "error": 2311,
+        "success": 578
+      }
+    },
+    "synthetic_observed_error_yield": 0.029764493879326417,
+    "synthetic_required_error_yield": 0.08476772163612807,
+    "estimated_completion": null
+  }
+}
