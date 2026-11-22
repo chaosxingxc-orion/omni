@@ -69,6 +69,8 @@ def aggregate(ledger, rows, layers):
             phases[row['phase']] += row['device_median_ms']
         kinds[kind] = dict(steps=len(steps), emitted=sum(sum(s['out'].values()) for s in steps),
                            median_step_ms=statistics.median(s['ms']['total'] for s in steps),
+                           median_core_ms={name:statistics.median(s['ms'][name] for s in steps)
+                                           for name in steps[0]['ms']},
                            total_step_s=sum(s['ms']['total'] for s in steps)/1000,
                            phases_mean_ms={name:total/len(steps) for name,total in phases.items()})
     require(sum(k['steps'] for k in kinds.values()) == len(ledger['steps']), 'incomplete step ledger')

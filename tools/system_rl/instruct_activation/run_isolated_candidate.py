@@ -13,7 +13,8 @@ def run(c):
         decision=Path(c['after_no_promotion'])
         lane,=cut['lanes']
         previous=Path(lane['old_code']).parent
-        require(decision==previous.with_name(previous.name+'-DECISION.json'),'decision from wrong study')
+        require(decision in (previous.with_name(previous.name+'-DECISION.json'),
+                             previous.with_name(previous.name+'-native-DECISION.json')), 'decision from wrong study')
         until=time.monotonic()+cut['wait_seconds']
         while not decision.is_file():
             require(time.monotonic()<until,'predecessor decision missing')

@@ -62,8 +62,48 @@ def edit(source, block):
     return source
 
 
+def edit_tail_clear(source):
+    """Gather the exact same pages, then zero just the invalid tail rows in owned storage."""
+    helper = """def tail_rows(lengths, counts, device):
+    import torch
+    from itertools import accumulate
+    ends = accumulate(count * 128 for count in counts)
+    invalid = [row for length, end in zip(lengths, ends, strict=True)
+               for row in range(end - (-length % 128), end)]
+    return torch.tensor(invalid, device=device, dtype=torch.long)
+
+
+def gather_zero_tail(cache, ids, invalid):
+    # index_select owns this allocation; never write into the resident cache.
+    gathered = cache.index_select(0, ids).flatten(0, 1)
+    if invalid.numel():
+        gathered.index_fill_(0, invalid, 0)
+    return gathered
+
+
+"""
+    source = once(source, 'def page_plan(', helper + 'def page_plan(')
+    source = once(source, """    valid = torch.cat([torch.arange(count * 128, device=device) < n
+                       for n, count in zip(lengths, counts, strict=True)])
+    valid = valid[:, None, None]""", '    valid = tail_rows(lengths, counts, device)')
+    source = once(source, """                packed = cache.index_select(0, indices).flatten(0, 1)
+                return torch.where(valid, packed, 0)""", '                return gather_zero_tail(cache, indices, valid)')
+    source = once(source, """    valid = torch.cat([torch.arange(c * 128, device=table.device) < k
+                       for c, k in zip(counts, kl, strict=True)])[:, None, None]""",
+                  '    valid = tail_rows(kl, counts, table.device)')
+    source = once(source, 'return torch.where(valid, cache.index_select(0, ids).flatten(0, 1), 0)',
+                  'return gather_zero_tail(cache, ids, valid)')
+    compile(source, 'decode_tiled_attention.py', 'exec')
+    return source
+
+
 def build(config):
-    build_tile(config)
+    tail_clear = config.get('kv_pack_mode') == 'zero_tail_rows'
+    if tail_clear:
+        from project_packed_prefill_qkv import build as packed
+        packed(config)
+    else:
+        build_tile(config)
     target = Path(config['projection']['target'])
     parent = snapshot(Path(config['pack_parent']))
     require(snapshot(target) == parent and digest(parent) == doc(config['pack_parent_proof'])['runtime'],
@@ -73,7 +113,7 @@ def build(config):
     rows_path = target/'bundle/ROWS.json'
     rows = doc(pin(rows_path))
     require(rows['decode_attention_sha256'] == file_digest(source), 'incorrect parent attention code')
-    source.write_text(edit(source.read_text(), config['pack_block_elements']))
+    source.write_text(edit_tail_clear(source.read_text()) if tail_clear else edit(source.read_text(), config['pack_block_elements']))
     rows['decode_attention_sha256'] = file_digest(source)
     write_json(rows_path, rows)
     for lane in config['projection']['lanes']:
@@ -84,7 +124,7 @@ def build(config):
     delta = changes(parent,snapshot(target))
     require(not delta['engine'] and set(delta['files']) == {relative} and
             set(delta['rows']) == {'decode_attention_sha256'}, 'unexpected runtime changes')
-    save(target/'KV-PACK.json',dict(parent=digest(parent),changes=delta,block=config['pack_block_elements']))
+    save(target/'KV-PACK.json',dict(parent=digest(parent),changes=delta,block=config.get('pack_block_elements'),mode=config.get('kv_pack_mode','triton_pair')))
 
 
 if __name__ == '__main__':

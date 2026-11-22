@@ -19,6 +19,10 @@ def build(c):
     elif kind == 'owner_routes':
         from project_graph_owned_routes import build as build_routes
         build_routes(c)
+    elif kind == 'kv_tail_clear':
+        from project_graph_kv_pack import build as build_pack
+        require(c['kv_pack_mode'] == 'zero_tail_rows', 'expected sparse tail clearing')
+        build_pack(c)
     elif kind == 'packed_schedule':
         from project_schedule_budget import build as build_schedule
         require('packed_schedule_parent' in c, 'expected training-aligned scheduling parent')
