@@ -1,0 +1,111 @@
+{
+  "hf_diagnostic": {
+    "common": 50,
+    "complete": 4,
+    "independent_top1_observed": false,
+    "max_sequence_delta": 0.0,
+    "max_token_delta": 0.0,
+    "requests": 5,
+    "result_sha256": "27ea61e38b142c98802507227bd7d90b4395574df9a8aa2180bbb136a7bafd4e"
+  },
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "implementation": {
+    "parents/jev-system-rl/implementation/decode_tiled_attention.py": {
+      "new": "eabf73ca5f7f36666976183ab452c3707b38487ecc6cc40d53282abbcf52464a",
+      "old": "b5e219d0dadafdf3d0fcf448954085e60fc926dac4e2ddb47e66ac5360829ff8"
+    }
+  },
+  "limitations": "One panel. Retains sampling, no independent top-1 or formal training acceptance.",
+  "paired": {
+    "batches": [
+      {
+        "batch": 0,
+        "candidate_first_s": 11.712291839998215,
+        "candidate_s": 12.918050190084614,
+        "candidate_tokens": 96,
+        "parent_first_s": 17.675102869980037,
+        "parent_s": 18.921402579988353,
+        "parent_tokens": 96,
+        "saved_s": 6.003352389903739
+      },
+      {
+        "batch": 1,
+        "candidate_first_s": 9.04085503006354,
+        "candidate_s": 10.11956491007004,
+        "candidate_tokens": 89,
+        "parent_first_s": 14.170555189950392,
+        "parent_s": 14.956570749985985,
+        "parent_tokens": 93,
+        "saved_s": 4.837005839915946
+      },
+      {
+        "batch": 2,
+        "candidate_first_s": 9.498978369985707,
+        "candidate_s": 10.600422720075585,
+        "candidate_tokens": 85,
+        "parent_first_s": 15.00505916995462,
+        "parent_s": 16.327230860013515,
+        "parent_tokens": 92,
+        "saved_s": 5.72680813993793
+      },
+      {
+        "batch": 3,
+        "candidate_first_s": 9.63387298991438,
+        "candidate_s": 10.517238679924048,
+        "candidate_tokens": 93,
+        "parent_first_s": 15.000133930006996,
+        "parent_s": 16.326411840040237,
+        "parent_tokens": 95,
+        "saved_s": 5.809173160116188
+      }
+    ],
+    "candidate_round": "90b9822b86ad1a6de74718bd67e73f2517d4095d3c5047507a44778ac1d944cc",
+    "candidate_valid": 28,
+    "mean_batch_saved_s": 5.594084882468451,
+    "output_actions": {
+      "candidate_tokens": 363,
+      "common": 305,
+      "common_max_abs": 0.0,
+      "identical_sequences": 24,
+      "parent_tokens": 376,
+      "sequence_max_abs": 0.0
+    },
+    "parent_round": "cd0a78dd3f61d10823ac2f8c7f4b52e8b3cc8934b8150042edb30cb5cd922304",
+    "parent_valid": 26,
+    "per_request": {
+      "mean_decode_seconds": [
+        7.152994482174108,
+        4.424177146254806
+      ],
+      "mean_prefill_seconds": [
+        3.163256634994468,
+        2.0058546081163513
+      ],
+      "mean_queue_seconds": [
+        4.678217400938593,
+        3.1680977350115427
+      ],
+      "mean_ttft_seconds": [
+        8.887739948928356,
+        6.088477209210396
+      ]
+    },
+    "prefix": [
+      67456.0,
+      154397.0
+    ],
+    "relative_batch_reduction": 0.3363264093836915
+  },
+  "parent_runtime_sha256": "2810815a2cc8a9a3f9b0a7d757fae1a1867d3308fb458c43719c03e5da74fc00",
+  "policy_sha256": "fe0e4be930c8e6227c0ba214076651cc56cf4f060ba1538dcc9a92e240fe66bb",
+  "production_rollout": false,
+  "row_change": {
+    "decode_attention_sha256": {
+      "new": "eabf73ca5f7f36666976183ab452c3707b38487ecc6cc40d53282abbcf52464a",
+      "old": "b5e219d0dadafdf3d0fcf448954085e60fc926dac4e2ddb47e66ac5360829ff8"
+    }
+  },
+  "runtime_sha256": "28fcf41f2edb133243d2aeec7353b2b99bfe3b3f5118105a9b0c2a19b120a386",
+  "scope": "P prefill engineering comparison, fixed batch of 8",
+  "version": "p-dense-prefill-c8-v1"
+}
