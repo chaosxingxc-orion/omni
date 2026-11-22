@@ -1,0 +1,28 @@
+{
+  "performance_lock": {
+    "bytes": 3705,
+    "file": "p-wide-owned-ready-widths-c8-native-v1.json",
+    "sha256": "f728bb822db29a35b649c1f32ce14e301856209ad667079a88bf03ba995d11c4"
+  },
+  "production_rollout": false,
+  "review": {
+    "actions": 375,
+    "candidate_s": 6.0380332825297955,
+    "max_batch_s": 6.055055962991902,
+    "native_round": "916c53c4c57f9fb4b79a62cc8f5b4ba1dbeadfd622be0a0938d9bffd727253d7",
+    "native_s": 5.504596329992637,
+    "relative_excess": 0.09690755153663955,
+    "requests": 32,
+    "round": "89bf3d22b13ad7a7b45d7431e8b1cae4359cd514460d141004fdebfb7d519afe",
+    "runtime": "03f4a22d017d8c5bf6f591979d955014e979caf791cddfb9a17af41946fc474e",
+    "step": 3,
+    "still_to_save_s": 0.0,
+    "within_target": true
+  },
+  "training": {
+    "bytes": 1211,
+    "file": "owned-ready-argmax-forward-public.json",
+    "sha256": "043544cdb9a7fe42c66dc6782334f16f15099fb5982492c5507894ae53e15070"
+  },
+  "version": "p-wide-owned-ready-widths-c8-native-v1"
+}
