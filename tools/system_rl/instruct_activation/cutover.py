@@ -21,6 +21,16 @@ def load(code, name):
 
 def switch(c):
     root=Path(c['output'])
+    if 'after_score' in c:
+        score=Path(c['after_score'])
+        assert Path(c['terminal'])==score.parent/'DRAINED.json'
+        deadline=time.monotonic()+c['wait_seconds']
+        while not (score.is_file() and Path(c['terminal']).is_file()):
+            if time.monotonic()>=deadline:
+                raise TimeoutError('predecessor score not sealed')
+            time.sleep(3)
+        prior=json.loads(score.read_bytes())
+        assert prior['training_use'] is False and prior['rows']
     root.mkdir(mode=0o700)
     guard=Path(c['guard'])
     with guard.open('rb') as lock:

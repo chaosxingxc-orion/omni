@@ -83,6 +83,9 @@ def argv(attempt, start):
                HCCL_IF_BASE_PORT=str(C['hccl_if_base_port']), HCCL_SOCKET_IFNAME=C['socket_ifname'],
                GLOO_SOCKET_IFNAME=C['socket_ifname'], TP_SOCKET_IFNAME=C['socket_ifname'],
                VLLM_PORT=str(C['vllm_port']))
+    if 'batch_invariant' in C:
+        assert type(C['batch_invariant']) is bool, 'batch_invariant must be a boolean'
+        env['VLLM_BATCH_INVARIANT'] = '1' if C['batch_invariant'] else '0'
     a = ['docker', 'run', '-d' if start else '--attach=stdout', '--name', name(attempt),
          '--label', LABEL, '--network', 'host' if start else 'none', '--ipc', 'private',
          '--shm-size', '16g', '--read-only', '--restart', 'no',
@@ -133,7 +136,7 @@ def start_checks():
         assert not any(x['PathOnHost'] in ['/dev/davinci'+str(i) for i in C['cards']] for x in ds), ('device lease conflict', d['Name'])
 
 
-def ready(attempt):
+def ready(attempt, expected_adapter=None):
     d = inspect(name(attempt))
     assert d['State']['Running'], d['State']
     assert sorted(x['PathOnHost'] for x in d['HostConfig']['Devices']) == sorted(
@@ -144,8 +147,21 @@ def ready(attempt):
         assert r.status == 200
     with urllib.request.urlopen(base+'/v1/models', timeout=8) as r:
         models = json.load(r)['data']
-    assert [m['id'] for m in models] == [C['served_model_name']], models
-    assert models[0].get('max_model_len') == int(C['serve_args'][C['serve_args'].index('--max-model-len')+1]), models
+    model = C['served_model_name']
+    bases = [m for m in models if m['id'] == model]
+    adapters = [m for m in models if m['id'] != model]
+    assert len(bases) == 1 and bases[0].get('max_model_len') == int(C['serve_args'][C['serve_args'].index('--max-model-len')+1]), models
+    if adapters:
+        assert 'policy_overlay' in C and len(adapters) == 1, models
+        adapter, = adapters
+        assert re.fullmatch(r'checkpoint-sha256:[0-9a-f]{64}', adapter['id']) and adapter.get('parent') == model, models
+    if expected_adapter is not None:
+        assert len(adapters) == 1 and adapters[0]['id'] == expected_adapter, 'active adapter mismatch'
+        receipt = json.loads(command(['docker', 'exec', d['Id'], 'cat', '/runtime/state/policy/ACTIVATION.json']))
+        assert receipt['alias'] == receipt['policy_version'] == expected_adapter
+        assert 'checkpoint-sha256:'+receipt['weights_ref']['sha256'] == expected_adapter
+        assert receipt['service_identity']['container_name'] == name(attempt) and receipt['source_boot'] == C['host_boot_id']
+        assert receipt['base'] is False and receipt['fixture'] is False
     print(json.dumps(dict(ready=True, container_id=d['Id'], models=models, thinking='OFF; clients send chat_template_kwargs.enable_thinking=false')))
 
 
@@ -153,6 +169,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('action', choices=['check', 'start', 'ready', 'stop', 'inspect'])
     p.add_argument('--attempt', default='run01')
+    p.add_argument('--expected-adapter')
     p.add_argument('--preflight-attempt', default='check01')
     ns = p.parse_args()
     verify()
@@ -170,7 +187,7 @@ if __name__ == '__main__':
         a = argv(ns.attempt, ns.action == 'start')
         print(command(a), flush=True)
     elif ns.action == 'ready':
-        ready(ns.attempt)
+        ready(ns.attempt, ns.expected_adapter)
     elif ns.action == 'inspect':
         d = inspect(n)
         print(json.dumps({k:d[k] for k in ('Id', 'Image', 'State', 'Mounts')}, indent=2))

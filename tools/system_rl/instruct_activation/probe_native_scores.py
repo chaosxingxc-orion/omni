@@ -71,7 +71,17 @@ def run(cfg):
         service_identity(s);idle(metrics(s['endpoint']))
         cid=json.loads(subprocess.check_output(['docker','inspect',s['container']]))[0]
         require(cid['Id']==doc(cfg['start'])['container_id'] and cid['State']['Running'],'service replaced')
-        alias=s['stock_adapter_alias']
+        alias='checkpoint-sha256:'+packet['cases'][0]['adapter_sha']
+        overlay=cfg.get('overlay_active',False)
+        model=packet['cases'][0]['wire']['model'] if overlay else alias
+        if overlay:
+            require('stock_adapter_alias' not in s,'mixed transport modes')
+            active=json.loads(subprocess.check_output(['docker','exec',s['container'],'cat',
+                              '/runtime/state/policy/ACTIVATION.json']))
+            require(active['alias']==active['policy_version']==alias and active['weights_ref']['sha256']==alias.split(':')[1]
+                    and active['service_identity']['container_name']==s['container'],'overlay identity mismatch')
+        else:
+            require(s['stock_adapter_alias']==alias,'static adapter identity mismatch')
         with urllib.request.urlopen(s['endpoint']+'/v1/models',timeout=10) as resp:
             registered=json.load(resp)['data']
         require(any(x['id']==alias and x.get('parent')==packet['cases'][0]['wire']['model'] for x in registered),
@@ -80,10 +90,10 @@ def run(cfg):
         save(root/'STARTED.json',dict(cases=cfg['cases'],container=cid['Id'],training_use=False))
         def one(r):
             require(alias=='checkpoint-sha256:'+r['adapter_sha'],'wrong weights')
-            response=contact(root/r['lane'],s['endpoint'],dict(r['wire'],model=alias,top_logprobs=2),
+            response=contact(root/r['lane'],s['endpoint'],dict(r['wire'],model=model,top_logprobs=2),
                              cfg['timeout_seconds'])
             body=json.loads(doc(response['receipt_ref'])['raw'])
-            return compare(r,body,alias)
+            return compare(r,body,model)
         try:
             with concurrent.futures.ThreadPoolExecutor(cfg['concurrency']) as pool:rows=list(pool.map(one,packet['cases']))
             save(root/'RESULT.json',dict(rows=rows,limits=packet['limits'],training_use=False,
