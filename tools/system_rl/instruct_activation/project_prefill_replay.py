@@ -22,10 +22,10 @@ def build(c):
     elif kind == 'decode_step_inputs':
         from project_decode_step_inputs import build as build_step_inputs
         build_step_inputs(c)
-    elif kind in ('kv_tail_clear', 'kv_interleaved', 'kv_interleaved_prefill', 'single_query'):
+    elif kind in ('kv_tail_clear', 'kv_interleaved', 'kv_interleaved_prefill', 'single_query', 'plane_rows'):
         from project_graph_kv_pack import build as build_pack
         require(c['kv_pack_mode'] == {'kv_tail_clear':'zero_tail_rows',
-                                      'kv_interleaved':'interleaved_pages', 'single_query':'single_query',
+                                      'kv_interleaved':'interleaved_pages', 'single_query':'single_query', 'plane_rows':'plane_rows',
                                       'kv_interleaved_prefill':'interleaved_prefill'}[kind], 'unexpected KV packing mode')
         build_pack(c)
     elif kind == 'packed_schedule':

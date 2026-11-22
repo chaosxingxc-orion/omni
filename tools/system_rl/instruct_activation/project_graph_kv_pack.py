@@ -121,6 +121,45 @@ def edit_interleaved(source, reference, *, include_decode):
     return source
 
 
+def edit_plane_rows(source):
+    """Read block-major KV directly into contiguous K then V rows for pure decode."""
+    helper = '''def plane_rows(ids):
+    import torch
+    # The physical cache alternates a 128-row K plane and a 128-row V plane.
+    rows = (ids[:, None] * 256 + torch.arange(128, device=ids.device)).flatten()
+    return torch.cat((rows, rows + 128))
+
+
+def read_planes(key, value, rows, invalid):
+    import torch
+    blocks = len(key)
+    plane = 128 * 128
+    stride = (2 * plane, 128, 128, 1)
+    if (key.stride() != stride or value.stride() != stride or
+            key.untyped_storage().data_ptr() != value.untyped_storage().data_ptr() or
+            value.storage_offset() != key.storage_offset() + plane):
+        raise ValueError("expected adjacent block-major K/V planes")
+    pool = torch.as_strided(key, (blocks * 256, 1, 128), (128, 128, 1))
+    gathered = pool.index_select(0, rows).view(2, -1, 1, 128)
+    gathered.masked_fill_(invalid, 0)
+    return gathered.unbind(0)
+
+
+'''
+    source = once(source, 'def page_plan(', helper + 'def page_plan(')
+    source = once(source, '    return ids, valid, query_rows, ends',
+                  '    return plane_rows(ids), ~valid, query_rows, ends')
+    source = once(source, '''            indices, valid, query_rows, ends = cached[identity]
+            def gather_pages(cache):
+                packed = cache.index_select(0, indices).flatten(0, 1)
+                return torch.where(valid, packed, 0)''',
+                  '''            rows, invalid, query_rows, ends = cached[identity]
+            packed_key, packed_value = read_planes(kc, vc, rows, invalid)''')
+    source = once(source, 'key=gather_pages(kc), value=gather_pages(vc)', 'key=packed_key, value=packed_value')
+    compile(source, 'decode_tiled_attention.py', 'exec')
+    return source
+
+
 def edit_single_query(source):
     """Pack only live KV rows. Each decode query attends its entire live prefix."""
     lo = source.index('    ends = list(accumulate(n * 128 for n in counts))')
@@ -144,7 +183,7 @@ def edit_single_query(source):
 
 def build(config):
     mode = config.get('kv_pack_mode', 'triton_pair')
-    require(mode in ('interleaved_pages', 'interleaved_prefill', 'zero_tail_rows', 'single_query', 'triton_pair'), 'unknown KV packing mode')
+    require(mode in ('interleaved_pages', 'interleaved_prefill', 'zero_tail_rows', 'single_query', 'triton_pair', 'plane_rows'), 'unknown KV packing mode')
     if mode != 'triton_pair':
         from project_packed_prefill_qkv import build as packed
         packed(config)
@@ -162,6 +201,8 @@ def build(config):
     original = source.read_text()
     if mode in ('interleaved_pages', 'interleaved_prefill'):
         result = edit_interleaved(original, config['interleaved_reference'], include_decode=mode=='interleaved_pages')
+    elif mode == 'plane_rows':
+        result = edit_plane_rows(original)
     elif mode == 'single_query':
         result = edit_single_query(original)
     elif mode == 'zero_tail_rows':

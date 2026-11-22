@@ -510,3 +510,8 @@ KV 批量取页后只清零末页无效行，在四批新录音上为 6.778 秒/
 两个独立诊断窗口都完成了 32 条真实录音，展开后的 prompt token、并发、prefix 命中和冷音频条件一致。按纯 decode 步中实际剩余的请求数比较，两端各有 52 步。8 条时，原生 43.68 ms（6 步），定制 126.65 ms（5 步）。剩 1 条时，原生 41.44 ms（11 步），定制 117.89 ms（15 步）。各宽度中位数相差 76–84 ms，计时覆盖模型结果等待及条件采样，含打桩和同步开销。已部署单 query 行的隔离候选，检查能否削减每层对齐到 128 行的工作。正式验收仍取无桩整批时间和同 checkpoint 的完整精度。[逐宽度计数与时延](engine-profile-bf16/native-vs-custom-step-widths.json)。
 
 只保留单行真实 query 并取有效 KV 前缀的候选实测 6.521 秒/批，父版 6.579，冷音频原生 5.505。四批三快一慢，单条 decode 2.664→2.680 秒。与 FSDP8 比较的 335 个共同动作有 11 个超限、29 条整段有 7 条超限（train/eval 相同）；该候选未晋级。[单行 query 实测](engine-profile-bf16/wide-decode-single-query-cold-train.json)。另对已验收父版 52 个纯 decode 步、7 个抽样层逐一比较四个 TP rank：364 次中有 357 次，attention/KV 耗时最短的 rank 随后比耗时最长的 rank 花更久做 all-gather；两者后续区间时长差的中位为 0.508 ms。后半层后接专家 reduce 的对应计数为 364/364、0.347 ms。设备流区间含等待；这些相关性不能把时延全部算作通信。[逐 rank 计时](engine-profile-bf16/wide-packed-decode-rank-intervals.json)。
+
+
+八并发平均整批时延的 10% 容差为 6.055 秒。已验收版本为 6.579 秒，比冷音频原生慢 19.52%；相比上一已验收版本，prefill 1.264→1.054 秒/请求、decode 3.142→2.664 秒/请求，整批墙钟下降 13.90%。预热与计时录音分开，原生与定制的冷音频窗口分别运行。
+
+对已验收算术做隔离计时，4 批共 53 个纯 decode 步，四个 rank、七个抽样层数据完整。各层先取四卡设备流时延中位再求和，每步 attention/KV 区间均值 8.496 ms，其中取 KV 页 4.632 ms、页计划和检查 1.379 ms、FIA 0.983 ms、组装 query 0.394 ms、复制结果 0.238 ms。首层页计划区间平均为 1.338 ms，其余抽样层平均 0.007 ms；而取页每层仍为 0.658–0.684 ms（首层与其余层两组均值）。后续 all-gather 区间为 12.822 ms，含等待其他卡；内外层不相加，打桩窗口不作晋级依据。新候选仅在纯 decode 按预先计算的行号一次收集两组连续 K/V，并对无效行补零；六组 CPU 对照逐位相同，实际收益与训推精度由无桩自然录音面板判定。[逐步、逐层区间](engine-profile-bf16/wide-decode-attention-intervals.csv) · [统计及分母](engine-profile-bf16/wide-decode-attention-intervals-summary.json)。
