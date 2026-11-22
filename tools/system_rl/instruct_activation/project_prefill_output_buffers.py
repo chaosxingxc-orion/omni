@@ -29,7 +29,13 @@ def edit(s):
 
 
 def build(config):
-    build_tile(config)
+    single = config.get('buffer_mode','copy_to_slices')
+    require(single in ('copy_to_slices','single_piece'), 'unknown buffer mode')
+    if single=='single_piece':
+        from project_packed_prefill_qkv import build as pack
+        pack(config)
+    else:
+        build_tile(config)
     root = Path(config['projection']['target'])
     parent = snapshot(Path(config['buffer_parent']))
     proof = doc(config['buffer_parent_proof'])
@@ -39,7 +45,24 @@ def build(config):
     src, rp = root/'bundle'/rel, root/'bundle/ROWS.json'
     rows = doc(pin(rp))
     require(file_digest(src) == rows['decode_layer_graph']['source_sha256'], 'graph source drift')
-    src.write_text(edit(src.read_text()))
+    original=src.read_text()
+    if single=='single_piece':
+        # tile_replay still clones outputs out of its shared graph pool. Keep
+        # contiguous operands for the backend and preserve every reduction.
+        original=once(original,'                q,k,v=(torch.cat(items,dim=0) for items in zip(*pieces,strict=True))',
+                      '''                if len(pieces)==1:
+                    q,k,v=(x.contiguous() for x in pieces[0])
+                else:
+                    q,k,v=(torch.cat(items,dim=0) for items in zip(*pieces,strict=True))''')
+        k='                rows=reduce(torch.cat(routed,dim=0)).reshape(n,8,2048)'
+        original=once(original,k,'''                if len(routed)==1:
+                    rows=reduce(routed[0].contiguous()).reshape(n,8,2048)
+                    return (rows*weights[0][:,:,None]).sum(dim=1),new_residual[0]
+'''+k)
+        compile(original,rel,'exec')
+    else:
+        original=edit(original)
+    src.write_text(original)
     rows['decode_layer_graph']['source_sha256'] = file_digest(src)
     write_json(rp, rows)
     for lane in config['projection']['lanes']:

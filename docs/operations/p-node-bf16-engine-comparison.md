@@ -474,3 +474,6 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 在新基线上，step‑3 checkpoint 的八卡 FSDP 已对 32 条真实录音的 368 个自然动作完整打分。训练与评估模式的逐 token 和整段 logprob 最大绝对差均为 0；回放相对自然采样的概率改变 0/368。366 个非并列位置均无 top‑1 翻转；另 2 个并列位置在同一批，独立观察实例只补测该批，不重复训练前向。优化器更新 0 次，正式 rollout 未切换。[八卡完整概率与待解并列数](engine-profile-bf16/wide-tiles-replay-forward-public.json)。
 
 最终复核：对包含两处并列的原始 8 条完整批次做独立观测，四个 TP rank 均以相同完整词表顺序取 argmax，与八卡训练结果一致。32/32 条、368/368 个动作在 train/eval 下逐 token 和整段 logprob 最大差为 0，top‑1 翻转 0、未解位置 0。该结论限第 3 步 checkpoint、真实音频与固定 8 并发的前向；优化器更新 0 次，正式 rollout 未切换。专家路由候选从这个已验收版本继续比较；纯 decode 合并 Q/K/V 另已生成隔离副本，尚无实测收益。[最终精度回执](engine-profile-bf16/wide-packed-argmax-forward-public.json)。
+
+
+在已通过完整 step‑3 前向的 2,048 行 + 合并 QKV 版本上，仅削减整块的无效专家计算。单条排队 1.396→0.977 s，prefill 1.054→0.953 s，首 token 3.128→2.810 s，但 decode 2.664→2.741 s，整批 6.579→6.613 s。第一批首个完整回复提早 0.592 s，首条至收齐却由 1.015 拉长至 3.146 s，其中相邻回复有两次约 1.28 s 的空档；发出 8 个请求仅相差 22 ms。后三批分别快 0.318、0.554、0.531 s。该窗口未采集内核事件，两次空档不能直接归因于捕图。两端同轮冷音频、相同前缀命中，原生 4.916 s/批，候选 6.613 s/批，差 1.697 s；历史独立匹配的冷原生是 5.505 s/批。有效输出同轮均 27/32。候选与 step‑3 train/eval 可比较的 327/372 个动作、27 个整段 logprob 差零；剩余 45 动作和独立 top‑1 未验收。工程基线保留原版，继续单独测试纯 decode 合并投影。[配对与概率](engine-profile-bf16/wide-packed-owned-cold-train.json) · [同轮原生及整批收齐时延](engine-profile-bf16/wide-packed-owned-same-round-native.json)。

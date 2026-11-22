@@ -37,6 +37,10 @@ def measure(config, lane, adapter, native, gold, parser):
     return (warm_wires,wires,[x['prompt_token_ids'] for x in replies],width,m['prefix_hits'],m['prefix_queries']), dict(
         lane=lane, round_sha256=window['round_sha256'],requests=len(rows),valid=window['valid'],
         batch_s=[x['release_to_last_s'] for x in window['batches']], mean_batch_s=window['mean_batch_s'],
+        batch_stages=[dict(first_response_s=b['http_finish_from_release_s'][0],
+                           first_to_last_s=b['first_to_last_finish_s'],last_only_s=b['last_only_s'],
+                           send_spread_s=b['send_spread_s'],output_tokens=b['generated'])
+                      for b in window['batches']],
         **{k:m[k] for k in ('mm_hits','mm_queries','prefix_hits','prefix_queries','mean_queue_seconds',
                              'mean_prefill_seconds','mean_ttft_seconds','mean_decode_seconds')})
 
