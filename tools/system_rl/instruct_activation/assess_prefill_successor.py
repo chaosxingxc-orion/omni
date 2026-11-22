@@ -5,7 +5,7 @@ import time
 
 from decode_lineage import snapshot
 from io_utils import digest, doc, pin, require, save
-from lock_prefill_comparison import lock
+from lock_prefill_comparison import lock, performance_gate
 from report_prefill_candidate import report
 from run_isolated_candidate import run
 
@@ -28,8 +28,11 @@ def assess(c):
     evidence = report(spec)
     summary = save(spec['output'],evidence)
     pair = evidence['paired']
-    enough = (all(r['saved_s']>0 for r in pair['batches'])
-              and pair['relative_batch_reduction'] >= lock_spec['min_relative_saving'])
+    if 'native_target' in lock_spec:
+        require(all(spec[k] == lock_spec[k] for k in ('cold_native_config','native_lane','gold','parser','lane')),
+                'assessment and lock use different native references')
+    gate = performance_gate(lock_spec, pair, evidence.get('cold_native_comparison'))
+    enough = gate['within_target']
     hf = evidence['historical_hf']
     limits = evidence['train']['limits']
     accurate = (all(m['over_token']==m['over_sequence']==0 for m in evidence['train']['modes'].values())
@@ -37,11 +40,11 @@ def assess(c):
                 and hf['max_sequence_abs']<=limits['sequence'])
     if enough and accurate:
         perf = save(c['lock_output'], lock(lock_spec))
-        save(c['decision'],dict(action='retain_for_full_precision',report=summary,performance_lock=perf))
+        save(c['decision'],dict(action='retain_for_full_precision',report=summary,performance_gate=gate,performance_lock=perf))
         return
     if enough or 'sibling_flow' not in c:
         action = 'retain_for_divergence_analysis' if enough else 'no_promotion'
-        save(c['decision'],dict(action=action,report=summary,observed_accuracy_within_limits=accurate))
+        save(c['decision'],dict(action=action,report=summary,performance_gate=gate,observed_accuracy_within_limits=accurate))
         return
     flow = doc(c['sibling_flow'])
     cut = doc(pin(flow['cutover']))
@@ -51,7 +54,7 @@ def assess(c):
     require(Path(lane['old_code']).parent==root and Path(cut['terminal'])==score/'DRAINED.json'
             and sibling==Path(c['sibling_proof']['path']).parent
             and derivation.get('immediate_parent',derivation.get('parent'))==digest(snapshot(parent)), 'unrelated fallback')
-    save(c['decision'],dict(action='measure_sibling',report=summary,observed_accuracy_within_limits=accurate))
+    save(c['decision'],dict(action='measure_sibling',report=summary,performance_gate=gate,observed_accuracy_within_limits=accurate))
     run(flow)
 
 

@@ -6,31 +6,45 @@ from pathlib import Path
 from statistics import mean
 
 
-def review(target, report, proof):
-    if (target['metric']!='mean_batch_s' or target['reference']!='matched_cold_native' or
-            not target['require_full_train_eval_forward'] or not 0<=target['max_relative_excess']<1):
+def latency_target(target, pair, candidate_round):
+    if (target['metric'] != 'mean_batch_s' or target['reference'] != 'matched_cold_native'
+            or not target['require_full_train_eval_forward'] or not 0 <= target['max_relative_excess'] < 1):
         raise ValueError('unsupported target')
-    pair=report['cold_native_comparison']
-    a,b=pair['candidate'],pair['native']
-    if not (proof['passed'] and proof['natural_round']==a['round_sha256']==report['paired']['candidate_round']
-            and proof['requests']==proof['passed_requests']==a['requests']==b['requests']
-            and proof['actions']==report['paired']['output_actions']['candidate_tokens']
-            and proof['unresolved_top1']==proof['replay_changed']==proof['optimizer_updates']==0
-            and len(a['batch_s'])*target['width']==len(b['batch_s'])*target['width']==a['requests']
-            and a['prefix_hits']==b['prefix_hits'] and a['prefix_queries']==b['prefix_queries']
-            and all(v['mm_queries']==v['requests'] and v['mm_hits']==0 and
-                    math.isclose(mean(v['batch_s']),v['mean_batch_s']) for v in (a,b))):
-        raise ValueError('unmatched measurements or incomplete precision proof')
+    candidate, native = pair['candidate'], pair['native']
+    if not (candidate['round_sha256'] == candidate_round and candidate['requests'] == native['requests']
+            and candidate['prefix_hits'] == native['prefix_hits']
+            and candidate['prefix_queries'] == native['prefix_queries']):
+        raise ValueError('different candidates, population or cache state')
+    for window in (candidate, native):
+        batches = window['batch_s']
+        if not (batches and all(math.isfinite(t) and t > 0 for t in batches)
+                and len(batches) * target['width'] == window['requests'] == window['mm_queries']
+                and window['mm_hits'] == 0 and math.isclose(mean(batches), window['mean_batch_s'])):
+            raise ValueError('invalid cold measurement')
+    limit = native['mean_batch_s'] * (1 + target['max_relative_excess'])
+    return dict(round=candidate_round, native_round=native['round_sha256'],
+                candidate_s=candidate['mean_batch_s'], native_s=native['mean_batch_s'],
+                max_batch_s=limit, still_to_save_s=max(0., candidate['mean_batch_s'] - limit),
+                relative_excess=candidate['mean_batch_s'] / native['mean_batch_s'] - 1,
+                within_target=candidate['mean_batch_s'] <= limit)
+
+
+def review(target, report, proof):
+    pair = report['cold_native_comparison']
+    candidate = pair['candidate']
+    performance = latency_target(target, pair, report['paired']['candidate_round'])
+    if not (proof['passed'] and proof['natural_round'] == performance['round']
+            and proof['requests'] == proof['passed_requests'] == candidate['requests']
+            and proof['actions'] == report['paired']['output_actions']['candidate_tokens']
+            and proof['unresolved_top1'] == proof['replay_changed'] == proof['optimizer_updates'] == 0):
+        raise ValueError('incomplete precision proof')
     for mode in ('train','eval'):
         m=proof['modes'][mode]
         if not (m['max_token_abs']<=proof['limits']['token']<=0.01 and
                 m['max_sequence_abs']<=proof['limits']['sequence']<=0.01 and m['top1_flips']==0):
             raise ValueError('precision limit exceeded')
-    limit=b['mean_batch_s']*(1+target['max_relative_excess'])
-    return dict(runtime=proof['runtime'],step=proof['step'],round=a['round_sha256'],native_round=b['round_sha256'],
-                requests=a['requests'],actions=proof['actions'],candidate_s=a['mean_batch_s'],native_s=b['mean_batch_s'],
-                max_batch_s=limit,still_to_save_s=max(0.,a['mean_batch_s']-limit),
-                relative_excess=a['mean_batch_s']/b['mean_batch_s']-1,within_target=a['mean_batch_s']<=limit)
+    return dict(runtime=proof['runtime'], step=proof['step'], requests=proof['requests'],
+                actions=proof['actions'], **performance)
 
 
 if __name__=='__main__':

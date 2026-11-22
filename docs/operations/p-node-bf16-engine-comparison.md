@@ -487,3 +487,5 @@ HF 比较的分母为同一输入、历史与采样动作；阈值为逐动作�
 按原生 vLLM 的 110% 批时延审查，当前锁定基线在真实 8 并发下比上版省 13.90%（7.641→6.579 秒/批），比匹配冷音频原生 5.505 秒/批慢 19.52%。两组使用相同输入和 adapter，在不同窗口测量，均有效 28/32。以本次原生窗口为参照，10% 容差为 6.055 秒/批，尚需省 0.524 秒/批。step‑3 的 32 条、368 个动作通过八卡训练和评估模式的全量前向验收。[性能判定](engine-profile-bf16/graph-wide-packed-qkv-native-target.json) · [精度回执](engine-profile-bf16/wide-packed-argmax-forward-public.json)。
 
 独立诊断实例的 4 批真实录音中，首条至末条完整响应的服务端发送间隔累计 5.758 秒，其中 5.737 秒（99.64%）落在纯 decode 调度步。首次宽度 8 建图落在首批首条完整响应前，与四批收尾重叠均为零。52 个纯 decode 步的时延中位数为 123.5 ms。这个比例描述诊断实例自身的收尾时间，对原生的时延差距仍用无桩窗口衡量。[发送与调度步交集](engine-profile-bf16/wide-packed-boundaries-tail.json) · [步耗时](engine-profile-bf16/wide-packed-boundaries-times.json)。
+
+纯 decode 将 attention gather、专家计算、reduce 和加权求和放入同一个图后，候选平均 6.729 秒/批，父版 6.579 秒。四批中三批变慢。首条完整回复后的收尾平均缩短 0.089 秒，但首条完整回复平均晚 0.239 秒。单请求 decode 从 2.664 增至 2.796 秒。32 条中的 324/374 个共同动作和 28 个整段与八卡 train/eval 概率差零。按冷音频原生 5.505 秒/批评估，这版仍慢 22.25%，控制器保留父版。新的筛选直接使用配置中的原生容差，达线才接续全动作前向验收。[四批性能及训练覆盖](engine-profile-bf16/wide-decode-collective-cold-train.json)。

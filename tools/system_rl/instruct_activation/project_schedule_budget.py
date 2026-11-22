@@ -14,8 +14,18 @@ def build(spec):
     flag = {'batched_tokens': '--max-num-batched-tokens',
             'scheduled_tokens': '--max-num-scheduled-tokens'}[key]
     if type(budget)!=int or budget<128 or budget%128:raise ValueError('expected whole KV pages')
-    tile(spec)
-    root=Path(spec['projection']['target']);parent=Path(spec['measured_parent'])
+    parent = Path(spec['measured_parent'])
+    if 'packed_schedule_parent' in spec:
+        from io_utils import digest as runtime_digest, doc
+        from project_packed_prefill_qkv import build as packed
+        parent = Path(spec['packed_schedule_parent'])
+        proof = doc(spec['packed_schedule_proof'])
+        if not proof['passed'] or proof['runtime'] != runtime_digest(snapshot(parent)):
+            raise ValueError('scheduler trial requires the measured training-aligned runtime')
+        packed(spec)
+    else:
+        tile(spec)
+    root = Path(spec['projection']['target'])
     before=snapshot(parent)
     if snapshot(root)!=before:raise ValueError('parent runtime differs')
     if spec.get('stage_trace'):

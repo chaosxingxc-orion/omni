@@ -19,6 +19,14 @@ def build(c):
     elif kind == 'owner_routes':
         from project_graph_owned_routes import build as build_routes
         build_routes(c)
+    elif kind == 'packed_schedule':
+        from project_schedule_budget import build as build_schedule
+        require('packed_schedule_parent' in c, 'expected training-aligned scheduling parent')
+        build_schedule(c)
+    elif kind == 'decode_collective':
+        from project_graph_collective import build as build_collective
+        require(c['collective_scope'] == 'pure_decode', 'unexpected collective scope')
+        build_collective(c)
     elif kind == 'single_piece':
         from project_prefill_output_buffers import build as build_buffers
         require(c['buffer_mode']=='single_piece','unexpected buffer implementation')

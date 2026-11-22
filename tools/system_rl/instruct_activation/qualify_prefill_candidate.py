@@ -24,6 +24,12 @@ def qualify(c):
     packet = Path(c['packet'])
     diagnostic = Path(c['diagnostic'])
     root = packet.parent
+    if 'replay_project' in c and not diagnostic.exists():
+        from project_prefill_replay import build
+        spec = doc(c['replay_project'])
+        require(diagnostic.parent == root and Path(spec['projection']['target']) == diagnostic
+                and Path(spec['measured_candidate']) == packet, 'wrong replay project')
+        build(spec)
     require(diagnostic.parent == root and doc(pin(diagnostic/'REPLAY-DELTA.json'))['parent_sha256'] ==
             perf['runtime_sha256'] and not perf['production_rollout'], 'wrong diagnostic runtime')
     natural = root/(packet.name+'-latency')/'CONFIG.local.json'

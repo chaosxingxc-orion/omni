@@ -8,6 +8,19 @@ from decode_lineage import changes, snapshot
 from io_utils import digest, doc, pin, require, save
 
 
+def performance_gate(config, paired, cold=None):
+    if 'native_target' in config:
+        from cold_native_window import compare as compare_native
+        from review_native_target import latency_target
+        if cold is None:
+            cold = compare_native(dict(config, candidate_config=config['candidate']))
+        return latency_target(doc(config['native_target']), cold, paired['candidate_round'])
+    threshold = config['min_relative_saving']
+    require(0 < threshold < 1, 'invalid parent saving threshold')
+    return dict(within_target=all(row['saved_s'] > 0 for row in paired['batches'])
+                and paired['relative_batch_reduction'] >= threshold)
+
+
 def lock(c):
     p, b = (Path(c[k]).resolve(strict=True) for k in ('parent_packet', 'candidate_packet'))
     inputs = {k:Path(c[k]) for k in ('parent','candidate','gold','parser')}
@@ -26,14 +39,16 @@ def lock(c):
     base, new = snapshot(p), snapshot(b)
     delta = changes(base, new)
     engine_delta = c.get('expected_engine_delta', {})
-    require(delta['engine']==engine_delta and set(delta['files'])=={c['changed_file']}
-            and set(delta['rows'])=={c['changed_row']},'unrelated runtime differences')
+    if c.get('change_scope') == 'scheduler_only':
+        require(set(engine_delta) == {'serve_args'} and delta['engine'] == engine_delta
+                and not delta['files'] and not delta['rows'], 'unrelated scheduler trial change')
+    else:
+        require(delta['engine'] == engine_delta and set(delta['files']) == {c['changed_file']}
+                and set(delta['rows']) == {c['changed_row']}, 'unrelated runtime differences')
     if 'parent_performance_lock' in c:
         require(digest(base)==doc(pin(c['parent_performance_lock']))['runtime_sha256'], 'unlocked parent')
-    for row in result['batches']:
-        require(row['saved_s']>0, 'parent faster on a measured batch')
-    require(0 < c['min_relative_saving'] < 1 and result['relative_batch_reduction']>=c['min_relative_saving'],
-            'insufficient measured improvement')
+    gate = performance_gate(c, result)
+    require(gate['within_target'], 'configured latency target missed')
     score=b.parent/(b.name+'-score')/'RESULT.json'; limits=doc(pin(score))['limits']
     require(doc(pin(score.with_name('DRAINED.json')))['guards_releasable'],'open HF ledger')
     scores=doc(pin(score))['rows'];common=[abs(d) for r in scores for d in r['deltas']]
@@ -43,6 +58,7 @@ def lock(c):
     return dict(version=c['version'],scope='P prefill engineering comparison, fixed batch of 8',
                 production_rollout=False, runtime_sha256=digest(new),parent_runtime_sha256=digest(base),
                 image=new['engine']['image'], policy_sha256=new['engine']['policy_sha256'],
+                **({'native_target':gate} if 'native_target' in c else {}),
                 implementation=delta['files'],engine_change=delta['engine'],row_change=delta['rows'],paired=result,
                 hf_diagnostic=dict(result_sha256=pin(score)['sha256'],requests=len(scores),common=len(common),
                                    complete=len(full),max_token_delta=max(common),max_sequence_delta=max(full),
