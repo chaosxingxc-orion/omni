@@ -54,7 +54,14 @@ def build(spec):
     layers = spec['timed_layers']
     if not layers or layers != sorted(set(layers)) or any(type(i)!=int or i not in range(48) for i in layers):
         raise ValueError('invalid observed layers')
-    make_graph(spec)
+    parent_kind = spec.get('timing_parent_kind', 'dense_tile_graph')
+    if parent_kind == 'dense_tile_graph':
+        make_graph(spec)
+    elif parent_kind == 'configured_tile_rows':
+        from project_graph_tile_rows import build as make_tile_rows
+        make_tile_rows(spec)
+    else:
+        raise ValueError('unknown timing parent kind')
     root=Path(spec['projection']['target'])
     parent=Path(spec['timing_parent'])
     if digest_state(snapshot(parent)) != read(Path(spec['graph_lock']))['runtime_sha256']:
