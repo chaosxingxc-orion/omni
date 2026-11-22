@@ -1,0 +1,155 @@
+{
+  "engine_change": {
+    "launch.py": {
+      "new": "70e5373ceb7416a864b2c58b0fc1183b5ea784e86ea0f43380c0b10d949bcef3",
+      "old": "840725a272d11bf6d0073e062048b9eefcd68e43590d1ef0b3597ea214df7f89"
+    }
+  },
+  "hf_diagnostic": {
+    "common": 50,
+    "complete": 4,
+    "independent_top1_observed": false,
+    "max_sequence_delta": 0.0,
+    "max_token_delta": 0.0,
+    "requests": 5,
+    "result_sha256": "27ea61e38b142c98802507227bd7d90b4395574df9a8aa2180bbb136a7bafd4e"
+  },
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "implementation": {
+    "parents/jev-system-rl/implementation/decode_layer_graph.py": {
+      "new": "807bf40c3edd778b89df65d1c385639ce9c10f6fafa2e359c61eb1a31fa0d128",
+      "old": "7cbeb41ae3f9bef8cb3f60267486199193d78a7582d2698c98c14a349d01250b"
+    }
+  },
+  "limitations": "One panel. Retains sampling, no independent top-1 or formal training acceptance.",
+  "paired": {
+    "batches": [
+      {
+        "batch": 0,
+        "candidate_first_s": 8.176576819969341,
+        "candidate_s": 9.199086520005949,
+        "candidate_tokens": 83,
+        "parent_first_s": 10.95505193003919,
+        "parent_s": 11.980126530048437,
+        "parent_tokens": 83,
+        "saved_s": 2.7810400100424886
+      },
+      {
+        "batch": 1,
+        "candidate_first_s": 8.227731139981188,
+        "candidate_s": 9.136038919910789,
+        "candidate_tokens": 93,
+        "parent_first_s": 10.363245630054735,
+        "parent_s": 11.832074049976654,
+        "parent_tokens": 89,
+        "saved_s": 2.696035130065866
+      },
+      {
+        "batch": 2,
+        "candidate_first_s": 7.460162280010991,
+        "candidate_s": 9.015095959999599,
+        "candidate_tokens": 98,
+        "parent_first_s": 10.077494750032201,
+        "parent_s": 11.187577489996329,
+        "parent_tokens": 92,
+        "saved_s": 2.1724815299967304
+      },
+      {
+        "batch": 3,
+        "candidate_first_s": 7.8882043700432405,
+        "candidate_s": 8.778832669951953,
+        "candidate_tokens": 90,
+        "parent_first_s": 10.492015289957635,
+        "parent_s": 11.499942039954476,
+        "parent_tokens": 89,
+        "saved_s": 2.721109370002523
+      }
+    ],
+    "candidate_round": "ed22e5b7ba4e299bd081022c7af571d8f28830d4e34f6fd1f87d9785b1d7aff9",
+    "candidate_valid": 27,
+    "mean_batch_saved_s": 2.592666510026902,
+    "output_actions": {
+      "candidate_tokens": 364,
+      "common": 302,
+      "common_max_abs": 0.0,
+      "identical_sequences": 25,
+      "parent_tokens": 353,
+      "sequence_max_abs": 0.0
+    },
+    "parent_round": "a41c80586d3df44ba2d1c516389c21c90d1f0cbca10b3f54f7d94af31bc47107",
+    "parent_valid": 30,
+    "per_request": {
+      "mean_decode_seconds": [
+        4.720147607189574,
+        3.713773830924765
+      ],
+      "mean_prefill_seconds": [
+        2.13220169593842,
+        1.5893986681330716
+      ],
+      "mean_queue_seconds": [
+        3.256631935633777,
+        2.2448824671919283
+      ],
+      "mean_ttft_seconds": [
+        6.301083065569401,
+        4.713131211698055
+      ]
+    },
+    "prefix": [
+      67456.0,
+      156293.0
+    ],
+    "relative_batch_reduction": 0.22302641855865102
+  },
+  "parent_runtime_sha256": "28fcf41f2edb133243d2aeec7353b2b99bfe3b3f5118105a9b0c2a19b120a386",
+  "policy_sha256": "fe0e4be930c8e6227c0ba214076651cc56cf4f060ba1538dcc9a92e240fe66bb",
+  "production_rollout": false,
+  "row_change": {
+    "decode_layer_graph": {
+      "new": {
+        "batch_sizes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "capture_segments": "both",
+        "pool_mode": "per_batch",
+        "prefill_graph": {
+          "capture_budget_bytes": 536870912,
+          "expandable_segments": false
+        },
+        "prefill_tile_rows": 512,
+        "reserve_bytes": 2147483648,
+        "source_sha256": "807bf40c3edd778b89df65d1c385639ce9c10f6fafa2e359c61eb1a31fa0d128",
+        "tiled_attention_batch": 8
+      },
+      "old": {
+        "batch_sizes": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "capture_segments": "both",
+        "pool_mode": "per_batch",
+        "prefill_tile_rows": 512,
+        "reserve_bytes": 2147483648,
+        "source_sha256": "7cbeb41ae3f9bef8cb3f60267486199193d78a7582d2698c98c14a349d01250b",
+        "tiled_attention_batch": 8
+      }
+    }
+  },
+  "runtime_sha256": "45b18afbdbcc1881bf35e38ffb02766dd721f8c4f52c1c2bd9acceb3e82dd32c",
+  "scope": "P prefill engineering comparison, fixed batch of 8",
+  "version": "p-dense-tile-graph-c8-v1"
+}
