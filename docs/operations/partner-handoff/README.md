@@ -91,7 +91,9 @@ Omni 公开仓从 `tools/system_rl/runtime_repairs/` 进入；内部 Omni 工作
 python3 tools/system_rl/runtime_repairs/stage_bounded_actor_step.py --config "$TRAIN_STEP_CONFIG"
 ```
 
-配置六项：`host` 是训练机 SSH 别名；`run` 是未使用的小写运行名；`source_bundle` 是**训练主机上**含 `HF-ACTOR.local.json`、`tree/` 和成功退出回执的冻结参考运行；`accepted_fields` 是**启动客户机上**的 `ACCEPTED-FIELDS.pt`（SHA-256：`e84a16fffeb2cd230117fb2a85da39117b8b4c2f56169ebf72a3d22f831146e0`）；`dataset_sha256` 取数据回执的 `pins.dataset`，对应 `datasetV2/COMPLETE.json` 的文件摘要；`devices` 为 `[4,5,6,7]`。配置中的 boot、原 guard、镜像、存储必须属于实际部署。热状态落本地持久盘，共享模型/数据/源码只读；由已验收的独立客户端归档。复现会写入新运行目录。此入口接受初始 Clock 和 policy-only 首步，不能循环调用来续训。
+训练 Docker 的宿主内存上限由部署配置的 `TRAIN_MEMORY_GIB` 提供。已解析配置使用整数 `training_memory_gib`，建议设为 1280。启动器要求该值大于 1024 GiB，创建容器后读回 Docker 的字节限制，再启动训练进程。
+
+配置中的数据和运行项包括：`host` 是训练机 SSH 别名；`run` 是未使用的小写运行名；`source_bundle` 是**训练主机上**含 `HF-ACTOR.local.json`、`tree/` 和成功退出回执的冻结参考运行；`accepted_fields` 是**启动客户机上**的 `ACCEPTED-FIELDS.pt`（SHA-256：`e84a16fffeb2cd230117fb2a85da39117b8b4c2f56169ebf72a3d22f831146e0`）；`dataset_sha256` 取数据回执的 `pins.dataset`，对应 `datasetV2/COMPLETE.json` 的文件摘要；`devices` 为 `[4,5,6,7]`。配置中的 boot、原 guard、镜像、存储必须属于实际部署。热状态落本地持久盘，共享模型/数据/源码只读；由已验收的独立客户端归档。复现会写入新运行目录。此入口接受初始 Clock 和 policy-only 首步，不能循环调用来续训。
 
 ## 从首步到连续训练：并行工作与合流条件
 

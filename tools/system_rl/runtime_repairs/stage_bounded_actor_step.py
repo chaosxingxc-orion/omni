@@ -7,6 +7,8 @@ import sys
 import tarfile
 import time
 
+from launch_retained_hf_fsdp import training_memory_bytes
+
 
 @contextmanager
 def measure(timings, name):
@@ -59,6 +61,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
            or r.get('publication_sha256')!=proof['resident_identity']['publication']['identity_sha256']
            for i,r in enumerate(owner_result)):raise ValueError('terminal rank/checkpoint identity differs')
     s=dict(old,name=c['run'],hot=str(dest/'hot'),dataset_sha256=c.get('dataset_sha256'),
+           training_memory_gib=c['training_memory_gib'],
            restore_checkpoint=dict(directory=str(checkpoint),sha256=proof_sha),
            continuation=dict(prior_step=step,predecessor_driver_sha256=proof['contract']['sources']['bounded_actor_step.py']),
            timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'])
@@ -70,7 +73,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
     s.pop('generation',None)
     s.pop('capture_mounts',None)
     s.pop('configuration_sha256',None)
-    overlay={'bounded_actor_step.py':d/'bounded_actor_step.py'}
+    overlay={name:d/name for name in ('bounded_actor_step.py','launch_retained_hf_fsdp.py')}
     geometry=c.get('lora_row_geometry',old.get('lora_row_geometry'))
     if geometry is not None or 'lora_row_geometry' in c:
         from source.lora_row_precision import validate
@@ -159,6 +162,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
 
 
 def stage(c, snapshots=None):
+    training_memory_bytes(c)
     host=c['host']; tag=c['run']; q=shlex.quote
     if not re.fullmatch(r'[A-Za-z0-9_-]+',host) or not re.fullmatch(r'[a-z0-9-]+',tag):raise ValueError('invalid run or alias')
     parent=Path(c['source_bundle']); dest=parent.with_name(tag); d=Path(__file__).resolve().parent
@@ -185,7 +189,8 @@ def stage(c, snapshots=None):
     files['events.py']=d/'source/events.py'
     files['policy_identity.py']=d/'source/policy_identity.py'
     files['accepted.pt']=Path(c['accepted_fields'])
-    s.update(accepted_fields='accepted.pt',dataset_sha256=c['dataset_sha256'],name=tag,hot=str(dest/'hot'),devices=c['devices'])
+    s.update(accepted_fields='accepted.pt',dataset_sha256=c['dataset_sha256'],name=tag,hot=str(dest/'hot'),
+             devices=c['devices'],training_memory_gib=c['training_memory_gib'])
     if c.get('trace_update') is True:
         if 'restore_run' in c:raise ValueError('trace_update requires an isolated initial step')
         s['trace_update']=True

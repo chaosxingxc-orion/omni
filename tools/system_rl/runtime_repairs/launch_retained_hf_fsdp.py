@@ -12,6 +12,30 @@ import time
 from dispatch_retained_hf_boundary import save
 
 
+def training_memory_bytes(cfg):
+    gib = cfg.get('training_memory_gib')
+    if type(gib) is not int or gib <= 1024:
+        raise ValueError('training_memory_gib must be an integer above 1024 GiB')
+    return gib << 30
+
+
+def start_container(args, memory_bytes, hot):
+    if memory_bytes is None:
+        return subprocess.check_output(args, text=True).strip()
+    cid = subprocess.check_output(args, text=True).strip()
+    try:
+        observed = int(subprocess.check_output(
+            ['docker', 'inspect', '--format', '{{.HostConfig.Memory}}', cid], text=True))
+        if observed != memory_bytes:
+            raise ValueError(f'Docker training memory is {observed} bytes; expected {memory_bytes}')
+        subprocess.run(['docker', 'start', cid], check=True, stdout=subprocess.DEVNULL)
+    except (ValueError, subprocess.SubprocessError, OSError) as exc:
+        save(hot/'EXIT.json', dict(container_id=cid, exit_code=1, failure=str(exc), complete_ranks=0))
+        raise
+    save(hot/'CONTAINER.json', dict(container_id=cid, memory_limit_bytes=observed))
+    return cid
+
+
 def capture_mounts(cfg, bundle):
     """Bind only sealed continuation inputs and its local writable index."""
     if 'generation' not in cfg:
@@ -69,6 +93,15 @@ def main(config,check_capture=False):
     config_bytes = config.read_bytes()
     cfg = json.loads(config_bytes)
     config_sha = hashlib.sha256(config_bytes).hexdigest()
+    is_training = ('training_memory_gib' in cfg or
+                   ('accepted_fields' in cfg and
+                    not any(key in cfg for key in ('updated_http_parity', 'parity_restore_step', 'efficiency'))))
+    memory_bytes = training_memory_bytes(cfg) if is_training else None
+    if memory_bytes is not None:
+        mem_total_kib = int(next(line.split()[1] for line in Path('/proc/meminfo').read_text().splitlines()
+                                 if line.startswith('MemTotal:')))
+        if memory_bytes > mem_total_kib * 1024:
+            raise ValueError('configured training memory exceeds host RAM')
     bundle = config.parent
     verify_staged_inputs(cfg, bundle)
     preflight_receipt = bundle/'CAPTURE-PREFLIGHT.json'
@@ -120,7 +153,10 @@ def main(config,check_capture=False):
         hot.mkdir(mode=0o700)
         storage.check_paths({'runtime':hot},min_free_bytes=20*1024**3+cfg['storage_budget_bytes'])
         paths = environment(hot,cfg['storage_budget_bytes'])
-        args = ['docker','run',*(['--rm'] if check_capture else ['--detach']),'--init','--read-only','--network','host',
+        limit = None if check_capture else memory_bytes
+        operation = ['run','--rm'] if check_capture else (
+            ['create','--memory',str(limit)] if limit is not None else ['run','--detach'])
+        args = ['docker',*operation,'--init','--read-only','--network','host',
                 '--shm-size','2g','--log-driver','json-file','--log-opt','max-size=50m','--log-opt','max-file=2',
                 '--user',f'{os.getuid()}:{os.getgid()}','--name',cfg['name']+('-check' if check_capture else ''),'--workdir','/omni-hot']
         for src,dst,ro in [(cfg['shared_root'],cfg['shared_root'],True),
@@ -176,14 +212,16 @@ print(json.dumps(dict(result=result, import_seconds=loaded-start, audit_seconds=
         args += [image,'python3','-B','-m','torch.distributed.run','--standalone',f'--nproc-per-node={world}',
                  '/sealed/retained_hf_fsdp_control.py','--config','/sealed/'+config.name,'--input','/sealed','--output','/omni-hot']
         save(hot/'INTENT.json',dict(image=image,devices=devices,boot_id=boot,guard_inode=os.fstat(guard.fileno()).st_ino,
-                                    storage=paths,config_sha256=config_sha))
+                                    storage=paths,config_sha256=config_sha,memory_limit_bytes=limit))
         try:
-            cid = subprocess.check_output(args,text=True).strip()
+            cid = start_container(args, limit, hot)
         except subprocess.CalledProcessError as exc:
-            save(hot/'EXIT.json',dict(container_id=None,exit_code=exc.returncode,
-                 failure='container launch failed; no worker started',complete_ranks=0))
+            if not (hot/'EXIT.json').exists():
+                save(hot/'EXIT.json',dict(container_id=None,exit_code=exc.returncode,
+                     failure='container launch failed; no worker started',complete_ranks=0))
             raise
-        save(hot/'CONTAINER.json',dict(container_id=cid))
+        if limit is None:
+            save(hot/'CONTAINER.json',dict(container_id=cid))
         deadline = time.monotonic()+cfg['timeout_seconds']
         failure = None
         try:

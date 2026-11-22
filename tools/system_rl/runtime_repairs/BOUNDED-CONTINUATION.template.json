@@ -7,6 +7,7 @@
   "restore_checkpoint_sha256": "${CHECKPOINT_SHA256}",
   "lineage": "${LINEAGE}",
   "devices": "${TRAIN_DEVICES}",
+  "training_memory_gib": "${TRAIN_MEMORY_GIB}",
   "storage_budget_bytes": "${TRAIN_STORAGE_BUDGET_BYTES}",
   "timeout_seconds": "${TRAIN_TIMEOUT_SECONDS}",
   "runtime_release": "${RUNTIME_RELEASE}",
