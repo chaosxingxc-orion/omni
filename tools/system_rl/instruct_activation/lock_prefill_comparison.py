@@ -25,8 +25,11 @@ def lock(c):
                 and len(started['physical_devices'])==4, 'unbound runtime packet')
     base, new = snapshot(p), snapshot(b)
     delta = changes(base, new)
-    require(not delta['engine'] and set(delta['files'])=={c['changed_file']}
+    engine_delta = c.get('expected_engine_delta', {})
+    require(delta['engine']==engine_delta and set(delta['files'])=={c['changed_file']}
             and set(delta['rows'])=={c['changed_row']},'unrelated runtime differences')
+    if 'parent_performance_lock' in c:
+        require(digest(base)==doc(pin(c['parent_performance_lock']))['runtime_sha256'], 'unlocked parent')
     for row in result['batches']:
         require(row['saved_s']>0, 'parent faster on a measured batch')
     require(0 < c['min_relative_saving'] < 1 and result['relative_batch_reduction']>=c['min_relative_saving'],
@@ -40,7 +43,7 @@ def lock(c):
     return dict(version=c['version'],scope='P prefill engineering comparison, fixed batch of 8',
                 production_rollout=False, runtime_sha256=digest(new),parent_runtime_sha256=digest(base),
                 image=new['engine']['image'], policy_sha256=new['engine']['policy_sha256'],
-                implementation=delta['files'],row_change=delta['rows'],paired=result,
+                implementation=delta['files'],engine_change=delta['engine'],row_change=delta['rows'],paired=result,
                 hf_diagnostic=dict(result_sha256=pin(score)['sha256'],requests=len(scores),common=len(common),
                                    complete=len(full),max_token_delta=max(common),max_sequence_delta=max(full),
                                    independent_top1_observed=any(r['top1'] for r in scores)),
