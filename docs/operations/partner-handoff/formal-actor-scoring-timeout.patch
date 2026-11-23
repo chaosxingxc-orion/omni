@@ -1,0 +1,225 @@
+--- a/launch_retained_hf_fsdp.py
++++ b/launch_retained_hf_fsdp.py
+@@ -97,7 +97,7 @@
+             raise ValueError(f'staged input drift: {name}')
+ 
+ 
+-def main(config,check_capture=False):
++def main(config,check_capture=False,timeout_recovery=None):
+     entered = time.monotonic()
+     config_bytes = config.read_bytes()
+     cfg = json.loads(config_bytes)
+@@ -159,7 +159,16 @@
+             smi = subprocess.check_output(['npu-smi','info'],text=True)
+             if any(f'No running processes found in NPU {i} ' not in smi for i in devices):
+                 raise ValueError('NPU has other processes: decline launch')
+-        hot.mkdir(mode=0o700)
++        name = cfg['name']
++        timeout_seconds = cfg['timeout_seconds']
++        if timeout_recovery is None:
++            hot.mkdir(mode=0o700)
++        else:
++            from recover_training_timeout import resume_scoring
++            storage.check_paths({'runtime':bundle}, min_free_bytes=20*1024**3+cfg['storage_budget_bytes'])
++            recovered = resume_scoring(config, cfg, hot, guard, timeout_recovery)
++            name += '-timeout-recovery'
++            timeout_seconds = recovered['timeout_seconds']
+         storage.check_paths({'runtime':hot},min_free_bytes=20*1024**3+cfg['storage_budget_bytes'])
+         paths = environment(hot,cfg['storage_budget_bytes'])
+         limit = None if check_capture else memory_bytes
+@@ -167,7 +176,7 @@
+             ['create','--memory',str(limit)] if limit is not None else ['run','--detach'])
+         args = ['docker',*operation,'--init','--read-only','--network','host',
+                 '--shm-size','2g','--log-driver','json-file','--log-opt','max-size=50m','--log-opt','max-file=2',
+-                '--user',f'{os.getuid()}:{os.getgid()}','--name',cfg['name']+('-check' if check_capture else ''),'--workdir','/omni-hot']
++                '--user',f'{os.getuid()}:{os.getgid()}','--name',name+('-check' if check_capture else ''),'--workdir','/omni-hot']
+         for src,dst,ro in [(cfg['shared_root'],cfg['shared_root'],True),
+                            ('/usr/local/Ascend/driver','/usr/local/Ascend/driver',True),
+                            ('/etc/passwd','/etc/passwd',True),('/etc/group','/etc/group',True),
+@@ -231,7 +240,7 @@
+             raise
+         if limit is None:
+             save(hot/'CONTAINER.json',dict(container_id=cid))
+-        deadline = time.monotonic()+cfg['timeout_seconds']
++        deadline = time.monotonic()+timeout_seconds
+         failure = None
+         try:
+             while True:
+@@ -241,7 +250,8 @@
+                 except subprocess.TimeoutExpired:
+                     storage.check_paths({'runtime':hot},min_free_bytes=20*1024**3+cfg['storage_budget_bytes'])
+                     if time.monotonic()>deadline:
+-                        raise TimeoutError('bounded same-input forward deadline')
++                        raise TimeoutError('bounded formal actor deadline' if cfg.get('formal_sampled')
++                                           else 'bounded same-input forward deadline')
+         except BaseException as exc:
+             failure = repr(exc)
+             subprocess.run(['docker','stop','-t','30',cid],check=True)
+@@ -259,5 +269,8 @@
+     p = argparse.ArgumentParser()
+     p.add_argument('--config',type=Path,required=True)
+     p.add_argument('--check-capture',action='store_true')
++    p.add_argument('--recover-scoring-timeout',type=Path)
+     a=p.parse_args()
+-    main(a.config.resolve(),a.check_capture)
++    if a.check_capture and a.recover_scoring_timeout:
++        p.error('timeout recovery acquires the original training guard')
++    main(a.config.resolve(),a.check_capture,a.recover_scoring_timeout)
+--- a/source/formal_actor_transport.py
++++ b/source/formal_actor_transport.py
+@@ -71,8 +71,107 @@
+             and result['inventory_sha256'] == template['generation']['generation_inventory_ref']['sha256']
+             and result['checkpoint_sha256'] == template['restore_checkpoint_sha256'],
+             'recovered actor identity differs from original submission')
+-    write(directory/'SUBMIT-RECOVERED.json', dict(intent_ref=intent_ref, observation=result))
++    marker = directory/'SUBMIT-RECOVERED.json'
++    if marker.exists():
++        old = read(marker)
++        require(old['intent_ref'] == intent_ref
++                and all(old['observation'][k] == result[k] for k in result if k != 'container'),
++                'recovered actor configuration changed')
++        if old['observation']['container'] != result['container']:
++            retry = read(directory/'SCORING-RECOVERY-SUBMIT.json')
++            require(retry['original_intent'] == intent_ref
++                    and retry['plan']['container_id'] == old['observation']['container']['container_id']
++                    and retry['plan']['config_sha256'] == result['config_sha256'],
++                    'replacement actor lacks a matching scoring recovery intent')
++    else:
++        write(marker, dict(intent_ref=intent_ref, observation=result))
+     return True
++
++
++def scoring_timeout_policy(config, spec):
++    raw = os.environ.get('OMNI_FORMAL_ACTOR_TIMEOUT_REF')
++    if not raw:
++        return None
++    policy = read(json.loads(raw))
++    require(policy['schema'] == 'formal-actor-timeout-policy-v1'
++            and policy['iteration_ref'] == pin(config['_path'])
++            and policy['boot'] == spec['source_boot']
++            and type(policy['timeout_seconds']) is int
++            and 0 < policy['timeout_seconds'] <= 86400,
++            'scoring timeout policy does not match the original iteration')
++    for key, name in (('launcher', 'launch_retained_hf_fsdp.py'),
++                      ('recovery', 'recover_training_timeout.py')):
++        require(Path(pin(policy[key])['path']).name == name, 'invalid recovery source pin')
++    return policy
++
++
++def submit_scoring_recovery(template, target, intent_ref, directory, policy):
++    """Use the original slot and guard, only after the remote watchdog closed."""
++    probe = '''import hashlib,json,sys
++from pathlib import Path
++root=Path(sys.argv[1])
++terminal=json.loads((root/'hot/EXIT.json').read_bytes())
++intent=json.loads((root/'hot/INTENT.json').read_bytes())
++raw=(root/'TRAIN.local.json').read_bytes(); cfg=json.loads(raw)
++print(json.dumps(dict(terminal=terminal,hot_intent=intent,config_sha256=hashlib.sha256(raw).hexdigest(),
++    timeout_seconds=cfg['timeout_seconds'],generation_sha256=cfg['generation']['generation_inventory_ref']['sha256'],
++    checkpoint_sha256=cfg['restore_checkpoint']['sha256'],
++    boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip())))'''
++    ssh = ['ssh', '-oBatchMode=yes', '-oConnectTimeout=10', template['host']]
++    observed = json.loads(subprocess.check_output(
++        [*ssh, shlex.join(['python3', '-B', '-c', probe, str(target)])], timeout=30))
++    terminal = observed['terminal']
++    if terminal['failure'] not in ("TimeoutError('bounded same-input forward deadline')",
++                                   "TimeoutError('bounded formal actor deadline')"):
++        return None
++    require(observed['boot'] == policy['boot'] == observed['hot_intent']['boot_id']
++            and observed['config_sha256'] == observed['hot_intent']['config_sha256']
++            and observed['generation_sha256'] == template['generation']['generation_inventory_ref']['sha256']
++            and observed['checkpoint_sha256'] == template['restore_checkpoint_sha256']
++            and observed['timeout_seconds'] < policy['timeout_seconds']
++            and terminal['complete_ranks'] == 0 and terminal['exit_code'] != 0
++            and terminal['container_id'], 'terminal scoring timeout does not match original submission')
++    plan = dict(schema='formal-actor-scoring-timeout-v1', boot=policy['boot'],
++                config_sha256=observed['config_sha256'], container_id=terminal['container_id'],
++                generation_sha256=observed['generation_sha256'], checkpoint_sha256=observed['checkpoint_sha256'],
++                timeout_seconds=policy['timeout_seconds'])
++    import base64
++    files = {'SCORING-TIMEOUT-PLAN.json': (json.dumps(plan, sort_keys=True)+'\n').encode()}
++    for key in ('launcher', 'recovery'):
++        ref = pin(policy[key])
++        files[Path(ref['path']).name] = Path(ref['path']).read_bytes()
++    from hashlib import sha256
++    marker = directory/'SCORING-RECOVERY-SUBMIT.json'
++    row = dict(plan=plan, original_intent=intent_ref, submitted_at=time.time(),
++               target=str(target), files={name:sha256(raw).hexdigest() for name,raw in files.items()})
++    # This durable intent precedes any remote action. A failed handoff must
++    # reconcile the original submission rather than launch a second recovery.
++    write(marker, row)
++    deploy = '''import base64,json,os,subprocess,sys
++from pathlib import Path
++root=Path(sys.argv[1]); plan=root/'scoring-timeout-recovery'
++assert root.resolve()==root and (root/'TRAIN.local.json').is_file()
++assert subprocess.check_output(['findmnt','-n','-T',str(root),'-o','FSTYPE'],text=True).strip() in ('ext4','xfs','btrfs')
++plan.mkdir(mode=0o700)
++for name, data in json.load(sys.stdin).items():
++    assert name in ('SCORING-TIMEOUT-PLAN.json','launch_retained_hf_fsdp.py','recover_training_timeout.py')
++    with (plan/name).open('xb') as f:
++        f.write(base64.b64decode(data,validate=True)); f.flush(); os.fsync(f.fileno())
++for directory in (plan,root):
++    fd=os.open(directory,os.O_DIRECTORY)
++    try: os.fsync(fd)
++    finally: os.close(fd)
++env=dict(os.environ,PYTHONPATH=str(root),PYTHONDONTWRITEBYTECODE='1')
++with (plan/'launch.log').open('xb') as log:
++    proc=subprocess.Popen(['python3','-B',str(plan/'launch_retained_hf_fsdp.py'),
++        '--config',str(root/'TRAIN.local.json'),'--recover-scoring-timeout',str(plan/'SCORING-TIMEOUT-PLAN.json')],
++        stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,cwd=root,env=env,start_new_session=True)
++print(proc.pid)'''
++    request = json.dumps({k:base64.b64encode(v).decode() for k,v in files.items()})
++    pid = subprocess.check_output([*ssh, shlex.join(['python3','-B','-c',deploy,str(target)])],
++                                  input=request, text=True, timeout=45)
++    write(directory/'SCORING-RECOVERY-PROCESS.json', dict(submission_ref=pin(marker), remote_pid=int(pid)))
++    return row
+ 
+ 
+ def train(config, state, directory, guard):
+@@ -112,6 +211,15 @@
+                     rollout_lanes=spec['rollout_lanes'], zero_result_refs=state.get('zero_result_refs', []))
+     template['capture_mounts']['formal_input_root'] = str(target.with_name(target.name + '-input'))
+     request_path = directory/'TRAIN-REQUEST.json'
++    timeout_policy = scoring_timeout_policy(config, spec)
++    if timeout_policy:
++        prior_intent = directory/'SUBMIT-INTENT.json'
++        if prior_intent.exists():
++            template['timeout_seconds'] = read(read(prior_intent)['training_ref'])['timeout_seconds']
++        elif request_path.exists():
++            template['timeout_seconds'] = read(request_path)['timeout_seconds']
++        else:
++            template['timeout_seconds'] = max(template['timeout_seconds'], timeout_policy['timeout_seconds'])
+     capture_root_ref = os.environ.get('OMNI_FORMAL_ACTOR_CAPTURE_ROOT_REF')
+     if capture_root_ref and not request_path.exists():
+         binding = read(json.loads(capture_root_ref))
+@@ -183,6 +291,12 @@
+         if submit_failed:
+             submit_failed = not observe_recovered_actor(template, target, pin(lease), directory)
+         wait_deadline = intent['observed_at'] + template['timeout_seconds'] + spec['submission_timeout_seconds']
++        retry_marker = directory/'SCORING-RECOVERY-SUBMIT.json'
++        retry = read(retry_marker) if retry_marker.is_file() else None
++        if retry:
++            require(retry['original_intent'] == pin(lease) and retry['target'] == str(target),
++                    'scoring recovery belongs to a different actor')
++            wait_deadline = retry['submitted_at'] + retry['plan']['timeout_seconds'] + spec['submission_timeout_seconds']
+         while True:
+             remaining = wait_deadline - time.time()
+             storage.check_paths({'formal_actor_return': directory},
+@@ -198,7 +312,16 @@
+                 unpack_closed(directory/'closed-return.tar', returned)
+                 break
+             if code == 3:
+-                raise ValueError('strict actor exited with failure: '+str(hot/'EXIT.json'))
++                if timeout_policy and retry is None:
++                    retry = submit_scoring_recovery(template, target, pin(lease), directory, timeout_policy)
++                    if retry:
++                        wait_deadline = retry['submitted_at'] + retry['plan']['timeout_seconds'] + spec['submission_timeout_seconds']
++                        continue
++                # The old terminal may remain visible briefly while the same
++                # guard is acquired. A new terminal is not eligible to retry.
++                if not retry or time.time() > retry['submitted_at'] + min(spec['submission_timeout_seconds'], 300):
++                    raise ValueError('strict actor exited with failure: '+str(hot/'EXIT.json'))
++                code = 75
+             if submit_failed or remaining <= 0:
+                 raise Pending('reconcile original strict actor intent: '+str(lease))
+             require(code in (2, 75, 255), 'failed to validate strict actor return')
