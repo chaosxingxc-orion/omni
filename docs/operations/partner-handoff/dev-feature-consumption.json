@@ -1,0 +1,44 @@
+{
+  "schema": "heldout-dataset-consumer-summary-v1",
+  "official_split": "DEV",
+  "population": 8690,
+  "feature_sources": {
+    "alias": 1989,
+    "batch": 6572,
+    "closed": 129
+  },
+  "encoder": {
+    "cards_per_host": 8,
+    "hosts": 2,
+    "batch_size_per_card": 128,
+    "host_totals": [
+      3284,
+      3288
+    ],
+    "dispatch_to_last_host_complete_seconds": 109.1,
+    "dispatch_to_local_seal_seconds": 198.4,
+    "new_rows_per_second_until_local_seal": 33.13
+  },
+  "consumer": {
+    "feature_rows": 8690,
+    "retrieval_rows": 8690,
+    "wall_seconds": 106.9,
+    "packet_check": {
+      "alias": {
+        "P": 1,
+        "S1": 10
+      },
+      "batch": {
+        "P": 1,
+        "S1": 10
+      },
+      "closed": {
+        "P": 1,
+        "S1": 10
+      }
+    },
+    "model_requests": 0,
+    "receipt_sha256": "4d9f34f2b6df51168e67fb067c3e16e49a7c62d6349309cabc08692967067f37"
+  },
+  "formal_dev_evaluation_complete": false
+}
