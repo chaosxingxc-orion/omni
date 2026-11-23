@@ -1,0 +1,15 @@
+--- a/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/provider.py
++++ b/delivery/system-rl-transition-v1/collection-dispatch-integration/production-pipeline-next-version-v1/provider.py
+@@ -81,9 +81,10 @@
+     """Supervisor owns one SSH tunnel until terminal; no automatic new window."""
+     p=request.get('provider')
+     if p is None:return None
+-    import shlex
+     remote=request['remote_provider_guard'];ssh=remote['ssh']
+-    argv=[ssh['executable'],*ssh.get('options',[]),'-S','none','-o','ControlMaster=no','-o','BatchMode=yes','-o','ExitOnForwardFailure=yes','-o','ConnectTimeout=10','-o','ServerAliveInterval=30','-o','ServerAliveCountMax=3','-N','-L',f"127.0.0.1:{p['local_port']}:127.0.0.1:{p['remote_port']}",ssh['target']]
++    # Match the existing guard transport for target-only deployment bindings.
++    executable='/usr/bin/ssh' if os.environ.get('SAEA_ENV_SCOPE')=='container' else ssh.get('executable','ssh')
++    argv=[executable,*ssh.get('options',[]),'-S','none','-o','ControlMaster=no','-o','BatchMode=yes','-o','ExitOnForwardFailure=yes','-o','ConnectTimeout=10','-o','ServerAliveInterval=30','-o','ServerAliveCountMax=3','-N','-L',f"127.0.0.1:{p['local_port']}:127.0.0.1:{p['remote_port']}",ssh['target']]
+     root=Path(root)
+     old=root/'PROVIDER-TUNNEL.json'
+     if old.exists():require(not alive(read(old)['identity']),'PROVIDER_TUNNEL_STILL_LIVE')
