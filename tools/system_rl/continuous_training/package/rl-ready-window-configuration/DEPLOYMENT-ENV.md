@@ -37,3 +37,5 @@ python3 configure_branch_training.py --config BRANCH-TRAINING.template.json \
 训练部署选择权重初始化或 checkpoint 恢复。前者复用冻结基座，使用新 LoRA 和空优化器；后者恢复原优化器和 Clock。实例观察记录、训练及精度诊断分别封存。运行目录只保存本次选择和引用。
 
 训练发布器可在实验模板设置 `row_encoding: compact_json_v1`，将每批 online/offline/provenance 按行编码到原子提交的 JSON 数组。缺省沿用原发布格式。消费者继续读取该批实际封存文件并验证摘要；编码变化会产生新的文件摘要，不追改历史数据。性能检查用 `check_cohort_encoding.py` 在同一封存批次比较两种编码。
+
+实验模板 v2 用 `group_preparation: shard_by_draw_v1`：冻结 reference 的集体前向结束后，按原 draw 顺序将每条录音交给一个 rank，保留同一录音的全部采样，整窗汇合并按原顺序发布。每组封存一次完全相同的音频特征、掩码和提示字段；读取时核对内容摘要，还原原始逐条字段。不同录音不共享召回，动作及概率一直逐请求保留。训练端继续复用已验收的 batch。`activation_concurrency` 约束并发热切的服务数；服务在同一租约和 marker 下独立执行，全部回执验证后才允许新采样。进程恢复仍重新核对封闭回执。

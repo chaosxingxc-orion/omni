@@ -61,6 +61,10 @@ def capture_runtime(spec):
     if actor_fields is not None and (actor_fields!='reuse_accepted_v1' or not spec.get('formal_sampled') or
                                      not config.get('reference_batch')):
         raise ValueError('accepted field reuse requires a formal batched reference')
+    layout = config.get('group_preparation', 'replicated')
+    if layout not in ('replicated','shard_by_draw_v1') or (layout == 'shard_by_draw_v1' and
+            (not spec.get('formal_sampled') or not config.get('reference_batch') or actor_fields != 'reuse_accepted_v1')):
+        raise ValueError('sharded capture requires formal batch reference and accepted actor fields')
     batch=config.get('reference_batch')
     if batch is not None and (not isinstance(batch,dict) or set(batch)!={'rows_per_rank','padded_tokens_per_rank'}
             or any(type(v) is not int or v<1 for v in batch.values())):
@@ -71,7 +75,7 @@ def capture_runtime(spec):
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
             raise ValueError(f'invalid parity threshold: {name}')
     return dict(cohort_dir=str(relative_path(config['cohort_dir'])),
-                prepared_cache_bytes=cache_bytes, reuse_group_current_scores=reuse_scores,actor_fields=actor_fields,row_encoding=encoding,
+                prepared_cache_bytes=cache_bytes, reuse_group_current_scores=reuse_scores,actor_fields=actor_fields,row_encoding=encoding,group_preparation=layout,
                 **({'reference_batch':batch} if batch is not None else {}),
                 targets=targets, index_root=str(targets['index']),
                 **{name: str(targets['overlays']/path) for name, path in sources.items()})

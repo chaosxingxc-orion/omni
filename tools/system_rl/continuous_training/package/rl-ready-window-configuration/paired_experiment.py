@@ -48,6 +48,9 @@ def validate(exp):
     total = len(devices) * micro * accum
     need(total % g == 0 and concurrency <= total and concurrency <= widths[-1], 'actor groups or inference capacity differ')
     need(exp.get('row_encoding','original') in ('original','compact_json_v1'), 'unsupported training row encoding')
+    need(exp.get('group_preparation','replicated') in ('replicated','shard_by_draw_v1'), 'unsupported group preparation')
+    width = exp.get('activation_concurrency', 1)
+    need(type(width) is int and 1 <= width <= len(lanes), 'invalid activation concurrency')
     validate_rank(rank_profile(exp))
     need(set(exp['readers']) == READERS and all(re.fullmatch('[a-f0-9]{64}', h) for h in exp['readers'].values()),
          'incomplete paired reader lock')
@@ -86,6 +89,8 @@ def check_actor(exp, start, policy):
          and all(training[k] == v for k, v in exp['lora'].items()), 'actor differs from experiment')
     need(policy['experiment_sha256'] == digest(exp) and policy['dev_cadence'] == exp['dev_cadence']
          and policy['rollout_dispatch']['episode_concurrency'] == exp['episode_concurrency']
+         and all(policy.get(key) == exp.get(key) for key in
+                 ('row_encoding', 'group_preparation', 'activation_concurrency'))
          and policy['acceptance']['episodes_per_recording'] == exp['episodes_per_recording']
          and policy['acceptance']['recordings_per_step'] == validate(exp), 'controller differs from experiment')
 
@@ -137,7 +142,9 @@ def compile_experiment(template, profile, output):
     snapshot = save(output / 'EXPERIMENT.json', exp)
     rank = save(output / 'rank-profile.json', rank_profile(exp))
     policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
-    if 'row_encoding' in exp:policy['row_encoding']=exp['row_encoding']
+    for name in ('row_encoding', 'group_preparation', 'activation_concurrency'):
+        if name in exp:
+            policy[name] = exp[name]
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
     policy['acceptance'].update(recordings_per_step=recordings, episodes_per_recording=exp['episodes_per_recording'])
     historical_graph = policy.pop('decode_graph_profile')

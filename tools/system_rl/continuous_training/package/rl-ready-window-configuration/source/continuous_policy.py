@@ -92,6 +92,28 @@ def control_post(url,expected,timeout):
     return ack
 
 
+def apply_lanes(providers, width, switch):
+    """Each service owns its own adapter/cache. Join all before opening rollout."""
+    from concurrent.futures import ThreadPoolExecutor
+    require(type(width) is int and 1 <= width <= len(providers), 'invalid activation concurrency')
+    with ThreadPoolExecutor(max_workers=width) as pool:
+        jobs = {name: pool.submit(switch, name, provider) for name, provider in providers.items()}
+        return {name: job.result() for name, job in jobs.items()}
+
+
+def read_lane_receipts(command, container, directory, names):
+    import io
+    import tarfile
+    # One read-only docker exec. Only regular files in the requested roster
+    # are consumed, and the original bytes flow into the existing verifier.
+    data = command(['docker', 'exec', container, 'tar', '-C', str(directory), '-cf', '-', *names])
+    with tarfile.open(fileobj=io.BytesIO(data), mode='r:') as archive:
+        members = archive.getmembers()
+        require([m.name for m in members] == list(names) and all(m.isfile() for m in members),
+                'unexpected service receipt archive')
+        return {m.name: archive.extractfile(m).read() for m in members}
+
+
 def activate(config,state,root,*,replacement=None):
     """Drive only the owner marker and existing service; no calls to generate."""
     import os
@@ -156,6 +178,7 @@ def activate(config,state,root,*,replacement=None):
     else:
         remote,ready,service=lease_plan(config,primary,fence,config['run_id']+'-publish-'+str(state['step']),
             policy_anchor)
+    verified = None
     if not closed.exists():
         if not session:acquire(fence,remote,primary,ready,service)
         if not first:
@@ -167,36 +190,47 @@ def activate(config,state,root,*,replacement=None):
             prior=active[primary['lane']]['policy_ref']
             if not (root/'MARKER.json').exists():
                 write(root/'MARKER.json',publish_inbox(remote,service,checkout,target,prior,successor,state['step']-1,session=session))
-        lanes={}
-        with ExitStack() as stack:
-            for name,p in providers.items():
-                ready=read(p['service_ready']);work=root/name;work.mkdir(exist_ok=True)
-                with provider_modules() as (lease,module,_,_):
-                    tunnel=module.tunnel(dict(provider=p,remote_provider_guard=remote),work);stack.callback(close_tunnel,tunnel)
-                    ack=control_post(f"http://127.0.0.1:{p['local_port']}",pub['artifact_version'],spec['drain_timeout_seconds'])
-                    advertised=Path(ack['activation_ref']['path'])
-                    digest=pub['assets'][0]['sha256'];base=Path(p['live_receipt_paths']['activation_ref']).parent
-                    expected=base if first else base/'updates'/digest
-                    require(advertised==expected/'ACTIVATION.json' and ack['service_identity']==active[name]['service_identity'],
-                            'activation reply from wrong path/process')
-                    lane=dict(lane=name,activation_depth=0 if first else before[name].get('activation_depth',0)+1,
-                              adapter_sha256=digest)
-                    files={'activation_ref':'ACTIVATION.json','precision_ref':'PRECISION.json','cache_ref':'CACHE-POLICY.json'}
-                    if not first:
-                        files['switch_ref']='SWITCHED.json';lane['previous_activation_ref']=before[name]['activation_ref']
-                    for role,file in files.items():
-                        raw=lease.command(remote,['docker','exec',ready['container_id'],'cat',str(expected/file)],
-                                          capture_output=True).stdout
-                        lane[role]=receipt_bytes(work/file,raw)
-                    actual=read(lane['activation_ref'])
-                    require(same(lane['activation_ref'],ack['activation_ref']) and actual['adapter_id']==ack['adapter_id']
-                            and actual['policy_ref']==(active[name]['policy_ref'] if first else successor)
-                            and actual['service_identity']==ack['service_identity'],'remote activation receipt differs')
-                lanes[name]=write(work/'LANE.json',lane)
+        width = opts.get('activation_concurrency', 1)
+        # provider_modules temporarily binds process-wide imports. Enter it
+        # once on the calling thread, and open all tunnels before sending POST.
+        with provider_modules() as (lease,module,_,_), ExitStack() as stack:
+            for name, p in providers.items():
+                work = root/name
+                work.mkdir(exist_ok=True)
+                tunnel = module.tunnel(dict(provider=p,remote_provider_guard=remote),work)
+                stack.callback(close_tunnel,tunnel)
+
+            def switch(name, p):
+                work = root/name
+                ready = read(p['service_ready'])
+                ack = control_post(f"http://127.0.0.1:{p['local_port']}",pub['artifact_version'],spec['drain_timeout_seconds'])
+                advertised=Path(ack['activation_ref']['path'])
+                digest=pub['assets'][0]['sha256'];base=Path(p['live_receipt_paths']['activation_ref']).parent
+                expected=base if first else base/'updates'/digest
+                require(advertised==expected/'ACTIVATION.json' and ack['service_identity']==active[name]['service_identity'],
+                        'activation reply from wrong path/process')
+                lane=dict(lane=name,activation_depth=0 if first else before[name].get('activation_depth',0)+1,
+                          adapter_sha256=digest)
+                files={'activation_ref':'ACTIVATION.json','precision_ref':'PRECISION.json','cache_ref':'CACHE-POLICY.json'}
+                if not first:
+                    files['switch_ref']='SWITCHED.json';lane['previous_activation_ref']=before[name]['activation_ref']
+                def command(args):
+                    return lease.command(remote, args, capture_output=True).stdout
+                receipts = read_lane_receipts(command, ready['container_id'], expected, files.values())
+                for role, file in files.items():
+                    lane[role] = receipt_bytes(work/file, receipts[file])
+                actual=read(lane['activation_ref'])
+                require(same(lane['activation_ref'],ack['activation_ref']) and actual['adapter_id']==ack['adapter_id']
+                        and actual['policy_ref']==(active[name]['policy_ref'] if first else successor)
+                        and actual['service_identity']==ack['service_identity'],'remote activation receipt differs')
+                return write(work/'LANE.json',lane)
+
+            lanes = apply_lanes(providers, width, switch)
         evidence=write(root/'ACTIVATIONS.json',dict(schema='continuous-training-activation-v1',
             precision_lock_ref=opts['precision_lock_ref'],**policy_anchor,
             profile_ref=read(opts['precision_lock_ref'])['assets']['profile_ref'],lanes=lanes))
         verify(pub,evidence)
+        verified = evidence
         write(closed,dict(terminal_verified=True,unknown_requests=0,activation_ref=evidence))
     terminal=read(closed)
     if session:
@@ -211,7 +245,8 @@ def activate(config,state,root,*,replacement=None):
                 released['terminal']==dict(terminal,owner=owner),'wrong closed activation lease')
     evidence=terminal['activation_ref']
     require(read(evidence)['precision_lock_ref']==opts['precision_lock_ref'],'precision release changed')
-    verify(pub,evidence)
+    if evidence != verified:
+        verify(pub,evidence)
     clean={k:v for k,v in pub.items() if k not in ('bounded_tp4_ref','updated_rcp_ref','runtime_ref')}
     new=write(root/'POLICY-PUBLISHED.json',dict(clean,status='published_for_fresh_sampling',continuous_activation_ref=evidence))
     if initial:

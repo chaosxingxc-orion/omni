@@ -163,7 +163,9 @@ def assemble(manifest, output, *, bind_live):
         rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
-        if 'row_encoding' in policy:rt['row_encoding']=policy['row_encoding']
+        for name in ('row_encoding', 'group_preparation'):
+            if name in policy:
+                rt[name] = policy[name]
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
         for role,rel in rt['sources'].items():
             if role=='consumer_source':
@@ -175,6 +177,8 @@ def assemble(manifest, output, *, bind_live):
                 require(wanted=={pin(parents/rel)['sha256']},'capture release differs from training snapshot: '+role)
             mounts['overlays'][rel]=pin(parents/rel)['sha256']
         rollout['continuous_training']=dict(protocol='apply-local-marker-v1',precision_lock_ref=precision)
+        if 'activation_concurrency' in policy:
+            rollout['continuous_training']['activation_concurrency'] = policy['activation_concurrency']
     train['generation']['update_token_upper']=cfg['actor_update_token_upper']
     vals.update(RESTORED_INPUT_PATH=cfg.get('branch_input_ref',data['input_ref'])['path'],RESTORED_CHECKPOINT_REF=None if branch else initial,
         RESIDENT_STARTUP_REF=data['endpoint_witness_ref'],FORMAL_DATA_PROGRAM_REF=base['program_template_ref'],

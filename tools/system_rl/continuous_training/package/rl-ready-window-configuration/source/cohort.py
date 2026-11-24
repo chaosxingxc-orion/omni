@@ -7,6 +7,53 @@ from pathlib import Path
 from cohort_io import BASE,ACL,CODE,HERE,read,raw,save,pin,require,digest,imports,load,storage,environment,verify_parents
 
 
+# Physical group storage only. The consumer sees the original per-call payloads.
+# Do not put policy-dependent fields, full-sequence positions or labels here.
+STATIC_FIELDS = ('audio_features', 'feature_mask', 'effective_audio_lengths',
+                 'prompt_token_ids', 'prompt_messages', 'prompt_text')
+
+
+def group_storage(group, *, expand=False):
+    """Intern exact, canonical field values within this draw; preserve distinct prompts."""
+    if expand and 'retained_static_v1' not in group:
+        return group
+    table = group.pop('retained_static_v1') if expand else {}
+    used = set()
+    require(isinstance(table, dict), 'invalid group static table')
+    if expand:
+        require(all(digest(value) == key for key, value in table.items()), 'changed group static field')
+    # Assemble creates one audio object per conditioning identity. Hash that
+    # object once, retaining a strong reference for the duration of the call.
+    memo = {}
+    for g in group['online']['behavior_bundle']['groups']:
+        for episode in g['episodes']:
+            for call in episode['calls']:
+                f = call['training_fields']
+                if expand:
+                    keys = f.pop('retained_static_refs')
+                    require(set(keys) == set(STATIC_FIELDS) and not set(keys).intersection(f),
+                            'invalid group static bindings')
+                    for name, key in keys.items():
+                        f[name] = table[key]
+                        used.add(key)
+                else:
+                    require('retained_static_refs' not in f, 'already interned')
+                    keys = {}
+                    for name in STATIC_FIELDS:
+                        value = f.pop(name)
+                        if id(value) not in memo:
+                            key = digest(value)
+                            memo[id(value)] = value, key
+                            table.setdefault(key, value)
+                        keys[name] = memo[id(value)][1]
+                    f['retained_static_refs'] = keys
+    if expand:
+        require(used == set(table), 'unused group static fields')
+    else:
+        group['retained_static_v1'] = table
+    return group
+
+
 def save_training_rows(path, rows, encoding):
     """Durable immutable JSON. Compact encoding changes only whitespace and its file pin."""
     if encoding == 'original':
@@ -159,7 +206,7 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None,row
     for d in plan['draws']:
         path=root/'groups'/str(d['draw_index'])/'GROUP.json'
         require(path.is_file(),'incomplete selected cohort: keep partial groups and reconcile; no refill')
-        captured=read(pin(path))
+        captured=group_storage(read(pin(path)), expand=True)
         require(captured['group_id']==d['group_id'] and captured['query_draw_id']==d['query_draw_id'],'capture/draw binding')
         require(captured['policy']==plan['policy'],'capture policy versions changed')
         require(captured['synthetic'] is fixture,'fixture provenance mismatch')

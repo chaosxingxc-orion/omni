@@ -557,10 +557,20 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
                 native_config=digest(native_config),input_ref=pending['input_ref']))
         if rank==0:
             save(directory/('REFERENCE-BATCH-'+digest([sorted(batched_reference),batch_stats])+'.json'),batch_stats)
-    for d in plan['draws']:
+    sharded = native_config.get('group_preparation') == 'shard_by_draw_v1'
+    if sharded:
+        require(resident and accepted_sink is not None and batched_reference is not None,
+                'group sharding requires completed collective reference scores')
+    processor_ref = pin(directory/'PROCESSOR.json')
+    tokenizer_ref = pin(directory/'TOKENIZER.json')
+
+    def assemble_group(d):
+        nonlocal parity_first
         storage(directory,config['capture']['runtime_storage_budget_bytes'])
-        gd=directory/'groups'/str(d['draw_index']);generated=read(pin(gd/'GENERATED.json'))
-        if (gd/'GROUP.json').exists():continue
+        gd=directory/'groups'/str(d['draw_index'])
+        if (gd/'GROUP.json').exists():return
+        generated=read(pin(gd/'GENERATED.json'))
+        static_fields = {}
         origin=origins[d['record']['recording_ref_id']];episodes=[];supervision={};costs=[];frozen={}
         snapshot=clock['groups'][d['group_id']]['snapshot']
         # One restored actor in eval mode, one recording group, no optimizer step.
@@ -628,10 +638,19 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
                     compare_behavior(directory,packet,item,old,now,tolerance,rank)
                     if current['kind']=='base':require(cur==refp,'initial base vs zero-init adapter identity failed')
                 enc=prepared['encoded'];prompt=enc['input_ids'][0].tolist();pos=inputs['position_ids'][0].cpu().tolist()
+                # Only inputs_for's action-dependent positions are rebuilt per reply.
+                # Scope to this draw, keyed by the full processor input including audio.
+                key_static = prepared_cache.conditioning_key(packet) if sharded else None
+                if not sharded or key_static not in static_fields:
+                    audio = dict(audio_features=enc['input_features'].tolist(),
+                                 feature_mask=enc['feature_attention_mask'].long().tolist(),
+                                 effective_audio_lengths=enc['feature_attention_mask'].sum(-1).tolist())
+                    if sharded:static_fields[key_static] = audio
+                else:
+                    audio = static_fields[key_static]
                 f=dict(prompt_token_ids=prompt,action_token_ids=tokens,behavior_logprobs=item['behavior_logprobs'],action_mask=[1]*len(tokens),
                     behavior_policy_version=version[node],adapter_vector=version,probability_semantics='same_effective_behavior_distribution_and_action_history',
-                    sampling_distribution=consumer_config['sampling_distribution'],processor_manifest=pin(directory/'PROCESSOR.json'),tokenizer_manifest=pin(directory/'TOKENIZER.json'),
-                    audio_features=enc['input_features'].tolist(),feature_mask=enc['feature_attention_mask'].long().tolist(),effective_audio_lengths=enc['feature_attention_mask'].sum(-1).tolist(),
+                    sampling_distribution=consumer_config['sampling_distribution'],processor_manifest=processor_ref,tokenizer_manifest=tokenizer_ref,**audio,
                     attention_mask=[1]*(len(prompt)+len(tokens)),position_ids=pos,modality_assets=online['audio_assets'],recording_id=origin['capture_recording_id'],
                     audio_token_lengths=audio_spans(prompt,tokenizer.convert_tokens_to_ids('<|audio_pad|>')),prompt_messages=packet['wire']['messages'],prompt_text=prepared['prompt'],
                     action_text=item['raw_output'],decoded_action_text=tokenizer.decode(tokens,skip_special_tokens=True,clean_up_tokenization_spaces=False),
@@ -682,8 +701,22 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
             task_records=[dict(group_id=d['group_id'],episode_id=ge['episode_id'],call_id=ge['episode_id']+':c'+str(i),node=item['packet']['stage'],annotation=item['annotation'],packet=item['packet']['original_packet']) for ge in generated['episodes'] for i,item in enumerate(ge['calls'])],
             online=dict(online=dict(audio_assets=[origin['audio_ref']]),behavior_bundle=dict(schema='unified-behavior-bundle-v1',synthetic=False,online_gold_injected=False,global_query_count=1,groups=[group])),
             offline=dict(supervision=d['record']['offline_supervision'],group_supervision=supervision))
-        if rank==0:save(gd/'GROUP.json',result)
-        dist.barrier()
+        if sharded:
+            from cohort import group_storage
+            save(gd/'GROUP.json', group_storage(result))
+        elif rank == 0:
+            save(gd/'GROUP.json',result)
+
+    if sharded:
+        from resident import collectively
+        def assemble_owned():
+            for draw in plan['draws'][rank::dist.get_world_size()]:
+                assemble_group(draw)
+        collectively(assemble_owned)
+    else:
+        for draw in plan['draws']:
+            assemble_group(draw)
+            dist.barrier()
     parity_first=None
     if batched_reference is None and parity_first is None:
         # Recover first trainable row from durable captured groups; do not sample
