@@ -193,7 +193,15 @@ def main(config,check_capture=False,timeout_recovery=None):
             args+=['--mount',f'type=bind,src={hot},dst={hot}']
         if 'restore_checkpoint' in cfg:
             cp=Path(cfg['restore_checkpoint']['directory'])
-            if (cp.resolve()!=cp or cp.parents[2]!=bundle.parent or
+            command=cfg.get('restore_command')
+            if command is None:
+                scoped=cp.parents[2]==bundle.parent
+            else:
+                owner=Path(command['owner'])
+                area=owner/'hot/resident/results'/f"{command['sequence']:06d}"
+                scoped=(owner.parent==bundle.parent and owner!=bundle and cp==area/f"step-{cfg['continuation']['prior_step']}"
+                        and hashlib.sha256((area/'CLOSED.json').read_bytes()).hexdigest()==command['closure_sha256'])
+            if (cp.resolve()!=cp or not scoped or
                     hashlib.sha256((cp/'COMMITTED.json').read_bytes()).hexdigest()!=cfg['restore_checkpoint']['sha256']):
                 raise ValueError('closed checkpoint differs from the staged restore source')
             args += ['--mount',f'type=bind,src={cp},dst=/prior-checkpoint,readonly']

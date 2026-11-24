@@ -230,7 +230,10 @@ def train(config, state, directory, guard):
                 config['formal_rollout'].get('continuous_training') and not os.environ.get('OMNI_TIMESHARED_ROLLOUT_REF')
                 and not os.environ.get('OMNI_FORMAL_MEASURED_BATCH_REF') and template.get('actor_batch')
                 and template['generation']['runtime'].get('reference_batch'),'ambiguous or incomplete continuous deployment')
-        call=reserve_call(Path(config['output_root'])/'formal-resident-client',directory,opts,lambda:dict(target=str(target)))
+        call=reserve_call(Path(config.get('_resident_client_root',Path(config['output_root'])/'formal-resident-client')),directory,opts,lambda:dict(target=str(target)))
+        if not call['sequence'] and config.get('_restored_command'):
+            prior=Path(config['_restored_command']['owner'])
+            template['restore_command']=config['_restored_command']
         template['continuous_actor']=opts
         template['resident_owner_hot']=str(Path(call['target'])/'hot')
         template['capture_mounts']['resident_input_root']=str(Path(call['target']).with_name(Path(call['target']).name+'-inputs'))
@@ -477,7 +480,7 @@ def resident_train(config,state,directory,guard,template,staged,call):
     from transport import pull_stream,restore_locations,unpack_closed
     spec=config['formal_actor'];opts=template['continuous_actor'];seq=call['sequence'];owner=Path(call['target'])
     gen=template['generation'];lease=directory/'SUBMIT-INTENT.json';returned=directory/'returned'
-    root=Path(config['output_root'])/'formal-resident-client';hot=owner/'hot'
+    root=Path(config.get('_resident_client_root',Path(config['output_root'])/'formal-resident-client'));hot=owner/'hot'
     coord=dict(run_id=opts['run_id'],sequence=seq,checkpoint_sha256=policy_anchor(state)['sha256'],
                pending_capture_ref=gen['pending_capture_ref'],generation_inventory_ref=gen['generation_inventory_ref'])
     if not returned.exists() and not (directory/'closed-return.tar').exists():
@@ -489,7 +492,7 @@ def resident_train(config,state,directory,guard,template,staged,call):
                         and previous['checkpoint_sha256']==coord['checkpoint_sha256'],'resident predecessor differs')
                 cmd=dict(coord,action='update',previous_close_sha256=previous['closure_sha256'])
             else:
-                require(policy_anchor(state)==(config.get('initial_resume_ref') or config.get('branch_initial_ref')) and owner.name==template['run'],
+                require(policy_anchor(state)==(config.get('_replacement_checkpoint') or config.get('initial_resume_ref') or config.get('branch_initial_ref')) and owner.name==template['run'],
                         'initial resident recovery mismatch')
                 cmd=None
             write(lease,dict(training_ref=staged,input_custody_ref=inputs,target=str(owner),sequence=seq,
@@ -558,7 +561,7 @@ def accept_resident_result(state,gen,spec,opts,root,returned,owner,seq):
 def end_resident(config,guard):
     from iteration import Pending
     spec=config['formal_actor'];opts=spec['continuous_actor']
-    root=Path(config['output_root'])/'formal-resident-client'
+    root=Path(config.get('_resident_client_root',Path(config['output_root'])/'formal-resident-client'))
     if not (root/'OWNER.json').exists():return
     done=root/'END-COMPLETE.json'
     if done.exists():return read(done)

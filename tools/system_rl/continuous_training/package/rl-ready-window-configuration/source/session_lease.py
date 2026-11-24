@@ -124,7 +124,7 @@ def lifetime(config):
     from run_package import read,write,pin
     from dependencies import require
     import uuid
-    spec,primary=settings(config);root=Path(config['output_root'])/'resident-lease'
+    spec,primary=settings(config);root=Path(config.get('_session_root',Path(config['output_root'])/'resident-lease'))
     require(spec.get('continuous_training') and 0<opts['interval']<opts['max_age_seconds']
             and opts['max_age_seconds']<=30,'invalid dedicated lease health window')
     ref=pin(config['_path'])

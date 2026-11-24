@@ -19,9 +19,17 @@ def measure(timings, name):
         timings[name] = time.monotonic() - start
 
 
-def read_predecessor(remote, prior, step, world):
-    names = ['TRAIN.local.json', 'hot/EXIT.json', f'hot/step-{step}/COMMITTED.json',
-             *(f'hot/rank-{rank}/RESULT.json' for rank in range(world))]
+def read_predecessor(remote, prior, step, world, command=None):
+    base = Path('hot')
+    if command is not None:
+        seq = command['sequence']
+        if type(seq) is not int or seq < 0 or Path(command['owner']) != prior:
+            raise ValueError('wrong resident command source')
+        base = base/'resident/results'/f'{seq:06d}'
+    names = ['TRAIN.local.json', 'hot/EXIT.json', f'{base}/step-{step}/COMMITTED.json',
+             *(f'{base}/rank-{rank}/RESULT.json' for rank in range(world))]
+    if command is not None:
+        names += [str(base/'CLOSED.json'),str(base/'RESULT.json')]
     command = shlex.join(['tar', '-cf', '-', '-C', str(prior), '--', *names])
     raw = remote(command, text=False)
     with tarfile.open(fileobj=BytesIO(raw), mode='r:') as archive:
@@ -73,13 +81,33 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         proof_sha=None
     else:
         if type(step) is not int or step<1:raise ValueError('positive prior step required')
-        checkpoint=prior/f'hot/step-{step}'
+        command=c.get('restore_command')
+        base=prior/'hot'
+        if command is not None:
+            base=base/'resident/results'/f"{command['sequence']:06d}"
+        checkpoint=base/f'step-{step}'
         with measure(timings, 'predecessor_receipts'):
-            old_raw, terminal_raw, proof_raw, *owner_raw = read_predecessor(remote, prior, step, 8)
+            old_raw, terminal_raw, proof_raw, *owner_raw = read_predecessor(remote, prior, step, 8, command)
             old = json.loads(old_raw)
             terminal = json.loads(terminal_raw)
         verify_started = time.monotonic()
-        if terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
+        if command is not None:
+            closed_raw,result_raw=owner_raw[8:]
+            owner_raw=owner_raw[:8]
+            closed=json.loads(closed_raw);result=json.loads(result_raw)
+            def matches(raw, ref, path):
+                return ref==dict(path=str(path),sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw))
+            if (hashlib.sha256(closed_raw).hexdigest()!=command['closure_sha256'] or closed['immutable'] is not True
+                    or closed['sequence']!=command['sequence'] or closed['source_boot']!=old['boot_id']
+                    or command['checkpoint_sha256']!=c['restore_checkpoint_sha256']
+                    or not matches(result_raw,closed['result_ref'],base/'RESULT.json')
+                    or not matches(proof_raw,result['checkpoint_ref'],checkpoint/'COMMITTED.json')
+                    or result['optimizer_steps']!=1 or len(result['rank_refs'])!=8
+                    or not all(matches(raw,ref,base/f'rank-{i}/RESULT.json')
+                               for i,(raw,ref) in enumerate(zip(owner_raw,result['rank_refs'])))
+                    or not terminal.get('container_id') or type(terminal['exit_code']) is not int):
+                raise ValueError('resident checkpoint is not the closed predecessor command')
+        elif terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
             raise ValueError('predecessor is not terminal with eight complete ranks')
         proof_sha=hashlib.sha256(proof_raw).hexdigest()
         if proof_sha!=c['restore_checkpoint_sha256']:raise ValueError('checkpoint pin changed')
@@ -101,6 +129,10 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
                timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'])
     if type(s['timeout_seconds']) is not int or s['timeout_seconds']<=0 or s['storage_budget_bytes']<2*1024**3:
         raise ValueError('invalid per-run duration/storage envelope')
+    if not initial:
+        s.pop('initial_actor',None)
+        s.pop('restore_command',None)
+        if command is not None:s['restore_command']=command
     s.pop('trace_update',None)
     s['files']=dict(s['files'])
     s['files'].pop('finalized_generation',None)

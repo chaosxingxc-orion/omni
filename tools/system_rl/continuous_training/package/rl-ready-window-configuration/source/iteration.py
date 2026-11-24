@@ -301,8 +301,10 @@ def inherited_screen(config, state, witness):
     return answer
 
 
-def run(config_path):
+def run(config_path, *, resume_placement=None):
     config=read(config_path);config['_path']=str(Path(config_path).resolve());root=Path(config['output_root'])
+    if resume_placement is not None:
+        config=resume_placement(config)
     require(config['schema']=='omni-dp8-iteration-v1','iteration schema')
     require(config['monitor_seconds']==900 and config['max_optimizer_updates']>0,'bounded configured execution')
     if config.get('newprocess_replay',{}).get('enabled'):

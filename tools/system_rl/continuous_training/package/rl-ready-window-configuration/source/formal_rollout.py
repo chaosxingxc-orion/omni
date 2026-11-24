@@ -159,7 +159,16 @@ def qualify(config, state, root, guard):
         grant=read(json.loads(os.environ['OMNI_ROLLOUT_HOST_GRANT_REF']))
         require(grant['iteration_ref']==pin(config['_path']) and provider['host'] in grant['hosts'],
                 'resident rollout not within current grant')
-        promoted=activate(config,state,root)
+        switched=config.get('_provider_switch')
+        if switched and state['resume_ref']==config['_replacement_checkpoint']:
+            root=Path(config['_session_root']).parent/'qualification'
+            promoted=switched['policy_ref']
+            from continuous_policy import verify
+            pub=read(read(promoted)['publication_ref'])
+            require(pub['checkpoint_ref']==state['resume_ref'] and pub['continuous_activation_ref']==switched['evidence_ref']
+                    and set(verify(pub,switched['evidence_ref']))==set(spec['provider_refs']), 'different switched checkpoint')
+        else:
+            promoted=activate(config,state,root)
         source=copy.deepcopy(read(state['input_ref']))
         require(source['policy']['current_ref']==state['policy_ref'],'updated rollout input drift')
         source['policy']['current_ref']=promoted

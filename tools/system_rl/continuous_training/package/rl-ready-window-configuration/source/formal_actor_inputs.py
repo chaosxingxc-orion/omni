@@ -87,6 +87,17 @@ def stage(template, config, directory):
                 # Inference provenance stays bound by its immutable endpoint receipt.
                 collect(document['checkpoint_ref'], False)
                 collect(document['assets'], False)
+                # Publication validation reads every adapter member from the
+                # checkpoint, including its dtype provenance after restoration.
+                checkpoint = document['checkpoint_ref']
+                parent = Path(checkpoint['path']).parent
+                if any(parent.is_relative_to(roots[name]) for name in dynamic):
+                    for row in read(checkpoint)['ranks']:
+                        for name, expected in row['files'].items():
+                            if name.startswith('lora_adapter/'):
+                                require(len(Path(name).parts)==2 and '..' not in Path(name).parts,
+                                        'invalid checkpoint adapter member')
+                                collect(dict(path=str(parent/name),sha256=expected),False)
                 if 'continuous_activation_ref' in document:
                     collect(document['continuous_activation_ref'])
                 elif 'bounded_tp4_ref' in document:

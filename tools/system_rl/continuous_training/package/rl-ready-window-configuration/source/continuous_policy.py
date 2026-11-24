@@ -92,7 +92,7 @@ def control_post(url,expected,timeout):
     return ack
 
 
-def activate(config,state,root):
+def activate(config,state,root,*,replacement=None):
     """Drive only the owner marker and existing service; no calls to generate."""
     import os
     from contextlib import ExitStack
@@ -134,9 +134,22 @@ def activate(config,state,root):
     policy_anchor={'branch_ref':pub['branch_ref']} if initial else {'checkpoint_ref':pub['checkpoint_ref']}
     from session_lease import enabled,get,boundary
     session=get(config) if enabled(config) else None
-    capture=None if first else previous_capture(state,session_ref=pin(session['root']/'REMOTE-LEASE.json') if session else None)
-    before={k:read(p['initial_lane_ref'] if first else read(capture['endpoint_witness_ref'])['lanes'][k])
-            for k,p in providers.items()}
+    if replacement:
+        require(not first and replacement['iteration_ref']==pin(config['_path']) and
+                replacement['checkpoint_ref']==state['resume_ref'] and replacement['providers']==spec['provider_refs'],
+                'replacement does not match the committed transition')
+        capture=previous_capture(state,session_ref=replacement['previous_session_ref'])
+        prior_lanes=read(capture['endpoint_witness_ref'])['lanes']
+        before={k:read(p['initial_lane_ref']) for k,p in providers.items()}
+        for k,lane in before.items():
+            old=read(read(prior_lanes[k])['activation_ref'])
+            new=read(lane['activation_ref'])
+            require(old['policy_version']==new['policy_version'] and same(old['weights_ref'],new['weights_ref'])
+                    and old['service_identity']!=new['service_identity'], 'replacement policy differs from previous rollout')
+    else:
+        capture=None if first else previous_capture(state,session_ref=pin(session['root']/'REMOTE-LEASE.json') if session else None)
+        before={k:read(p['initial_lane_ref'] if first else read(capture['endpoint_witness_ref'])['lanes'][k])
+                for k,p in providers.items()}
     active={k:read(v['activation_ref']) for k,v in before.items()}
     root.mkdir(parents=True,exist_ok=True); fence=root/'lease';closed=root/'ACTIVATIONS-CLOSED.json'
     if session:remote,ready,service=(session[k] for k in ('remote','ready','service'))
