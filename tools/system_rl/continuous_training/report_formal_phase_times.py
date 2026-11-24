@@ -14,7 +14,27 @@ def stamps(name):
 print(json.dumps({n:stamps(n) for n in names}))
 """
 
-def report(run,policy,after):
+def controller_intervals(window, cohort, directory, policy):
+    """All endpoints are mtimes written by the same live controller host."""
+    events = [
+        ('first_dispatch', window['first_dispatch_ns']),
+        ('last_response', max(p.stat().st_mtime_ns for p in cohort.glob(
+            'groups/*/episode-*/native-journal/*.response.json'))),
+        ('inventory_closed', (cohort/'GENERATION-INVENTORY.json').stat().st_mtime_ns),
+        ('submit_intent', (directory/'SUBMIT-INTENT.json').stat().st_mtime_ns),
+        ('optimizer_return', (directory/'returned/CLOSED-COMMIT.json').stat().st_mtime_ns),
+        ('promoted_policy', policy.stat().st_mtime_ns),
+        ('successor_dispatch', window['successor_first_dispatch_ns']),
+    ]
+    intervals = {}
+    for (start, a), (end, b) in zip(events, events[1:]):
+        if b < a:
+            raise ValueError(f'controller receipt time reversed: {start} -> {end}')
+        intervals[f'{start}_to_{end}'] = (b - a) / 1e9
+    return intervals
+
+
+def report(run,policy,after,*,controller_only=False):
     from report_step_latency import report as measure
     measured=measure(run,policy,after);rows=[]
     for w in measured['steps']:
@@ -32,6 +52,17 @@ def report(run,policy,after):
         actual=json.loads(Path(locations[ret['result_ref']['path']]).read_bytes())
         if actual['result']['objective_observation']['global_episode_denominator']!=w['episodes']:raise ValueError('wrong actor scale')
         inv=json.loads(Path(actual['generation_inventory_ref']['path']).read_bytes());cohort=Path(inv['cohort_root'])
+        if controller_only:
+            policy_root=run/f"policy-{w['step']:06d}"
+            promoted,=[path for path in (policy_root/'promoted/POLICY.json',policy_root/'POLICY.json') if path.is_file()]
+            exported=json.loads(Path(locations[ret['policy_ref']['path']]).read_bytes())
+            promotion=json.loads(promoted.read_bytes())
+            if (promotion['assets']!=exported['assets'] or promotion['step']!=exported['step']
+                    or promotion['step']!=w['step']):
+                raise ValueError('promoted policy differs from the measured optimizer export')
+            intervals=controller_intervals(w,cohort,directory,promoted)
+            rows.append(dict(**w,control_host_seconds=intervals))
+            continue
         end=max(x.stat().st_mtime_ns for x in cohort.glob('groups/*/episode-*/native-journal/*.response.json'))
         proof=Path(ret['checkpoint_ref']['path'])
         if proof.parent.parent.name!='hot':raise ValueError('historical one-container actor only')
@@ -52,11 +83,14 @@ def report(run,policy,after):
         rows.append(dict(step=w['step'],seconds=w['seconds'],phases_seconds=intervals,
                 other_including_policy_switch_seconds=remaining,actor_receipt_root=str(target),
                 generation_inventory_ref=actual['generation_inventory_ref'],actor_checkpoint_ref=ret['checkpoint_ref']))
-    return dict(scope='historical_observed_intervals_not_candidate_speed',rows=rows)
+    scope='control_host_observed_intervals' if controller_only else 'historical_observed_intervals_not_candidate_speed'
+    return dict(scope=scope,rows=rows)
 
 if __name__=='__main__':
     p=argparse.ArgumentParser()
     for k in ('run','policy','output'):p.add_argument('--'+k,type=Path,required=True)
-    p.add_argument('--after',type=int,required=True);a=p.parse_args()
+    p.add_argument('--after',type=int,required=True)
+    p.add_argument('--controller-only', action='store_true', help='use only control-host receipts, without SSH')
+    a=p.parse_args()
     from run_package import write
-    data=report(a.run,a.policy,a.after);print(json.dumps(write(a.output,data)))
+    data=report(a.run,a.policy,a.after,controller_only=a.controller_only);print(json.dumps(write(a.output,data)))
