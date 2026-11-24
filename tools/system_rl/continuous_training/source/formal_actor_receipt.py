@@ -270,7 +270,8 @@ def close_live(cfg, root, prior_ref, produced_ref, rank_live_refs, peers):
     before=read(prior_ref);clock=before['clock']
     for zero in cfg['continuation'].get('zero_result_refs',[]):
         clock=verified_zero_clock(clock,read(zero),prior_ref['sha256'])
-    trajectory_ref,selected_ref,selected,_=finalized_window(cfg,root,inventory,resident=True)
+    trajectory_ref,selected_ref,selected,finalized=finalized_window(cfg,root,inventory,resident=True)
+    members=[intent_ref,trajectory_ref,selected_ref,*refs,*finalized,*rank_live_refs]
     if rows[0].get('status')=='no_gradient':
         values=[{k:v for k,v in row.items() if k!='rank'} for row in rows];receipt=values[0]
         require(produced_ref==prior_ref and all(v==receipt for v in values)
@@ -281,11 +282,21 @@ def close_live(cfg, root, prior_ref, produced_ref, rank_live_refs, peers):
         require(produced_ref==pin(root/f"step-{before['step']+1}"/'COMMITTED.json'),'wrong local recovery checkpoint')
         accepted=_updated(rows,refs,prior_ref,produced_ref,pin(root/cfg['generation']['runtime']['cohort_dir']/
             'CONSUMER-REPORT.json'),prior_clock=clock,generation_ref=inventory,terminal=dict(resident_intent_ref=intent_ref))
-        accepted['policy_ref']=seal(produced_ref,root/'publication')
+        accepted['policy_ref']=seal(produced_ref,root/'publication',fresh_commit=True)
+        policy=read(accepted['policy_ref'])
+        members.extend([produced_ref,accepted['policy_ref'],policy['publication_ref'],policy['asset_manifest_ref']])
+        for entry in read(produced_ref)['ranks']:
+            for name,sha in entry['files'].items():
+                if name.startswith('lora_adapter/'):
+                    require(len(Path(name).parts)==2 and '..' not in Path(name).parts,'invalid adapter path')
+                    asset=pin(Path(produced_ref['path']).parent/name)
+                    require(asset['sha256']==sha,'adapter differs from committed export')
+                    members.append(asset)
     require(accepted['group_ids']==selected['group_ids'],'resident result differs from sampled roster')
     result=write(root/'RESULT.json',dict(accepted,formal_rl_enabled=True,selected_cohort_ref=selected_ref,sampled_window_ref=selected['sampled_window_ref'],
                                          trajectory_ref=trajectory_ref))
     returned=dict(optimizer_steps=accepted['optimizer_steps'],result_ref=result,trajectory_ref=trajectory_ref,
                   **{k:accepted[k] for k in ('checkpoint_ref','policy_ref') if k in accepted})
     return write(root/'CLOSED.json',dict(schema='formal-resident-command-v1',immutable=True,source_boot=owner['boot_id'],
-        sequence=seq,run_id=owner['run_id'],rank_live_refs=rank_live_refs,result_ref=result,return_ref=write(root/'RETURN.json',returned)))
+        sequence=seq,run_id=owner['run_id'],rank_live_refs=rank_live_refs,result_ref=result,projected_members=[result,*members],
+        return_ref=write(root/'RETURN.json',returned)))

@@ -44,12 +44,41 @@
       "rl-ready-window-configuration/stage_bounded_actor_step.py",
       "rl-ready-window-configuration/launch_retained_hf_fsdp.py",
       "rl-ready-window-configuration/assemble_sampled_p.py",
-      "rl-ready-window-configuration/report_step_latency.py"
+      "rl-ready-window-configuration/report_step_latency.py",
+      "rl-ready-window-configuration/source/formal_command.py",
+      "rl-ready-window-configuration/source/pull_closed.py",
+      "rl-ready-window-configuration/verify_runtime_sources.py",
+      "rl-ready-window-configuration/build_continuous_release.py",
+      "rl-ready-window-configuration/source/capture_stage.py"
     ],
     "shared": [
       "implementation/finalize_capture.py",
       "implementation/publication.py",
       "implementation/bounded_tp4.py"
     ]
+  },
+  "runtime_members": {
+    "parents/jev-system-rl/implementation/formal_actor_transport.py": "rl-ready-window-configuration/source/formal_actor_transport.py",
+    "parents/jev-system-rl/implementation/resident_inputs.py": "rl-ready-window-configuration/source/resident_inputs.py",
+    "parents/jev-system-rl/implementation/resident_transport.py": "rl-ready-window-configuration/source/resident_transport.py",
+    "parents/jev-system-rl/implementation/formal_actor_inputs.py": "rl-ready-window-configuration/source/formal_actor_inputs.py",
+    "parents/jev-system-rl/implementation/formal_command.py": "rl-ready-window-configuration/source/formal_command.py",
+    "parents/jev-system-rl/implementation/formal_actor_receipt.py": "rl-ready-window-configuration/source/formal_actor_receipt.py",
+    "parents/jev-system-rl/implementation/pull_closed.py": "rl-ready-window-configuration/source/pull_closed.py",
+    "parents/jev-system-rl/implementation/continuous_policy.py": "rl-ready-window-configuration/source/continuous_policy.py",
+    "parents/jev-system-rl/implementation/formal_rollout.py": "rl-ready-window-configuration/source/formal_rollout.py",
+    "parents/jev-system-rl/implementation/formal_parity.py": "rl-ready-window-configuration/source/formal_parity.py",
+    "parents/jev-system-rl/implementation/iteration.py": "rl-ready-window-configuration/source/iteration.py",
+    "parents/jev-system-rl/implementation/capture_stage.py": "rl-ready-window-configuration/source/capture_stage.py",
+    "parents/jev-system-rl/implementation/resident.py": "rl-ready-window-configuration/source/resident.py",
+    "parents/jev-system-rl/implementation/fresh_adapter.py": "rl-ready-window-configuration/source/fresh_adapter.py",
+    "parents/jev-system-rl/implementation/provider_policy.py": "rl-ready-window-configuration/source/provider_policy.py",
+    "parents/jev-system-rl/implementation/service_bootstrap.py": "rl-ready-window-configuration/source/service_bootstrap.py",
+    "parents/jev-system-rl/implementation/service_overlay.py": "rl-ready-window-configuration/source/service_overlay.py",
+    "parents/jev-system-rl/implementation/publication.py": "implementation/publication.py",
+    "parents/jev-system-rl/implementation/finalize_capture.py": "implementation/finalize_capture.py",
+    "parents/jev-system-rl/implementation/bounded_tp4.py": "implementation/bounded_tp4.py",
+    "parents/fresh-cohort-successor/cohort_capture.py": "rl-ready-window-configuration/source/cohort_capture.py",
+    "parents/fresh-cohort-successor/reference_batch.py": "rl-ready-window-configuration/source/reference_batch.py"
   }
 }

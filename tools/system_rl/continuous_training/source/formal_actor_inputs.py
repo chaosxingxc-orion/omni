@@ -27,6 +27,12 @@ def stage(template, config, directory):
     prior = Path(template['restore_run'])
     require(target.parent == prior.parent, 'input custody must use the original local actor namespace')
     allowed = [Path(root) for root in spec['already_visible_roots']]
+    if 'continuous_actor' in template:
+        # Written by this same actor under its process-lifetime output mount.
+        # These artifacts (including Adam shards) never travel back as inputs.
+        owner_hot=Path(template['resident_owner_hot'])
+        require(owner_hot.name=='hot' and owner_hot.parent.parent==prior.parent,'invalid actor output mount')
+        allowed.append(owner_hot)
     require(all(root.is_absolute() and root != Path('/') and '..' not in root.parts for root in allowed),
             'invalid retained input roots')
     members = {}
@@ -81,13 +87,24 @@ def stage(template, config, directory):
                 # Inference provenance stays bound by its immutable endpoint receipt.
                 collect(document['checkpoint_ref'], False)
                 collect(document['assets'], False)
-                if 'bounded_tp4_ref' in document:
+                if 'continuous_activation_ref' in document:
+                    collect(document['continuous_activation_ref'])
+                elif 'bounded_tp4_ref' in document:
                     collect(document['bounded_tp4_ref'])
+            elif isinstance(document,dict) and document.get('schema')=='continuous-training-activation-v1':
+                collect(document['checkpoint_ref'],False);collect(document['precision_lock_ref'])
+                collect(document['profile_ref'],False);collect(document['lanes'])
+            elif isinstance(document,dict) and document.get('purpose')=='precision_alignment':
+                collect(document['accepted_checkpoint'],False)
+                for key in ('activation_ref','precision_ref','profile_ref'):collect(document['assets'][key],False)
+            elif isinstance(document,dict) and 'activation_depth' in document and 'adapter_sha256' in document:
+                for key in ('activation_ref','precision_ref','cache_ref','switch_ref','previous_activation_ref'):
+                    if key in document:collect(document[key],False)
             else:
                 collect(document)
 
     generation = template['generation']
-    if 'predecessor_step' in roots:
+    if 'predecessor_step' in roots and ('continuous_actor' not in template or template['prior_step']==config.get('continuous_start_step')):
         commit=read(roots['predecessor_step']/'COMMITTED.json')
         for row in commit['ranks']:
             for name,digest in row['files'].items():
