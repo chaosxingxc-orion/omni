@@ -714,7 +714,7 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
             save(target/'capture.json',dict(records=[dict(prompt_token_ids=item['prompt_token_ids'],token_ids=item['token_ids'])]))
             save(target/'positions.json',dict(positions=positions))
             config=copy.deepcopy(config);config['native'].update(parity_input_refs={k:pin(target/name) for k,name in dict(prepared='prepared.pt',capture='capture.json',positions='positions.json').items()},parity_record_index=0)
-        release=publish(config,directory,**({'accepted_sink':accepted_sink} if accepted_sink else {}),**({'consumer_ref':consumer_ref} if native_config.get('local_consumer_ref') else {}))
+        release=publish(config,directory,**({'row_encoding':native_config['row_encoding']} if 'row_encoding' in native_config else {}),**({'accepted_sink':accepted_sink} if accepted_sink else {}),**({'consumer_ref':consumer_ref} if native_config.get('local_consumer_ref') else {}))
         generated_native=read(release['native_config_ref']);generated_native['enabled']=True
         from execution import cost_plan
         generated_native.update(cost_receipt if cost_receipt is not None else cost_plan(config,directory,worker.tokenizer))

@@ -47,6 +47,7 @@ def validate(exp):
          and widths == sorted(set(widths)) and widths[0] == 1, 'unsupported decode graph widths')
     total = len(devices) * micro * accum
     need(total % g == 0 and concurrency <= total and concurrency <= widths[-1], 'actor groups or inference capacity differ')
+    need(exp.get('row_encoding','original') in ('original','compact_json_v1'), 'unsupported training row encoding')
     validate_rank(rank_profile(exp))
     need(set(exp['readers']) == READERS and all(re.fullmatch('[a-f0-9]{64}', h) for h in exp['readers'].values()),
          'incomplete paired reader lock')
@@ -136,6 +137,7 @@ def compile_experiment(template, profile, output):
     snapshot = save(output / 'EXPERIMENT.json', exp)
     rank = save(output / 'rank-profile.json', rank_profile(exp))
     policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
+    if 'row_encoding' in exp:policy['row_encoding']=exp['row_encoding']
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
     policy['acceptance'].update(recordings_per_step=recordings, episodes_per_recording=exp['episodes_per_recording'])
     historical_graph = policy.pop('decode_graph_profile')

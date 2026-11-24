@@ -35,3 +35,5 @@ python3 configure_branch_training.py --config BRANCH-TRAINING.template.json \
 ```
 
 训练部署选择权重初始化或 checkpoint 恢复。前者复用冻结基座，使用新 LoRA 和空优化器；后者恢复原优化器和 Clock。实例观察记录、训练及精度诊断分别封存。运行目录只保存本次选择和引用。
+
+训练发布器可在实验模板设置 `row_encoding: compact_json_v1`，将每批 online/offline/provenance 按行编码到原子提交的 JSON 数组。缺省沿用原发布格式。消费者继续读取该批实际封存文件并验证摘要；编码变化会产生新的文件摘要，不追改历史数据。性能检查用 `check_cohort_encoding.py` 在同一封存批次比较两种编码。

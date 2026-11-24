@@ -7,6 +7,36 @@ from pathlib import Path
 from cohort_io import BASE,ACL,CODE,HERE,read,raw,save,pin,require,digest,imports,load,storage,environment,verify_parents
 
 
+def save_training_rows(path, rows, encoding):
+    """Durable immutable JSON. Compact encoding changes only whitespace and its file pin."""
+    if encoding == 'original':
+        return save(path, rows)
+    require(encoding == 'compact_json_v1', 'unknown training row encoding')
+    import hashlib, os, tempfile
+    storage(path.parent)
+    # Keep memory bounded to one recording, and hash exactly the bytes we publish.
+    digestor=hashlib.sha256()
+    size=0
+    with tempfile.NamedTemporaryFile(dir=path.parent) as out:
+        def put(raw):
+            nonlocal size
+            out.write(raw); digestor.update(raw); size+=len(raw)
+        put(b'[')
+        for i,row in enumerate(rows):
+            if i:put(b',')
+            put(json.dumps(row,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode())
+        put(b']\n')
+        out.flush();os.fsync(out.fileno())
+        expected=dict(path=str(path.resolve()),bytes=size,sha256=digestor.hexdigest())
+        try:os.link(out.name,path)
+        except FileExistsError:
+            require(pin(path)==expected,'immutable training rows changed')
+        fd=os.open(path.parent,os.O_DIRECTORY)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+    return expected
+
+
 def draw(config,root,*,fixture=False,persist=True):
     sampling=copy.deepcopy(config['sampling'])
     from policy import validate_scope
@@ -120,7 +150,7 @@ def prepare(config,root,*,fixture=False):
     return plan,clock,cfg
 
 
-def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None):
+def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None,row_encoding="original"):
     """All selected groups, exact order; consumer is authoritative for full G."""
     consumer=load(HERE/'consumer.py','fresh_release_consumer')
     build,restore=consumer.build,consumer.restore
@@ -139,7 +169,7 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None):
         p={k:v for k,v in d.items() if k!='record'}
         p.update({k:d['record'][k] for k in ('sample_id','recording_ref_id','source_id','source','domain','outcome')})
         provenance.append(p);costs.append(captured['costs']);task_records.extend(captured.get('task_records',[]))
-    refs={n:save(root/(n+'.json'),v) for n,v in dict(online=online,offline=offline,provenance=provenance).items()}
+    refs={n:save_training_rows(root/(n+'.json'),v,row_encoding) for n,v in dict(online=online,offline=offline,provenance=provenance).items()}
     files=dict(count=len(online),refs=refs,**{n:r['path'] for n,r in refs.items()})
     if accepted_sink is not None:
         fields,report,bundle=consumer.build_with_bundle(files,cfg)

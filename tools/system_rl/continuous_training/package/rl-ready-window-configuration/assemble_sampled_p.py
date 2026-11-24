@@ -163,6 +163,7 @@ def assemble(manifest, output, *, bind_live):
         rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
+        if 'row_encoding' in policy:rt['row_encoding']=policy['row_encoding']
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
         for role,rel in rt['sources'].items():
             if role=='consumer_source':

@@ -35,6 +35,7 @@ def restored_worker(worker,adapted,config,hot,rank,*,sources=None,accepted_sink=
         native['local_official_source_ref']=pin(directory/'LOCAL-OFFICIAL-SOURCE.json')
         native['local_consumer_ref']=pin(directory/'LOCAL-CONSUMER.json')
         native['prepared_cache_bytes']=sources['prepared_cache_bytes']
+        if 'row_encoding' in sources:native['row_encoding']=sources['row_encoding']
         if sources.get('reference_batch'):
             native['reference_batch']=sources['reference_batch']
         if sources.get('reuse_group_current_scores'):
