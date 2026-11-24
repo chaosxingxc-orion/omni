@@ -126,7 +126,7 @@ def assemble(manifest, output, *, bind_live):
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
         for role,rel in rt['sources'].items():
-            if role in ('consumer_source','consumer_wrapper'):
+            if role=='consumer_source':
                 require(pin(parents/rel)['sha256']==policy['inherited_capture_members'][rel],
                         'inherited consumer differs from qualified training release: '+role)
             else:

@@ -21,9 +21,10 @@ def run(a):
     env.update(TORCH_DEVICE_BACKEND_AUTOLOAD='0',PYTHONDONTWRITEBYTECODE='1',OMP_NUM_THREADS='1',OPENBLAS_NUM_THREADS='1')
     for k,v in env.items():cmd.extend(['-e',k+'='+v])
     print(out,flush=True)
-    subprocess.run(cmd+[info['Image'],'-B','/new-sources/check_accepted_actor_packet.py','--spec',a.spec,'--root',a.root,'--out','/scratch','--ranks',str(a.ranks)],check=True)
+    subprocess.run(cmd+[info['Image'],'-B','/new-sources/'+a.check,'--spec',a.spec,'--root',a.root,'--out','/scratch','--ranks',str(a.ranks)],check=True)
 if __name__=='__main__':
     p=argparse.ArgumentParser()
     for k in ('container','scratch','spec','root','memory'):p.add_argument('--'+k,required=True)
     for k in ('ranks','cpus'):p.add_argument('--'+k,type=int,required=True)
+    p.add_argument('--check',choices=('check_accepted_actor_packet.py','check_single_consumer.py'),default='check_accepted_actor_packet.py')
     run(p.parse_args())

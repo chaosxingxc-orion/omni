@@ -141,8 +141,11 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None):
         provenance.append(p);costs.append(captured['costs']);task_records.extend(captured.get('task_records',[]))
     refs={n:save(root/(n+'.json'),v) for n,v in dict(online=online,offline=offline,provenance=provenance).items()}
     files=dict(count=len(online),refs=refs,**{n:r['path'] for n,r in refs.items()})
-    fields,report=build(files,cfg)
-    bundle,_=restore(files,cfg)
+    if accepted_sink is not None:
+        fields,report,bundle=consumer.build_with_bundle(files,cfg)
+    else:
+        fields,report=build(files,cfg)
+        bundle,_=restore(files,cfg)
     require(set(g['group_id'] for g in bundle['groups'])==set(plan['group_ids']),'complete selected group accounting')
     save(root/'FILES.json',files);save(root/'CAPTURE-COSTS.json',costs)
     save(root/'CONSUMER-REPORT.json',report);save(root/'TASK-RECORDS.private.json',task_records)

@@ -25,7 +25,8 @@
       "rl-ready-window-configuration/source/cohort_capture.py",
       "rl-ready-window-configuration/source/reference_batch.py",
       "rl-ready-window-configuration/source/fresh_adapter.py",
-      "rl-ready-window-configuration/source/cohort.py"
+      "rl-ready-window-configuration/source/cohort.py",
+      "rl-ready-window-configuration/source/consumer.py"
     ],
     "service": [
       "rl-ready-window-configuration/source/service_bootstrap.py",
@@ -81,11 +82,11 @@
     "parents/jev-system-rl/implementation/bounded_tp4.py": "implementation/bounded_tp4.py",
     "parents/fresh-cohort-successor/cohort_capture.py": "rl-ready-window-configuration/source/cohort_capture.py",
     "parents/fresh-cohort-successor/reference_batch.py": "rl-ready-window-configuration/source/reference_batch.py",
-    "parents/fresh-cohort-successor/cohort.py": "rl-ready-window-configuration/source/cohort.py"
+    "parents/fresh-cohort-successor/cohort.py": "rl-ready-window-configuration/source/cohort.py",
+    "parents/fresh-cohort-successor/consumer.py": "rl-ready-window-configuration/source/consumer.py"
   },
   "actor_fields": "reuse_accepted_v1",
   "inherited_capture_members": {
-    "fresh-cohort-successor/consumer.py": "2f83d3ef1c6685058b14839b950e53092cbce573f9557e12a348907ac8d6c56f",
     "training-consumer-successor/adapter.py": "169f984eed645829bc7fca72b605d6a621611779ee992542519c9298150f1b02"
   }
 }
