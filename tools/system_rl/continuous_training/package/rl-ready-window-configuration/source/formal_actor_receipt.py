@@ -57,14 +57,21 @@ def _updated(rows,rank_refs,prior_checkpoint_ref,checkpoint_ref,report_ref,*,pri
     after = read(checkpoint_ref)
     step = after['step']
     clock = after['clock']
-    old_clock = before['clock'] if prior_clock is None else prior_clock
+    initial=before.get('schema')=='expanded-policy-branch-v1'
+    old_clock=(read(before['clock_ref']) if initial else before['clock']) if prior_clock is None else prior_clock
     lineage = after['training_lineage']
     groups = lineage['group_ids']
     attempt = lineage['attempt_id']
-    require(before['world_size'] == after['world_size'] == 8
+    if initial:
+        policy=read(before['policy_ref']);parent=read(read(policy['publication_ref'])['parent_ref'])
+        require(before['optimizer_inherited'] is False and step==1 and before['step']==0 and
+                after['contract']['lineage']!=parent['contract']['lineage'] and
+                lineage['current_policy_vector']==lineage['behavior_policy_vector']==dict.fromkeys(('P','S1','S2','D'),policy['version']),
+                'first update did not use initial weights on a new lineage')
+    require((parent if initial else before)['world_size'] == after['world_size'] == 8
             and old_clock['successful_optimizer_steps'] == before['step'] == step - 1
             and step == clock['successful_optimizer_steps'], 'checkpoint did not advance exactly one step')
-    require(after['recoverable'] is True and after['contract']['lineage'] == before['contract']['lineage'],
+    require(after['recoverable'] is True and (initial or after['contract']['lineage'] == before['contract']['lineage']),
             'optimizer lineage changed')
     require(groups and len(groups) == len(set(groups)) and set(groups).isdisjoint(old_clock['groups'])
             and set(clock['groups']) == set(old_clock['groups']) | set(groups)
@@ -256,7 +263,8 @@ def close_live(cfg, root, prior_ref, produced_ref, rank_live_refs, peers):
     require(root.name==f'{seq:06d}' and owner['objects']==peers and len(peers)==len(rank_live_refs)==8
             and owner['run_id']==cfg['continuous_actor']['run_id']==command['run_id']
             and command['generation_inventory_ref']==inventory and intent['predecessor']==prior_ref
-            and prior_ref['sha256']==cfg['restore_checkpoint']['sha256']==command['checkpoint_sha256']
+            and prior_ref['sha256']==(cfg['initial_actor']['branch_ref'] if 'initial_actor' in cfg else cfg['restore_checkpoint'])['sha256']
+            ==command['checkpoint_sha256']
             and command['previous_close_sha256']==pin(exchange/'READY.json' if not seq else
                 root.parent/f'{seq-1:06d}'/'CLOSED.json')['sha256'],'resident command identity differs')
     refs=[];rows=[]
@@ -267,7 +275,7 @@ def close_live(cfg, root, prior_ref, produced_ref, rank_live_refs, peers):
         require(live==dict(rank=rank,objects=peers[rank],intent_ref=intent_ref,result_ref=result_ref)
                 and row['rank']==rank,'rank or resident object identity differs')
         refs.append(result_ref);rows.append(row)
-    before=read(prior_ref);clock=before['clock']
+    before=read(prior_ref);clock=read(before['clock_ref']) if 'initial_actor' in cfg else before['clock']
     for zero in cfg['continuation'].get('zero_result_refs',[]):
         clock=verified_zero_clock(clock,read(zero),prior_ref['sha256'])
     trajectory_ref,selected_ref,selected,finalized=finalized_window(cfg,root,inventory,resident=True)
@@ -284,6 +292,12 @@ def close_live(cfg, root, prior_ref, produced_ref, rank_live_refs, peers):
             'CONSUMER-REPORT.json'),prior_clock=clock,generation_ref=inventory,terminal=dict(resident_intent_ref=intent_ref))
         accepted['policy_ref']=seal(produced_ref,root/'publication',fresh_commit=True)
         policy=read(accepted['policy_ref'])
+        if 'initial_actor' in cfg:
+            start=cfg['initial_actor'];export=read(policy['publication_ref'])
+            require(all(export['scientific_contract'][k]==start[k] for k in ('training','image','devices','lineage'))
+                    and export['resident_identity']['base']==start['base'] and
+                    policy['assets']==export['assets'] and policy['assets'][0]['sha256']!=start['assets']['adapter_model.safetensors']['sha256'],
+                    'first export differs from initial actor contract or did not update the weights')
         members.extend([produced_ref,accepted['policy_ref'],policy['publication_ref'],policy['asset_manifest_ref']])
         for entry in read(produced_ref)['ranks']:
             for name,sha in entry['files'].items():

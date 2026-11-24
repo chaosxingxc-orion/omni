@@ -17,18 +17,33 @@ def same(a,b):
 def verify(pub, evidence):
     from bounded_tp4 import inference_protocol
     record=read(evidence)
+    binding='branch_ref' if 'branch_ref' in pub else 'checkpoint_ref'
     require(record['schema']=='continuous-training-activation-v1'
-            and same(record['checkpoint_ref'],pub['checkpoint_ref']),'activation belongs to different checkpoint')
+            and same(record[binding],pub[binding]),'activation belongs to different policy')
     baseline=read(record['precision_lock_ref'])
     require(baseline['purpose']=='precision_alignment' and baseline['accepted_verdict']['passed'] is True,
             'missing numerical baseline')
     anchor=read(baseline['assets']['activation_ref'])
     prec=read(baseline['assets']['precision_ref'])
-    prior=read(baseline['accepted_checkpoint'])
-    contract=pub['scientific_contract']
-    require(pub['resident_identity']['base']==prior['resident_identity']['base'] and
-            all(contract[k]==prior['contract'][k] for k in ('lineage','devices','lora_arithmetic','image','training')),
-            'trained model or arithmetic differs from qualified contract')
+    if baseline['schema']=='omni-expanded-precision-v1':
+        start=read(baseline['accepted_initial_ref'])
+        if binding=='branch_ref':
+            require(same(pub[binding],start[binding]) and pub['step']==0 and
+                    pub['artifact_version']==start['version'] and pub['assets'][0]==start['assets']['adapter_model.safetensors'],
+                    'initial policy differs from measured branch')
+        else:
+            contract=pub['scientific_contract']
+            require(pub['resident_identity']['base']==start['base'] and pub['step']>0
+                    and all(contract[k]==start[k] for k in ('training','image','devices','lineage'))
+                    and contract['lora_arithmetic']['geometry']=={k:v for k,v in prec['workers'][0]['lora_row_geometry'].items() if k!='source_sha256'}
+                    and contract['lora_arithmetic']['source_sha256']==prec['workers'][0]['lora_row_geometry']['source_sha256'],
+                    'checkpoint differs from branch training contract')
+    else:
+        prior=read(baseline['accepted_checkpoint'])
+        contract=pub['scientific_contract']
+        require(pub['resident_identity']['base']==prior['resident_identity']['base'] and
+                all(contract[k]==prior['contract'][k] for k in ('lineage','devices','lora_arithmetic','image','training')),
+                'trained model or arithmetic differs from qualified contract')
     require(same(record['profile_ref'],baseline['assets']['profile_ref']),'different sampling profile')
     lanes={}
     for key,ref in record['lanes'].items():
@@ -85,22 +100,51 @@ def activate(config,state,root):
     from formal_parity import previous_capture,relocate_candidate,publish_inbox,receipt_bytes
     from publication import validate_publication
     spec,primary=settings(config);providers=lane_providers(config,spec,primary)
-    policy=read(state['policy_ref']);pub=validate_publication(policy['publication_ref'],verify_parity=False)
+    policy=read(state['policy_ref'])
+    initial=policy['kind']=='branch_initial'
+    if initial:
+        branch=read(state['branch_initial_ref'])
+        if 'admission_ref' in policy:
+            original=read(branch['policy_ref'])
+            require(state['step']==0 and state['resume_ref'] is None and
+                    {k:v for k,v in policy.items() if k not in ('admission_ref','asset_manifest_ref')}==original,
+                    'admitted initial policy differs from branch')
+            admitted=read(policy['admission_ref'])
+            evidence=admitted['continuous_activation_ref']
+            require(admitted['branch_ref']==state['branch_initial_ref'] and
+                    read(evidence)['precision_lock_ref']==spec['continuous_training']['precision_lock_ref'] and
+                    set(read(evidence)['lanes'])==set(providers) and
+                    read(policy['asset_manifest_ref'])==dict(status='CLOSED_IMMUTABLE',assets=policy['assets'],
+                                                            publication_ref=policy['publication_ref']),
+                    'restored admission differs from original training configuration')
+            verify(admitted,evidence)
+            return state['policy_ref']
+        require(state['step']==0 and state['resume_ref'] is None and state['policy_ref']==branch['policy_ref'],
+                'unexpected expanded initial policy')
+        pub=dict(schema='expanded-training-publication-v1',branch_ref=state['branch_initial_ref'],
+                 initial_publication_ref=policy['publication_ref'],step=0,
+                 artifact_version=policy['artifact_version'],assets=policy['assets'])
+    else:pub=validate_publication(policy['publication_ref'],verify_parity=False)
     opts=spec['continuous_training']
     require(not os.environ.get('OMNI_TIMESHARED_ROLLOUT_REF') and
             opts['protocol']=='apply-local-marker-v1' and spec['ssh']['target']==primary['host'],
             'continuous rollout requires dedicated resident provider')
-    require(pub['step']==state['step'] and pub['checkpoint_ref']==state['resume_ref'],'wrong actor publication')
-    first=state['resume_ref']==config['initial_resume_ref']
-    capture=None if first else previous_capture(state)
+    require(pub['step']==state['step'] and (initial or pub['checkpoint_ref']==state['resume_ref']),'wrong actor publication')
+    first=initial or state['resume_ref']==config.get('initial_resume_ref')
+    policy_anchor={'branch_ref':pub['branch_ref']} if initial else {'checkpoint_ref':pub['checkpoint_ref']}
+    from session_lease import enabled,get,boundary
+    session=get(config) if enabled(config) else None
+    capture=None if first else previous_capture(state,session_ref=pin(session['root']/'REMOTE-LEASE.json') if session else None)
     before={k:read(p['initial_lane_ref'] if first else read(capture['endpoint_witness_ref'])['lanes'][k])
             for k,p in providers.items()}
     active={k:read(v['activation_ref']) for k,v in before.items()}
     root.mkdir(parents=True,exist_ok=True); fence=root/'lease';closed=root/'ACTIVATIONS-CLOSED.json'
-    remote,ready,service=lease_plan(config,primary,fence,config['run_id']+'-publish-'+str(state['step']),
-        dict(checkpoint_ref=state['resume_ref']))
+    if session:remote,ready,service=(session[k] for k in ('remote','ready','service'))
+    else:
+        remote,ready,service=lease_plan(config,primary,fence,config['run_id']+'-publish-'+str(state['step']),
+            policy_anchor)
     if not closed.exists():
-        acquire(fence,remote,primary,ready,service)
+        if not session:acquire(fence,remote,primary,ready,service)
         if not first:
             inbox=Path(service['policy_overlay']['update_mount']);target=inbox/f"{config['run_id']}-step-{state['step']}"
             require(all(read(p['service_config'])['policy_overlay']['update_mount']==str(inbox) for p in providers.values())
@@ -109,7 +153,7 @@ def activate(config,state,root):
             checkout=root/'adapter-input';successor=relocate_candidate(state['policy_ref'],checkout,target)
             prior=active[primary['lane']]['policy_ref']
             if not (root/'MARKER.json').exists():
-                write(root/'MARKER.json',publish_inbox(remote,service,checkout,target,prior,successor,state['step']-1))
+                write(root/'MARKER.json',publish_inbox(remote,service,checkout,target,prior,successor,state['step']-1,session=session))
         lanes={}
         with ExitStack() as stack:
             for name,p in providers.items():
@@ -137,21 +181,27 @@ def activate(config,state,root):
                             and actual['service_identity']==ack['service_identity'],'remote activation receipt differs')
                 lanes[name]=write(work/'LANE.json',lane)
         evidence=write(root/'ACTIVATIONS.json',dict(schema='continuous-training-activation-v1',
-            precision_lock_ref=opts['precision_lock_ref'],checkpoint_ref=pub['checkpoint_ref'],
+            precision_lock_ref=opts['precision_lock_ref'],**policy_anchor,
             profile_ref=read(opts['precision_lock_ref'])['assets']['profile_ref'],lanes=lanes))
         verify(pub,evidence)
         write(closed,dict(terminal_verified=True,unknown_requests=0,activation_ref=evidence))
     terminal=read(closed)
-    receipt=root/'RELEASED.json'
-    if not receipt.exists():
-        write(receipt,release(fence,remote,service,terminal,spec['drain_timeout_seconds']))
-    released=read(receipt)
-    owner=read(remote['config'])['owner']
-    require(released['status']=='released' and released['owner']==owner and
-            released['terminal']==dict(terminal,owner=owner),'wrong closed activation lease')
+    if session:
+        write(root/'SESSION-BOUNDARY.json',boundary(config,terminal))
+    else:
+        receipt=root/'RELEASED.json'
+        if not receipt.exists():
+            write(receipt,release(fence,remote,service,terminal,spec['drain_timeout_seconds']))
+        released=read(receipt)
+        owner=read(remote['config'])['owner']
+        require(released['status']=='released' and released['owner']==owner and
+                released['terminal']==dict(terminal,owner=owner),'wrong closed activation lease')
     evidence=terminal['activation_ref']
     require(read(evidence)['precision_lock_ref']==opts['precision_lock_ref'],'precision release changed')
     verify(pub,evidence)
     clean={k:v for k,v in pub.items() if k not in ('bounded_tp4_ref','updated_rcp_ref','runtime_ref')}
     new=write(root/'POLICY-PUBLISHED.json',dict(clean,status='published_for_fresh_sampling',continuous_activation_ref=evidence))
+    if initial:
+        manifest=write(root/'ASSETS.json',dict(status='CLOSED_IMMUTABLE',assets=policy['assets'],publication_ref=policy['publication_ref']))
+        return write(root/'POLICY.json',dict(policy,admission_ref=new,asset_manifest_ref=manifest))
     return write(root/'POLICY.json',dict(policy,publication_ref=new))

@@ -13,3 +13,13 @@ python3 prepare_initial_branch.py --release "$OMNI_TRAIN_RELEASE" \
 同一输出目录只采用第一次解析后的快照；换环境后恢复仍使用它。更换部署应使用新的输出目录。RESOLUTION.json 记录模板、原始配置、生效配置与结果的摘要；ENVIRONMENT.json 只记录声明项的来源及生效配置。以上文件留在本地热目录。
 
 分支准备还支持 OMNI_BRANCH_CONFIG、OMNI_DEPLOYMENT_PROFILE。训练组装使用 OMNI_TRAIN_MANIFEST 和 OMNI_TRAIN_OUTPUT；如果 manifest 是模板，还要提供部署 profile 和 OMNI_TRAIN_RELEASE。显式 CLI 路径优先于对应变量。Actor 使用 OMNI_ACTOR_CONFIG 指定已封闭的训练配置；TP 部署使用 OMNI_ROLLOUT_DEPLOYMENT_ROOT 指定部署根，可用 OMNI_ROLLOUT_CONFIG 指向预解析配置，与已有部署根不一致时拒绝切换。运行时不反复读取环境。
+
+正式训练分支可用 `configure_branch_training.py` 读取 `BRANCH-TRAINING.template.json` 和 `BRANCH-TRAINING-DEPLOYMENT.example.json`。后者声明八个可从环境传入的路径；例如 `OMNI_DEPLOY_ACTOR_SOURCE` 选择训练机上已验收的算子目录，`OMNI_DEPLOY_PROVIDERS` 选择推理实例清单。启动后根据各实例回执核对实际设备，不从实例名推断卡号。已封闭的训练构建与精度证据须匹配。
+
+```sh
+python3 configure_branch_training.py --config BRANCH-TRAINING.template.json \
+  --profile BRANCH-TRAINING-DEPLOYMENT.example.json \
+  --release "$OMNI_TRAIN_RELEASE" --output "$OMNI_TRAIN_OUTPUT"
+```
+
+训练部署选择权重初始化或 checkpoint 恢复。前者复用冻结基座，使用新 LoRA 和空优化器；后者恢复原优化器和 Clock。实例观察记录、训练及精度诊断分别封存。运行目录只保存本次选择和引用。

@@ -174,7 +174,11 @@ class CaptureLease:
         require(c['resources']['rank'] in self.registry.resources,'original resource rank missing')
         require(self.registry.authority['max_cost_units']<=c['budget']['total_tokens'] and self.registry.usage()['cost_units']>=c['budget']['cumulative_prior_tokens_upper'],'original cumulative budget cannot reset')
         require(not self.registry.admission_closed(),'original global admission closed')
-        self.fence=Fence(c['lease_fence']);self.fence.start()
+        if 'session' in c['lease_fence']:
+            from session_lease import LocalLease
+            self.fence=LocalLease(c['lease_fence'])
+        else:self.fence=Fence(c['lease_fence'])
+        self.fence.start()
         with (self.root/'capture-lease-publish.guard').open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
             save(self.root/'CAPTURE-LEASE.json',dict(lease_fence=c['lease_fence'],registry=r,authorization=auth,automatic_next_cohort=False))
@@ -187,8 +191,11 @@ class CaptureLease:
                 # Charge actual HTTP upper plus current/frozen-reference capture
                 # BEFORE provider contact, through the SAME original ledger.
                 cap=request_cap(lease.config['budget'],packet)
-                accounted=lease.Accounted(lease.ContactFence(inner,lease.fence),lease.registry,lease.config['resources']['rank'],3*cap)
-                return accounted.submit(rid,packet)
+                # A failed pre-contact lease check must not create an unknown
+                # spend. The accounted transport still reserves before HTTP,
+                # and there is no retry after entry into that transport.
+                accounted=lease.Accounted(inner,lease.registry,lease.config['resources']['rank'],3*cap)
+                return lease.ContactFence(accounted,lease.fence).submit(rid,packet)
             def reconcile(self,rid,packet):
                 return lease.Accounted(inner,lease.registry,lease.config['resources']['rank'],0).reconcile(rid,packet)
             def inspect(self,packet):

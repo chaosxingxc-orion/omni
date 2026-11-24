@@ -96,7 +96,10 @@ class ServiceOverlay:
         policy, profile = doc(policy_ref), doc(profile_ref)
         base=policy['kind']=='base'
         if not self.fixture and not base:
-            if getattr(self,'bounded_candidate',False):
+            if policy['kind']=='branch_initial':
+                from initial_policy import validate_initial
+                validate_initial(policy)
+            elif getattr(self,'bounded_candidate',False):
                 from publication import validate_publication
                 published=validate_publication(policy['publication_ref'])
                 require(published['status']=='candidate_for_updated_parity' and published['assets']==policy['assets'],
@@ -104,7 +107,7 @@ class ServiceOverlay:
             else:
                 from lineage import publication
                 publication(policy['publication_ref'])
-        require(policy['model'] == MODEL and policy['thinking'] is False and policy['kind'] in ('checkpoint','base'), 'PUBLISHED_POLICY_REQUIRED')
+        require(policy['model'] == MODEL and policy['thinking'] is False and policy['kind'] in ('checkpoint','base','branch_initial'), 'PUBLISHED_POLICY_REQUIRED')
         model_config = self.engine.model_config
         if not self.fixture:
             require(getattr(model_config,'model',None)==getattr(self,'expected_base_model_path',None) and

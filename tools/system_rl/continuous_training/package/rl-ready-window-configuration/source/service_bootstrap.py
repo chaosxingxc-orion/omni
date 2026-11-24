@@ -145,7 +145,10 @@ def main():
             require(importlib.util.find_spec('acl') is not None,'CANN Python bindings missing from image environment')
             validate(doc(config['named_rpc_overlay']['precision_ref']))
             policy=doc(config['policy_ref'])
-            validate_publication(policy['publication_ref'])
+            if policy['kind']=='branch_initial':
+                from initial_policy import validate_initial
+                validate_initial(policy)
+            else:validate_publication(policy['publication_ref'])
             doc(config['profile_ref'])
             return
         if release=='precision' and local.get('diagnostic_logits'):
@@ -251,6 +254,14 @@ def policy_middleware(config,handles,ServiceOverlay,local,inbox,release,control,
                             save(Path(config['overlay_root'])/'PRECISION.json',dict(specification_ref=precision,workers=rows,actual_device_execution=True))
                         # Precision/adapter changes invalidate cached activations.
                         # The owner has drained the lane; never abort live work.
+                        enc_reset=local.get('reset_audio_on_precision_install',False) if local else False
+                        require(type(enc_reset) is bool,'explicit initial audio reset setting required')
+                        if enc_reset:
+                            # Precision installation can change the frozen audio tower.
+                            # Clear the API renderer/worker feature cache and the
+                            # scheduler/worker encoder outputs before admitting requests.
+                            await pending.engine.reset_mm_cache()
+                            await pending.engine.reset_encoder_cache()
                         reset=await pending.engine.reset_prefix_cache(reset_running_requests=False)
                         require(reset is True,'RL_POLICY_PREFIX_CACHE_RESET_FAILED')
                         from io_utils import save
@@ -258,6 +269,7 @@ def policy_middleware(config,handles,ServiceOverlay,local,inbox,release,control,
                             schema='rl-rollout-cache-policy-v1',kv_cache=True,prefix_cache=True,
                             policy_ref=config['policy_ref'],precision_ref=precision,
                             reset_on_activation=True,reset_succeeded=reset,
+                            **({'audio_processor_reset':True,'audio_encoder_reset':True} if enc_reset else {}),
                             reuse_scope='same_policy_precision_adapter_and_input'))
                         await pending.activate(config['policy_ref'],config['profile_ref'])
                     except BaseException as error:
@@ -350,8 +362,12 @@ def local_successor(inbox, marker, previous):
     publication=doc(new['publication_ref'])
     contained(publication['checkpoint_ref'])
     for ref in publication['assets']:contained(ref)
-    before=validate_publication(old['publication_ref'])
     after=validate_publication(new['publication_ref'])
+    if old['kind']=='branch_initial':
+        from initial_policy import verify_first_update
+        verify_first_update(old,new,after)
+        return successor
+    before=validate_publication(old['publication_ref'])
     require(new['kind']=='checkpoint' and new['step']==after['step']==before['step']+1
             and before['scientific_contract']['lineage']==after['scientific_contract']['lineage']
             and before['resident_identity']['base']==after['resident_identity']['base']

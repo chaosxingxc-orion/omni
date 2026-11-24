@@ -22,7 +22,7 @@ def settings(config):
             and config['execution_mode'] == 'formal'
             and config['formal_rl_enabled'] is True
             and config.get('sampled_training')
-            and config.get('initial_resume_ref')
+            and (bool(config.get('initial_resume_ref')) != bool(config.get('branch_initial_ref')))
             and not config.get('resident', {}).get('enabled')
             and not config.get('newprocess_replay', {}).get('enabled'),
             'strict actor requires a restored, sampled formal iteration')
@@ -36,6 +36,13 @@ def settings(config):
     require(Path(launcher['path']).name == 'stage_bounded_actor_step.py',
             'strict actor requires the retained staging entry')
     return spec
+
+
+def policy_anchor(state):
+    ref=state['resume_ref']
+    if ref is not None:return ref
+    require(state['step']==0 and state.get('branch_initial_ref'),'missing initial actor anchor')
+    return state['branch_initial_ref']
 
 
 def recovery_run(checkpoint_ref, step):
@@ -236,10 +243,17 @@ def train(config, state, directory, guard):
             and inventory['generation_closed_ref'] == pin(capture['generation_closed_ref'])
             and read(capture['input_ref'])['sampled_window_ref'] == state['sampled_pending_window_ref'],
             'strict actor needs the current sampled window and its closed generation')
-    template.update(run=name, source_bundle=str(prior), restore_run=str(prior),
+    template.update(run=name, source_bundle=str(prior),
                     prior_step=state['step'], expected_boot=spec['source_boot'],
-                    restore_checkpoint_sha256=state['resume_ref']['sha256'], formal_sampled=True,
+                    formal_sampled=True,
                     rollout_lanes=spec['rollout_lanes'], zero_result_refs=state.get('zero_result_refs', []))
+    if state['resume_ref'] is None:
+        require(opts and config['branch_initial_ref']==template['initial_actor']['branch_ref']==policy_anchor(state),
+                'formal actor initialization differs')
+        for key in ('restore_run','restore_checkpoint_sha256'):template.pop(key,None)
+    else:
+        template.pop('initial_actor',None)
+        template.update(restore_run=str(prior),restore_checkpoint_sha256=state['resume_ref']['sha256'])
     if os.environ.get('OMNI_TIMESHARED_ROLLOUT_REF'):
         from timeshared_rollout import deployment
         template['rollout_lanes']=[deployment(config)['lane']]
@@ -464,7 +478,7 @@ def resident_train(config,state,directory,guard,template,staged,call):
     spec=config['formal_actor'];opts=template['continuous_actor'];seq=call['sequence'];owner=Path(call['target'])
     gen=template['generation'];lease=directory/'SUBMIT-INTENT.json';returned=directory/'returned'
     root=Path(config['output_root'])/'formal-resident-client';hot=owner/'hot'
-    coord=dict(run_id=opts['run_id'],sequence=seq,checkpoint_sha256=state['resume_ref']['sha256'],
+    coord=dict(run_id=opts['run_id'],sequence=seq,checkpoint_sha256=policy_anchor(state)['sha256'],
                pending_capture_ref=gen['pending_capture_ref'],generation_inventory_ref=gen['generation_inventory_ref'])
     if not returned.exists() and not (directory/'closed-return.tar').exists():
         if not lease.exists():
@@ -475,7 +489,7 @@ def resident_train(config,state,directory,guard,template,staged,call):
                         and previous['checkpoint_sha256']==coord['checkpoint_sha256'],'resident predecessor differs')
                 cmd=dict(coord,action='update',previous_close_sha256=previous['closure_sha256'])
             else:
-                require(state['resume_ref']==config['initial_resume_ref'] and owner.name==template['run'],
+                require(policy_anchor(state)==(config.get('initial_resume_ref') or config.get('branch_initial_ref')) and owner.name==template['run'],
                         'initial resident recovery mismatch')
                 cmd=None
             write(lease,dict(training_ref=staged,input_custody_ref=inputs,target=str(owner),sequence=seq,
@@ -520,12 +534,12 @@ def accept_resident_result(state,gen,spec,opts,root,returned,owner,seq):
     require(closed['schema']=='formal-resident-command-v1' and closed['immutable'] is True and
             closed['sequence']==seq and closed['run_id']==opts['run_id'] and closed['source_boot']==spec['source_boot']
             and result['result_ref']==closed['result_ref'] and ack['command']['sequence']==seq
-            and ack['command']['checkpoint_sha256']==state['resume_ref']['sha256']
+            and ack['command']['checkpoint_sha256']==policy_anchor(state)['sha256']
             and ack['command']['pending_capture_ref']==gen['pending_capture_ref']
             and ack['command']['generation_inventory_ref']==gen['generation_inventory_ref']==accepted['generation_inventory_ref']
             and accepted['formal_rl_enabled'] is True and accepted['sampled_window_ref']==state['sampled_pending_window_ref']
             and accepted['optimizer_steps']==result['optimizer_steps'] in (0,1),'wrong resident optimizer result')
-    checkpoint=result.get('checkpoint_ref',state['resume_ref'])
+    checkpoint=result.get('checkpoint_ref') or policy_anchor(state)
     require(accepted['clock']['successful_optimizer_steps']==state['step']+result['optimizer_steps']
             and read(checkpoint)['step']==accepted['clock']['successful_optimizer_steps'],
             'resident Clock did not match reported update')

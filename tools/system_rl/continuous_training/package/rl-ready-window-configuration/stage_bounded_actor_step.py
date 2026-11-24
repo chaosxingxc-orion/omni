@@ -34,43 +34,75 @@ def read_predecessor(remote, prior, step, world):
 def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
     """Continue from a terminal run using its unchanged worker and optimizer."""
     q=shlex.quote
-    prior=Path(c['restore_run'])
+    initial=c.get('initial_actor')
+    prior=Path(c['source_bundle'] if initial else c['restore_run'])
     if not prior.is_absolute() or prior.parent!=dest.parent or '..' in prior.parts or prior==dest:
         raise ValueError('invalid continuation source')
     if any(k in c for k in ('trace_update','efficiency','updated_http_parity','published_adapter_control')):
         raise ValueError('continuation cannot be combined with a diagnostic')
     step=c['prior_step']
-    if type(step) is not int or step<1:raise ValueError('positive prior step required')
-    checkpoint=prior/f'hot/step-{step}'
-    with measure(timings, 'predecessor_receipts'):
-        old_raw, terminal_raw, proof_raw, *owner_raw = read_predecessor(remote, prior, step, 8)
-        old = json.loads(old_raw)
-        terminal = json.loads(terminal_raw)
-    verify_started = time.monotonic()
-    if terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
-        raise ValueError('predecessor is not terminal with eight complete ranks')
-    proof_sha=hashlib.sha256(proof_raw).hexdigest()
-    if proof_sha!=c['restore_checkpoint_sha256']:raise ValueError('checkpoint pin changed')
-    proof=json.loads(proof_raw)
-    if old.get('deterministic_backward') is not True or old['lineage']!=c['lineage'] or old['devices']!=c['devices']:
-        raise ValueError('strict training source differs')
-    if c.get('expected_boot') is not None and old['boot_id'] != c['expected_boot']:
-        raise ValueError('strict training predecessor boot differs')
-    if old['files']['bounded_actor_step.py']!=proof['contract']['sources']['bounded_actor_step.py']:
-        raise ValueError('predecessor driver does not match committed source')
-    owner_result=[json.loads(raw) for raw in owner_raw]
-    if any(r.get('rank')!=i or r.get('step')!=step or not r.get('recoverable_checkpoint')
-           or r.get('publication_sha256')!=proof['resident_identity']['publication']['identity_sha256']
-           for i,r in enumerate(owner_result)):raise ValueError('terminal rank/checkpoint identity differs')
-    s=dict(old,name=c['run'],hot=str(dest/'hot'),dataset_sha256=c.get('dataset_sha256'),
-           training_memory_gib=c['training_memory_gib'],
-           restore_checkpoint=dict(directory=str(checkpoint),sha256=proof_sha),
-           continuation=dict(prior_step=step,predecessor_driver_sha256=proof['contract']['sources']['bounded_actor_step.py']),
-           timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'])
+    if initial:
+        if (type(step) is not int or step!=0 or not c.get('formal_sampled') or not c.get('continuous_actor')
+                or 'restore_run' in c or 'restore_checkpoint_sha256' in c or 'batch_selection_ref' in c):
+            raise ValueError('weight initialization cannot resume a checkpoint or migrate a measured batch')
+        with measure(timings, 'predecessor_receipts'):
+            names=['TRAIN.local.json','hot/EXIT.json']
+            chunk=remote(shlex.join(['tar','-cf','-','-C',str(prior),'--',*names]),text=False)
+            with tarfile.open(fileobj=BytesIO(chunk)) as archive:
+                if archive.getnames()!=names or not all(m.isfile() for m in archive):
+                    raise ValueError('invalid source actor receipts')
+                old,terminal=(json.load(archive.extractfile(n)) for n in names)
+        verify_started=time.monotonic()
+        if (terminal['exit_code']!=0 or terminal['failure'] or terminal['complete_ranks']!=len(c['devices'])
+                or old['boot_id']!=c['expected_boot'] or old['devices']!=c['devices']
+                or any(old[k]!=initial[k] for k in ('image','training','devices'))
+                or old['files']['BASE-ASSETS.json']!=initial['base']['asset_manifest_ref']['sha256']):
+            raise ValueError('initialization source is not the qualified actor')
+        # Retain only production dependencies. The source may also contain
+        # actions, diagnostic packets and an unrelated scoring configuration.
+        inherited=('BASE-ASSETS.json','dispatch_retained_hf_boundary.py','actor_arithmetic.py',
+                   'retained_router_candidate.py','retained_kv_candidate.py','retained_expert_candidate.py',
+                   'policy_identity.py','worker_dp8.py','rank_profile.py')
+        s={k:old[k] for k in ('image','training','devices','boot_id','existing_guard',
+                              'communication','shared_root','source_pins')}
+        s.update(files={n:old['files'][n] for n in inherited},name=c['run'],hot=str(dest/'hot'),
+                 initial_actor=initial,lineage=c['lineage'],deterministic_backward=True,
+                 dataset_sha256=c.get('dataset_sha256'),training_memory_gib=c['training_memory_gib'],
+                 timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'],
+                 continuation=dict(prior_step=step))
+        proof_sha=None
+    else:
+        if type(step) is not int or step<1:raise ValueError('positive prior step required')
+        checkpoint=prior/f'hot/step-{step}'
+        with measure(timings, 'predecessor_receipts'):
+            old_raw, terminal_raw, proof_raw, *owner_raw = read_predecessor(remote, prior, step, 8)
+            old = json.loads(old_raw)
+            terminal = json.loads(terminal_raw)
+        verify_started = time.monotonic()
+        if terminal['exit_code']!=0 or terminal.get('failure') or terminal['complete_ranks']!=8:
+            raise ValueError('predecessor is not terminal with eight complete ranks')
+        proof_sha=hashlib.sha256(proof_raw).hexdigest()
+        if proof_sha!=c['restore_checkpoint_sha256']:raise ValueError('checkpoint pin changed')
+        proof=json.loads(proof_raw)
+        if old.get('deterministic_backward') is not True or old['lineage']!=c['lineage'] or old['devices']!=c['devices']:
+            raise ValueError('strict training source differs')
+        if c.get('expected_boot') is not None and old['boot_id'] != c['expected_boot']:
+            raise ValueError('strict training predecessor boot differs')
+        if old['files']['bounded_actor_step.py']!=proof['contract']['sources']['bounded_actor_step.py']:
+            raise ValueError('predecessor driver does not match committed source')
+        owner_result=[json.loads(raw) for raw in owner_raw]
+        if any(r.get('rank')!=i or r.get('step')!=step or not r.get('recoverable_checkpoint')
+               or r.get('publication_sha256')!=proof['resident_identity']['publication']['identity_sha256']
+               for i,r in enumerate(owner_result)):raise ValueError('terminal rank/checkpoint identity differs')
+        s=dict(old,name=c['run'],hot=str(dest/'hot'),dataset_sha256=c.get('dataset_sha256'),
+               training_memory_gib=c['training_memory_gib'],
+               restore_checkpoint=dict(directory=str(checkpoint),sha256=proof_sha),
+               continuation=dict(prior_step=step,predecessor_driver_sha256=proof['contract']['sources']['bounded_actor_step.py']),
+               timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'])
     if type(s['timeout_seconds']) is not int or s['timeout_seconds']<=0 or s['storage_budget_bytes']<2*1024**3:
         raise ValueError('invalid per-run duration/storage envelope')
     s.pop('trace_update',None)
-    s['files']=dict(old['files'])
+    s['files']=dict(s['files'])
     s['files'].pop('finalized_generation',None)
     s.pop('generation',None)
     s.pop('capture_mounts',None)
@@ -87,8 +119,9 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
             raise ValueError('one or two distinct formal rollout lanes are required')
         if 'actor_batch' in c:
             batch=c['actor_batch']
-            if (set(batch)-{'microbatch_per_card','arithmetic'} or
+            if (set(batch)-{'microbatch_per_card','arithmetic','gradient_accumulation_steps'} or
                 ('arithmetic' in batch and batch['arithmetic']!='single_clip_compact_qo_v1') or
+                type(batch.get('gradient_accumulation_steps',1)) is not int or batch.get('gradient_accumulation_steps',1)<=0 or
                 type(batch.get('microbatch_per_card')) is not int or batch['microbatch_per_card']<=0):
                 raise ValueError('invalid per-card actor microbatch')
             s['actor_batch']=dict(batch)
@@ -111,10 +144,11 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         })
     if c.get('continuous_actor'):
         s['continuous_actor']=c['continuous_actor']
-        if (not c.get('formal_sampled') or not c.get('actor_batch') or old.get('actor_batch')!=c['actor_batch']
+        if (not c.get('formal_sampled') or not c.get('actor_batch') or (initial or old).get('actor_batch')!=c['actor_batch']
                 or s['training_memory_gib']<1024 or not c['generation']['runtime'].get('reference_batch')):
             raise ValueError('continuous actor requires original accepted batch geometry and reference batching')
         overlay.update({name:d/'source'/name for name in ('resident.py','formal_actor_receipt.py','pull_closed.py','continuous_policy.py')})
+        if initial:overlay['actor_start.py']=d/'source/actor_start.py'
         overlay['publication.py']=d.parent/'implementation/publication.py'
     if 'actor_batch' in s:
         overlay['events.py']=d/'source/events.py'
@@ -137,7 +171,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         overlay.update({name:d/name for name in ('pack_actor_fields.py','retained_hf_fsdp_control.py',
                                                 'capture_runtime.py')})
         s['source_pins']=dict(old['source_pins'])
-        s['continuation']['predecessor_control_sha256']=proof['contract']['sources']['retained_hf_fsdp_control.py']
+        if not initial:s['continuation']['predecessor_control_sha256']=proof['contract']['sources']['retained_hf_fsdp_control.py']
         s['accepted_fields']='finalized_generation'
         s['files']['finalized_generation']=c['generation']['generation_inventory_ref']['sha256']
     else:
@@ -154,7 +188,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         measured=json.loads(raw)
         if (not s.get('formal_sampled') or measured['schema']!='actor-batch-measurement-selection-v1'
             or s.get('actor_batch')!=measured['actor_batch'] or s['devices']!=measured['devices']
-            or measured['training_rows']!=len(s['devices'])*s['actor_batch']['microbatch_per_card']
+            or measured['training_rows']!=len(s['devices'])*s['actor_batch']['microbatch_per_card']*s['actor_batch'].get('gradient_accumulation_steps',1)
             or any(s['files'].get(n)!=measured['sources'][n] for n in (
                 'events.py','retained_attention_candidate.py','retained_hf_fsdp_control.py',
                 'pack_actor_fields.py'))):
@@ -189,7 +223,11 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
     from bounded_actor_step import verify_continuation
     sys_path=d.parent/'implementation'
     sys.path.insert(0,str(sys_path))
-    try:verify_continuation(s,proof)
+    try:
+        if initial:
+            from source.actor_start import check_spec
+            check_spec(s)
+        else:verify_continuation(s,proof)
     finally:sys.path.remove(str(sys_path))
     if 'generation' in c:
         from verify_runtime_sources import require_release_sources
@@ -220,7 +258,7 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         return
     # Never copy hot state or alter a sealed predecessor. Original launcher
     # still locks the same guard, checks boot/occupancy and mounts state RO.
-    links=(set(old['files'])|{'tree','dispatch_retained_hf_boundary.py','retained_hf_fsdp_control.py'})-set(overlay)-{'finalized_generation'}
+    links=(set(s['files'])|{'tree','dispatch_retained_hf_boundary.py','retained_hf_fsdp_control.py'})-set(overlay)-{'finalized_generation'}
     payloads['TRAIN.local.json']=json.dumps(s,indent=2).encode()
     with measure(timings, 'stage_bundle'):
         buffer = BytesIO()
@@ -338,7 +376,7 @@ def stage(c, snapshots=None):
         if not s.get('restore_checkpoint') or 'efficiency' in c:
             raise ValueError('updated parity requires only the closed checkpoint probe')
         packet=json.loads(Path(c['updated_http_parity']).read_bytes())
-        if packet.get('schema')=='closed-rollout-probability-diagnostic-v1':
+        if packet.get('schema') in ('closed-rollout-probability-diagnostic-v1','closed-cohort-width-parity-v1'):
             files['retained_group_parity.py']=d/'retained_group_parity.py'
         if 'limits' not in packet:  # historical packet; use its frozen criterion
             limits_path=Path(c.get('parity_criterion',d.parent/'parity-criterion-v1/CRITERION.v1.json'))
@@ -407,17 +445,21 @@ def stage(c, snapshots=None):
     print(dest)
 if __name__=='__main__':
     p=argparse.ArgumentParser()
-    p.add_argument('--config',type=Path,required=True)
-    p.add_argument('--profile',type=Path)
+    import os
+    p.add_argument('--config',type=Path,default=os.environ.get('OMNI_ACTOR_CONFIG'))
+    p.add_argument('--profile',type=Path,help='optional deployment profile for a template')
+    p.add_argument('--resolution-dir',type=Path,default=os.environ.get('OMNI_DEPLOYMENT_OUTPUT'))
     a=p.parse_args()
+    if not a.config:p.error('provide --config or OMNI_ACTOR_CONFIG')
     raw=a.config.read_bytes()
     config=json.loads(raw)
     if a.profile:
-        import sys
-        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'implementation/reward-finite-integration/source'))
-        from config_profile import resolve
-        profile_raw=a.profile.read_bytes()
-        config=resolve(config,json.loads(profile_raw))
+        from source.config_profile import compile_profile
+        from run_package import read
+        if not a.resolution_dir:a.resolution_dir=a.config.parent/(a.config.name+'.resolution')
+        receipt=read(compile_profile(a.config,a.profile,a.resolution_dir))
+        profile_raw=Path(receipt['profile_snapshot_ref']['path']).read_bytes()
+        config=read(receipt['resolved_ref'])
         if 'prior_step' not in config: p.error('--profile requires a continuation')
         stage(config,{'CAPTURE-TEMPLATE.json':raw,'CAPTURE-PROFILE.local.json':profile_raw,
                       'CAPTURE-RESOLVED.json':json.dumps(config,indent=2).encode()})

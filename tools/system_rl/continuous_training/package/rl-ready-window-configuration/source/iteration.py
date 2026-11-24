@@ -17,6 +17,19 @@ from run_package import read,pin,write,compile_package
 class Pending(RuntimeError):pass
 
 
+def dev_due(config,state,epoch_complete):
+    cadence=config['selection'].get('dev_cadence','optimizer_steps')
+    if cadence=='epoch_end':
+        require(config.get('sampled_training') and state.get('sampled_dataset_ref'),
+                'epoch DEV needs the sealed sampled population')
+        # Consumption is advanced only by a terminal training result, including
+        # zero-gradient windows; the optimizer clock cannot identify this boundary.
+        return epoch_complete
+    require(cadence=='optimizer_steps','unknown DEV cadence')
+    return (epoch_complete or bool(state.get('phase_boundary'))
+            or state['step']%config['selection']['dev_every_optimizer_steps']==0)
+
+
 def once(root,name,argv,result):
     root=Path(root);done=root/(name+'-COMPLETE.json');intent=root/(name+'-INTENT.json')
     if done.exists():return read(done)['result_ref']
@@ -138,8 +151,14 @@ def request(config,root,sequence,stage,input_ref,policy_ref,witness_ref=None,ext
         return answer
     if config.get('formal_rollout'):
         if stage=='capture':
-            release=read(answer['resident_release_ref'])
-            require(release['status']=='released' and release['terminal']['unknown_requests']==0
+            from session_lease import enabled,get
+            if enabled(config):
+                release=read(answer['resident_boundary_ref'])
+                require(release['lease_ref']==pin(get(config)['root']/'REMOTE-LEASE.json'),'different resource owner')
+                expected='session_held'
+            else:
+                release=read(answer['resident_release_ref']);expected='released'
+            require(release['status']==expected and release['terminal']['unknown_requests']==0
                     and release['terminal']['request_ref']==pin(marker)
                     and release['terminal']['generation_closed_ref']==answer['generation_closed_ref'],
                     'formal generation did not release its exact original lease')
@@ -187,6 +206,21 @@ def train(config,root,trajectory,witness,parity,learning,resume,iteration,*,diag
 
 def initial_resume(config, initial):
     """Initialize a new cursor using the original sealed policy migration."""
+    if 'branch_initial_ref' in initial or 'branch_initial_ref' in config:
+        anchor=pin(initial['branch_initial_ref'])
+        require(config['branch_initial_ref']==anchor and not config.get('initial_resume_ref') and
+                not config.get('branch_plan_ref') and 'restore_checkpoint_ref' not in initial['native'],
+                'expanded branch cannot restore an optimizer checkpoint')
+        branch=read(anchor);clock=read(initial['clock_state_ref']);policy=read(initial['policy']['current_ref'])
+        from initial_policy import validate_initial
+        publication=validate_initial(policy)
+        require(branch['schema']=='expanded-policy-branch-v1' and branch['optimizer_inherited'] is False
+                and branch['policy_ref']==initial['policy']['current_ref'] and branch['clock_ref']==initial['clock_state_ref']
+                and branch['learning_ref']==initial['learning_config_ref'] and branch['step']==policy['step']==0
+                and clock['successful_optimizer_steps']==0 and all(not clock[k] for k in ('groups','attempts','validations'))
+                and publication['parent_ref']['sha256']==branch['parent_checkpoint']['sha256'],
+                'branch initialization does not match the new Clock or weights')
+        return dict(step=0,resume_ref=None,cohort_sequence=0,branch_initial_ref=anchor)
     if 'initial_resume_ref' not in config:
         require(read(initial['clock_state_ref'])['successful_optimizer_steps']==0,
                 'nonzero Clock requires an explicit checkpoint ref')
@@ -298,7 +332,9 @@ def run(config_path):
     from storage import configure_scope
     configure_scope(root,config['client_storage_bytes'],config['run_id']+':client',Path('/proc/sys/kernel/random/boot_id').read_text().strip(),noncheckpoint_limit_bytes=config.get('client_noncheckpoint_limit_bytes'))
     environment(root,config['client_storage_bytes'])
-    with (root/'iteration.guard').open('ab') as guard:
+    from contextlib import ExitStack
+    from session_lease import lifetime
+    with (root/'iteration.guard').open('ab') as guard, ExitStack() as lifetime_stack:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
         from transport import restore_locations
         for closed in config.get('inherited_closed_returns',[]):
@@ -332,9 +368,63 @@ def run(config_path):
                 trajectory_ref=pin(config['trajectory']),best=None,stale=0,sampling_round=0,
                 screen=None,zero_signal_batches=0,consumed_cohorts=[],program_predecessor_output=config['program_predecessor_output'],
                 charged_tokens_upper=config['budget']['prior_tokens_upper'],reservations={},**resume)
+            if resume.get('branch_initial_ref'):
+                branch=read(resume['branch_initial_ref']);parent=read(branch['parent_cursor_ref'])
+                window=read(branch['excluded_window_ref']);dataset=read(branch['dataset_ref'])
+                term=read(parent['capture']['resident_boundary_ref'])['terminal']
+                require(strict_actor and not finite and parent['phase']=='update' and
+                        term['terminal_verified'] and term['unknown_requests']==0 and
+                        term['generation_closed_ref']==branch['closed_generation_ref']==parent['capture']['generation_closed_ref']
+                        and parent['resume_ref']==branch['parent_checkpoint']
+                        and parent['sampled_pending_window_ref']==branch['excluded_window_ref']
+                        and dataset['specification']==sample_spec(config)
+                        and window['dataset_ref']==parent['sampled_dataset_ref']==branch['dataset_ref']
+                        and window['start']==parent['sampled_consumed'] and window['end']==branch['next_window_start']
+                        and window['start']<window['end']<=dataset['count']
+                        and state['charged_tokens_upper']==(read(read(config['closed_undispatched_ref'])['terminal']['undispatched_ref'])['charged_tokens_upper']
+                            if config.get('closed_undispatched_ref') else branch['prior_tokens_upper'])
+                        and state['charged_tokens_upper']>=branch['prior_tokens_upper']==parent['charged_tokens_upper'],
+                        'unreconciled expanded branch cursor')
+                for key in ('screen','screen_policy_ref','inherited_screen','sampling_round','program_predecessor_output',
+                            'baseline_input_ref','baseline_policy_ref','baseline_dev_ref','phase_baseline_dev_ref','deferred_system_dev_ref'):
+                    if key in parent:state[key]=parent[key]
+                state.update(phase='endpoint',sampled_dataset_ref=branch['dataset_ref'],sampled_windows=[],
+                             sampled_consumed=window['end'],branch_parent_ref=branch['parent_cursor_ref'],
+                             excluded_window_ref=branch['excluded_window_ref'])
+            elif config.get('branch_plan_ref'):
+                plan=read(config['branch_plan_ref']);parent=read(plan['parent_cursor_ref'])
+                first=read(read(plan['first_input_ref'])['sampled_window_ref'])
+                pending=read(plan['protected_window_ref'])
+                start=pending['end']
+                for ref in plan.get('retired_windows',[]):
+                    ack=read(ref);term=ack['terminal'];proof=read(term['retirement_ref']);window=read(proof['window_ref'])
+                    require(ack['status']=='released' and term['outcome']=='retired_without_training' and term['unknown_requests']==0
+                            and proof['training_admission'] is False and proof['checkpoint_ref']==state['resume_ref']
+                            and window['dataset_ref']==plan['dataset_ref'] and window['start']==start and window['end']>start,
+                            'retired range is not a contiguous closed predecessor')
+                    start=window['end']
+                require(strict_actor and not finite and parent['phase']=='update' and
+                        parent['capture']['generation_closed_ref']==plan['protected_generation_ref']
+                        and parent['sampled_pending_window_ref']==plan['protected_window_ref']
+                        and state['resume_ref']==plan['checkpoint_ref']==parent['resume_ref']
+                        and state['policy_ref']==plan['policy_ref']==parent['policy_ref']
+                        and state['input_ref']==parent['capture_source_input_ref']
+                        and pending['dataset_ref']==first['dataset_ref']==plan['dataset_ref']==parent['sampled_dataset_ref']
+                        and start==first['start']==plan['windows'][0]['start']
+                        and parent['sampled_consumed']==pending['start'] and read(plan['dataset_ref'])['specification']==config['sampled_training']
+                        and parent['consumed_cohorts'][-1]['result']['checkpoint_ref']==state['resume_ref'],
+                        'independent branch predecessor or first window differs')
+                for k in ('screen','screen_policy_ref','inherited_screen','sampled_dataset_ref','sampled_windows',
+                          'consumed_cohorts','baseline_input_ref','baseline_policy_ref','deferred_system_dev_ref',
+                          'baseline_dev_ref','phase_baseline_dev_ref','trajectory_ref','sampling_round',
+                          'charged_tokens_upper','program_predecessor_output','cohort_sequence'):
+                    if k in parent:state[k]=parent[k]
+                state.update(phase='endpoint',sampled_consumed=first['start'],
+                             branch_parent_ref=plan['parent_cursor_ref'],excluded_window_ref=plan['protected_window_ref'])
             commit(cursor,state)
         if state.get('accepted_dataset_profile'):
             config['dataset_profile']=copy.deepcopy(state['accepted_dataset_profile'])
+        if state['phase']!='done':lifetime_stack.enter_context(lifetime(config))
         def persist():commit(cursor,state,replace=True)
         def allocate(stage,extra=None):
             # Persist exact identity and full reservation BEFORE transport. A
@@ -416,17 +506,16 @@ def run(config_path):
                 endpoint=call('endpoint');state['witness_ref']=endpoint['witness_ref']
                 if strict_actor:
                     if 'baseline_dev_ref' not in state and 'deferred_system_dev_ref' not in state:
-                        require(state['resume_ref']==config['initial_resume_ref'],
+                        require(state['resume_ref']==config.get('initial_resume_ref'),
                                 'restored formal run has no DEV baseline for its initial policy')
                         state['phase']='baseline_dev'
                     else:
-                        state['phase']='dev' if (state.get('phase_boundary') or samples_complete(config,state)
-                            or step%config['selection']['dev_every_optimizer_steps']==0) else 'capture'
+                        state['phase']='dev' if dev_due(config,state,samples_complete(config,state)) else 'capture'
                 else:
                     state['phase']='parity_capture'
                 persist()
             elif phase=='baseline_dev':
-                require(strict_actor and state['resume_ref']==config['initial_resume_ref'],
+                require(strict_actor and state['resume_ref']==config.get('initial_resume_ref'),
                         'baseline DEV must use the restored initial policy')
                 from formal_resume import defer_system_dev
                 if defer_system_dev(config, state, root):
@@ -514,15 +603,18 @@ def run(config_path):
                     state['policy_ref']=promote(state['policy_ref'],state['raw_ref'],state['runtime_ref'],root/f'promoted-{step:06d}')
                 # Full DEV is evaluated on configured step intervals and phase
                 # boundaries; full TRAIN rescreen only after business promotion.
-                state['phase']='dev' if step==0 or step%config['selection']['dev_every_optimizer_steps']==0 or step>=config['max_optimizer_updates'] else 'capture'
-                if state.get('phase_boundary'):state['phase']='dev'
-                if samples_complete(config,state):state['phase']='dev'
+                due=dev_due(config,state,samples_complete(config,state)) if step else True
+                if config['selection'].get('dev_cadence')!='epoch_end' and step>=config['max_optimizer_updates']:due=True
+                state['phase']='dev' if due else 'capture'
                 if finite:state['phase']='finite_complete' if step>=config['max_optimizer_updates'] else 'capture'
                 if bounded:state['phase']='capture'
                 from diagnostic_retention import release_consumers
                 release_consumers(config,state,root)
                 persist()
             elif phase=='dev':
+                if (config['selection'].get('dev_cadence')=='epoch_end' and state.get('pending_stage') is None
+                        and not dev_due(config,state,samples_complete(config,state))):
+                    state['phase']='capture';persist();continue
                 if state.get('deferred_system_dev_ref') and 'baseline_dev_ref' not in state:
                     from formal_resume import accept_deferred_system_dev
                     if not accept_deferred_system_dev(config, state):

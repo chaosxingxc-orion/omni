@@ -4,7 +4,9 @@ from functools import wraps
 
 def validate(spec):
     grouped = spec.get('algorithm') == 'grouped_bf16'
-    if set(spec) != {'layers','algorithm' if grouped else 'tile_rows','site'} or spec['site'] not in (('o_lora_a','qkv_lora_a','qkvo_lora_a') if grouped else ('o_lora_a',)):
+    if type(spec.get('adapter_rank',8)) is not int or spec.get('adapter_rank',8)<=0:
+        raise ValueError('invalid adapter rank')
+    if set(spec)-{'adapter_rank'} != {'layers','algorithm' if grouped else 'tile_rows','site'} or spec['site'] not in (('o_lora_a','qkv_lora_a','qkvo_lora_a') if grouped else ('o_lora_a',)):
         raise ValueError('unknown LoRA A configuration')
     layers=spec['layers']
     if (not isinstance(layers,list) or not layers or layers!=sorted(set(layers))
@@ -39,7 +41,7 @@ def attach(text,spec):
         active=[]
         class Mode(TorchFunctionMode):
             def __torch_function__(self,func,types,args=(),kwargs=None):
-                if func is torch.nn.functional.linear and len(args)>=2 and args[1].shape==(8,width):
+                if func is torch.nn.functional.linear and len(args)>=2 and args[1].shape==(spec.get('adapter_rank',8),width):
                     x,w=args[:2]
                     if (torch.is_grad_enabled() or kwargs or len(args)!=2 or x.ndim!=2
                             or x.dtype!=w.dtype or x.dtype!=torch.bfloat16 or x.device.type!='npu'):
@@ -80,7 +82,7 @@ def attach(text,spec):
 def grouped_linear(x,w):
     import torch
     import torch_npu
-    if (x.ndim<2 or w.ndim!=2 or w.shape[0]!=8 or w.shape[1] not in (2048,4096) or x.shape[-1]!=w.shape[1] or x.dtype!=torch.bfloat16
+    if (x.ndim<2 or w.ndim!=2 or w.shape[0]<=0 or w.shape[1] not in (2048,4096) or x.shape[-1]!=w.shape[1] or x.dtype!=torch.bfloat16
             or w.dtype!=x.dtype or w.device!=x.device or x.device.type!='npu'):
         raise ValueError(f'unexpected grouped O LoRA A operands: x={x.shape}/{x.dtype}/{x.device}, '
                          f'weight={w.shape}/{w.dtype}/{w.device}')
@@ -101,7 +103,7 @@ def grouped_linear(x,w):
                     dy.T @ flat if ctx.needs_input_grad[1] else None)
     flat=x.reshape(-1,w.shape[1])
     y=Trainable.apply(flat,w) if torch.is_grad_enabled() else project(flat,w)
-    return y.reshape(*x.shape[:-1],8)
+    return y.reshape(*x.shape[:-1],w.shape[0])
 
 
 def attach_hf(text,spec):
@@ -121,7 +123,7 @@ def attach_hf(text,spec):
             attn=unwrap(unwrap(text.layers[i]).self_attn)
             for site in sites:
                 leaf=unwrap(unwrap(getattr(attn,site+'_proj')).lora_A['default'])
-                if not isinstance(leaf,torch.nn.Linear) or leaf.bias is not None:
+                if not isinstance(leaf,torch.nn.Linear) or leaf.bias is not None or leaf.out_features!=spec.get('adapter_rank',8):
                     raise ValueError('unexpected PEFT O LoRA A leaf')
                 if 'forward' in vars(leaf):stack.callback(setattr,leaf,'forward',leaf.forward)
                 else:stack.callback(delattr,leaf,'forward')

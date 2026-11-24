@@ -45,6 +45,25 @@ def policy(module, *, allow_candidate_parity=False):
     original=module.validate
     def validate(spec,learning,state,fixture=False):
         current=read(spec['current_ref'])
+        if current['kind']=='branch_initial':
+            from bounded_tp4 import validate_routes
+            from policy_identity import digest
+            admission=read(current['admission_ref']);seal=read(current['asset_manifest_ref'])
+            witness=read(spec['runtime_evidence_ref']);ref=read(spec['reference_ref']);kernel=learning['kernel']
+            require(not fixture and spec.get('formal_sampled') and current['step']==state['successful_optimizer_steps']==0
+                    and current['role']=='current' and current['model']==ref['model']==witness['model']
+                    and current['thinking'] is ref['thinking'] is False and current['version']==admission['artifact_version']
+                    and seal['status']=='CLOSED_IMMUTABLE' and current['assets']==admission['assets']==seal['assets']
+                    and current['publication_ref']==admission['initial_publication_ref']==seal['publication_ref']
+                    and witness['asset_manifest_ref']==current['asset_manifest_ref']
+                    and ref['frozen'] and ref['kind']=='base' and ref['role']=='reference'
+                    and read(ref['asset_manifest_ref'])['assets']==ref['assets'] and ref['version']=='base-sha256:'+digest(ref['assets'])
+                    and kernel['reference_policy_vector']==dict.fromkeys(module.NODES,ref['version'])
+                    and kernel['current_policy_vector']==kernel['behavior_policy_vector']==dict.fromkeys(module.NODES,current['version'])
+                    and learning['phases'][0]['target_nodes']==['P'] and learning['phases'][0]['rollout_scope']=='node',
+                    'initial training weights, reference or active Clock differ')
+            validate_routes(admission,spec['runtime_evidence_ref'],read(witness['profile_ref']),sampled=True)
+            return current,ref
         if current['kind']!='checkpoint':return original(spec,learning,state,fixture=fixture)
         pub=validate_publication(current['publication_ref'],verify_checkpoint_shards=False)
         if pub.get('schema')!='omni-dp8-publication-v1':return original(spec,learning,state,fixture=fixture)

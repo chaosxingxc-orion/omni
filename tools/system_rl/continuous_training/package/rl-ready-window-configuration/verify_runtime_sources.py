@@ -92,11 +92,31 @@ def continuous_release(runtime,settings,training_files,paired_geometry):
         if name in index:
             if value!=index[name]:raise ValueError('continuous source mismatch: '+name)
             rows.append(dict(role='training',component=name,observed=value,matched=True))
-    for role in ('training','rollout'):
-        geometry=[r for r in baseline['components'] if r['role']==role and Path(r['component']).name=='lora_row_precision.py']
-        if len(geometry)!=1 or geometry[0]['observed']!=paired_geometry:raise ValueError('LoRA geometry differs from precision pair')
+    rollout=[r for r in baseline['components'] if r['role']=='rollout']
+    def pinned(ref):
+        raw=Path(ref['path']).read_bytes()
+        if len(raw)!=ref['bytes'] or hashlib.sha256(raw).hexdigest()!=ref['sha256']:
+            raise ValueError('changed precision input')
+        return json.loads(raw)
+    ref=settings.get('precision_lock_ref')
+    if ref and ref['sha256']!=snap['precision_lock_sha256']:raise ValueError('wrong precision lock')
+    precision=pinned(ref) if ref else {}
+    if precision.get('schema')=='omni-expanded-precision-v1':
+        if not precision['accepted_verdict']['passed']:raise ValueError('unqualified initial policy')
+        workers=pinned(precision['assets']['precision_ref'])['workers']
+        if (not workers or [w['rank'] for w in workers]!=list(range(len(workers))) or
+                any(w['lora_row_geometry']['source_sha256']!=paired_geometry for w in workers) or
+                index.get('lora_row_precision.py')!=paired_geometry or
+                {v for p,v in snap['roles']['service'].items() if Path(p).name=='lora_row_precision.py'}!={paired_geometry}):
+            raise ValueError('LoRA geometry differs from the measured residents or actor')
+        rollout=[r for r in rollout if Path(r['component']).name!='lora_row_precision.py']
+        rollout.append(dict(role='rollout',component='lora_row_precision.py',observed=paired_geometry,matched=True))
+    else:
+        for role in ('training','rollout'):
+            geometry=[r for r in baseline['components'] if r['role']==role and Path(r['component']).name=='lora_row_precision.py']
+            if len(geometry)!=1 or geometry[0]['observed']!=paired_geometry:raise ValueError('LoRA geometry differs from precision pair')
     for row in baseline['components']:
         if row['role']=='training' and row['component'] not in index and training_files.get(row['component'])!=row['observed']:
             raise ValueError('unlocked scientific input changed: '+row['component'])
     return dict(precision_release=baseline['source_commit'],candidate=snap['candidate_sha256'],components=rows+
-                [r for r in baseline['components'] if r['role']=='rollout'])
+                rollout)

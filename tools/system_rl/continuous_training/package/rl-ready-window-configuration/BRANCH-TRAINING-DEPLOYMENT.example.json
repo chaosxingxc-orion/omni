@@ -1,0 +1,14 @@
+{
+  "schema": "omni-local-profile-v2",
+  "values": {},
+  "environment": {
+    "RUNNER": "path",
+    "MANIFEST": "path",
+    "BUILD": "path",
+    "POLICY": "path",
+    "BRANCH_INPUT": "path",
+    "PROVIDERS": "path",
+    "ACTOR_SOURCE": "path",
+    "ACTOR_CAPTURE_ROOT": "path"
+  }
+}

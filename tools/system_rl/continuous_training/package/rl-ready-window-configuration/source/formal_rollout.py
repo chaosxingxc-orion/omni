@@ -53,11 +53,16 @@ def lane_providers(config, spec, primary):
     require(lanes and len(lanes) <= 2 and len(lanes) == len(set(lanes))
             and set(rows) == set(lanes) and rows.get(primary['lane']) == primary,
             'resident lanes must include the primary DATA provider exactly once')
+    occupied=set()
     for name,p in rows.items():
-        require(p['schema'] == 'existing-tp4-provider-v2' and name == p['lane']
-                and name in ('a','b') and p['devices'] == ([0,1,2,3] if name=='a' else [4,5,6,7])
-                and p['host'] == primary['host'] and p['guard_path'] == primary['guard_path'],
-                'provider differs from the configured shared host guard or physical lane')
+        devices=p['devices']
+        require(p['schema']=='existing-tp4-provider-v2' and name==p['lane'] and
+                len(devices)==len(set(devices))==4 and all(type(n) is int and n>=0 for n in devices)
+                and not occupied.intersection(devices)
+                and read(read(p['initial_lane_ref'])['activation_ref'])['service_identity']['physical_devices']==devices
+                and p['host']==primary['host'] and p['guard_path']==primary['guard_path'],
+                'provider differs from actual placement or shares devices')
+        occupied.update(devices)
     for key in ('local_port','remote_port'):
         require(len({p[key] for p in rows.values()}) == len(rows), 'duplicate resident '+key)
     return {k:rows[k] for k in lanes}
@@ -107,7 +112,7 @@ def endpoint(config, request, root):
     spec, provider = settings(config)
     providers = lane_providers(config, spec, provider)
     policy = read(request['policy_ref'])
-    pub = read(policy['publication_ref'])
+    pub = read(policy.get('admission_ref') or policy['publication_ref'])
     if spec.get('continuous_training'):
         from continuous_policy import verify
         evidence=read(pub['continuous_activation_ref'])
@@ -158,7 +163,9 @@ def qualify(config, state, root, guard):
         source=copy.deepcopy(read(state['input_ref']))
         require(source['policy']['current_ref']==state['policy_ref'],'updated rollout input drift')
         source['policy']['current_ref']=promoted
-        source['continuation']['publication_ref']=read(promoted)['publication_ref']
+        if 'continuation' in source:source['continuation']['publication_ref']=read(promoted)['publication_ref']
+        else:require(read(promoted)['kind']=='branch_initial' and source['branch_initial_ref']==state['branch_initial_ref'],
+                     'missing checkpoint continuation')
         state['input_ref']=write(root/'QUALIFIED-INPUT.json',source)
         return promoted
     if os.environ.get('OMNI_TIMESHARED_ROLLOUT_REF'):
@@ -424,10 +431,19 @@ def capture(config, request_ref, request, root):
     cohort.mkdir(exist_ok=True)
     fence = root/'lease'
     owner = config['run_id']+'-capture-'+str(request['sequence'])
-    remote, ready, service = lease_plan(config, provider, fence, owner, dict(request_ref=request_ref))
+    from session_lease import enabled,get,boundary
+    session_owner=get(config) if enabled(config) else None
+    if session_owner:
+        remote,ready,service=(session_owner[k] for k in ('remote','ready','service'))
+    else:remote, ready, service = lease_plan(config, provider, fence, owner, dict(request_ref=request_ref))
     urls={k:f"http://127.0.0.1:{p['local_port']}" for k,p in providers.items()}
     source.update(output_root=str(cohort), cohort_id='dp8-'+request_ref['sha256'][:20],
         lease_fence=dict(root=str(fence), remote=remote, safety_seconds=spec['safety_seconds']))
+    if session_owner:source['lease_fence'].update(session_owner['source'],root=str(fence))
+    if 'max_parallel_lease_probes_per_lane' in spec:
+        slots=spec['max_parallel_lease_probes_per_lane']
+        require(type(slots) is int and 1<=slots<=32,'invalid parallel lease probes')
+        source['lease_fence']['max_parallel_probes']=slots
     source['native']['attempt_id'] = source['cohort_id']
     if 'official_index_cache_root' in spec:
         source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
@@ -450,7 +466,10 @@ def capture(config, request_ref, request, root):
             require(result['can_dispatch'] is True,'capture preparation incomplete')
             write(prepared,dict(source=source_ref,input=pin(cohort/'INPUT.json'),
                                 selected=pin(cohort/'SELECTED.json')))
-        acquire(fence, remote, provider, ready, service)
+        if session_owner:
+            write(fence/'REMOTE-LEASE.json',read(session_owner['root']/'REMOTE-LEASE.json'))
+            session_owner['local'].check_local()
+        else:acquire(fence, remote, provider, ready, service)
         with ExitStack() as stack:
             sessions=[]
             for lane,p in providers.items():
@@ -462,7 +481,7 @@ def capture(config, request_ref, request, root):
                 call=dict(provider=p,policy_session_ref=session_ref)
                 session=read(session_ref)
                 with provider_modules() as (_, data_provider, _, _):
-                    active=observe_resident(call,directory,session,'open')
+                    active=(dict(lane=lane,activation_ref=read(witness['lanes'][lane])['activation_ref']) if session_owner else observe_resident(call,directory,session,'open'))
                     write(directory/'PROVIDER-ACTIVE.json',active)
                     tunnel=data_provider.tunnel(dict(provider=p,remote_provider_guard=remote),directory)
                 stack.callback(close_tunnel,tunnel)
@@ -481,7 +500,7 @@ def capture(config, request_ref, request, root):
             require(usage['unknown']==0,'formal capture has unresolved request outcomes')
             with provider_modules():
                 for call,directory,session in sessions:
-                    write(directory/'PROVIDER-CLOSED.json',observe_resident(call,directory,session,'close'))
+                    write(directory/'PROVIDER-CLOSED.json',(boundary(config,dict(terminal_verified=True,unknown_requests=0,session_ref=call['policy_session_ref'])) if session_owner else observe_resident(call,directory,session,'close')))
             write(terminal,dict(terminal_verified=True,unknown_requests=0,usage=usage,
                   request_ref=request_ref,generation_closed_ref=result['generation_closed_ref'],
                   closed_lanes={c['provider']['lane']:pin(d/'PROVIDER-CLOSED.json') for c,d,_ in sessions}))
@@ -490,6 +509,9 @@ def capture(config, request_ref, request, root):
     require(evidence['request_ref'] == request_ref and
             evidence['generation_closed_ref'] == result['generation_closed_ref'],
             'terminal capture evidence differs')
+    if session_owner:
+        closure=write(root/'SESSION-BOUNDARY.json',boundary(config,evidence))
+        return dict(result,resident_boundary_ref=closure,charged_tokens_upper=evidence['usage']['cost_units'])
     released = write(root/'RELEASED.json', release(fence, remote, service, evidence,
                                                     spec['drain_timeout_seconds']))
     if 'timeshared_lanes' in spec:

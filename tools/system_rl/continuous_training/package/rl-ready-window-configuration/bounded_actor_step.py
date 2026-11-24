@@ -119,7 +119,7 @@ def prepare(spec,sealed,world,packet=None):
     require(len(selected)==len(packet['selected_groups']) and selected
             and selected=={gid for gid,g in packet['clock']['groups'].items() if not g['consumed']},
             'consumer reservations must contain exactly the fresh groups')
-    if not prior_step:
+    if not prior_step and not spec.get('continuation',{}).get('zero_result_refs'):
         require(set(packet['clock']['groups'])==selected,'initial TRAIN batch contains prior history')
     require(spec['image']==runtime['image_id'] and spec['training']['actor_arithmetic_profile']==profile,
             'unexpected actor image/profile')
@@ -208,7 +208,15 @@ def verify_continuation(spec, prior, packet=None):
     """Authenticate a transition without changing the predecessor manifest."""
     from dependencies import require
     from policy_identity import digest
-    c=spec['continuation'];contract=checkpoint_contract(spec);old=prior['contract']
+    c=spec['continuation'];contract=checkpoint_contract(spec)
+    if prior.get('kind')=='branch_initial':
+        from actor_start import check_spec
+        start=check_spec(spec)
+        require(prior['step']==0 and prior['version']==start['version'],'wrong weight-only actor')
+        if packet is not None:
+            verify_fresh_packet(spec,prior,packet,start['version'],start['branch_ref']['sha256'])
+        return
+    old=prior['contract']
     require(type(c['prior_step']) is int and c['prior_step']>0 and c['prior_step']==prior['step']
             ==prior['clock']['successful_optimizer_steps'] and prior['world_size']==8,
             'checkpoint predecessor step/topology differs')
@@ -249,6 +257,14 @@ def verify_continuation(spec, prior, packet=None):
         require(old['accepted_fields_sha256']!=contract['accepted_fields_sha256']
                 and old['dataset_sha256']!=contract['dataset_sha256'],'cannot reuse prior training cohort')
     if packet is None:return
+    version='checkpoint-sha256:'+prior['ranks'][0]['files']['lora_adapter/adapter_model.safetensors']
+    verify_fresh_packet(spec,prior,packet,version,spec['restore_checkpoint']['sha256'])
+
+
+def verify_fresh_packet(spec,prior,packet,version,anchor_sha):
+    from dependencies import require
+    from policy_identity import digest
+    c=spec['continuation']
     if spec.get('formal_sampled'):
         from run_package import read
         expected=read(spec['generation']['pending_capture_ref'])['attempt_id']
@@ -258,13 +274,12 @@ def verify_continuation(spec, prior, packet=None):
     if c.get('zero_result_refs'):
         from run_package import read
         for receipt_ref in c['zero_result_refs']:
-            before=verified_zero_clock(before,read(receipt_ref),spec['restore_checkpoint']['sha256'])
+            before=verified_zero_clock(before,read(receipt_ref),anchor_sha)
     after=packet['clock'];selected=set(packet['selected_groups'])
     require(all(after[k]==v for k,v in before.items() if k not in ('config_sha256','config_version','groups'))
             and set(after['groups'])==set(before['groups'])|selected and selected.isdisjoint(before['groups'])
             and all(after['groups'][k]==v and v['consumed'] for k,v in before['groups'].items()),
             'consumer did not inherit exact committed history')
-    version='checkpoint-sha256:'+prior['ranks'][0]['files']['lora_adapter/adapter_model.safetensors']
     learning=packet['learning'];vectors=learning['kernel']
     require(after['config_sha256']==digest(learning)
             and vectors['current_policy_vector']==vectors['behavior_policy_vector']
@@ -402,7 +417,8 @@ def finalize_and_run(worker,adapted,spec,out,rank,world,sealed,*,live=None):
         ref,prior=restore_continuation(worker,spec)
     else:
         ref,prior=live
-        require(ref['sha256']==spec['restore_checkpoint']['sha256'],'wrong live optimizer predecessor')
+        anchor=spec['initial_actor']['branch_ref'] if 'initial_actor' in spec else spec['restore_checkpoint']
+        require(ref['sha256']==anchor['sha256'],'wrong live actor predecessor')
         verify_continuation(spec,prior)
     require(prior['step']==spec['continuation']['prior_step'],'scoring checkpoint step differs')
     started=time.monotonic()
@@ -447,7 +463,8 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
     contract=checkpoint_contract(spec)
     step=1
     if 'continuation' in spec:
-        require(recoverable and spec.get('restore_checkpoint'),'continuation requires full optimizer state')
+        require(recoverable and (spec.get('restore_checkpoint') or (spec.get('initial_actor') and restored is not None)),
+                'missing optimizer predecessor or authenticated initial actor')
         ref,prior=restored if restored is not None else restore_continuation(worker,spec)
         verify_continuation(spec,prior,packet)
         step=prior['step']+1
@@ -509,7 +526,9 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
             dataset_sha256=spec['dataset_sha256'],group_ids=packet['selected_groups']))
     result=run_existing_actor(worker.actor,fields,plan,None,evaluate,actor_sha256=runtime['actor_sha256'],
         world=world,rank=rank,before_step=before_step,forward_api=runtime['forward_api'],
-        **({'micro_batch':spec['actor_batch']['microbatch_per_card']} if 'actor_batch' in spec else {}))
+        lora_dropout=spec['training'].get('lora_dropout',0.),
+        **({'micro_batch':spec['actor_batch']['microbatch_per_card'],
+            'accumulation':spec['actor_batch'].get('gradient_accumulation_steps',1)} if 'actor_batch' in spec else {}))
     if result.get('status')=='no_gradient' and spec.get('formal_sampled'):
         from policy_identity import digest
         from run_package import read
@@ -522,7 +541,10 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
         clock.finish(attempt,groups,False)
         for gid in groups:
             clock.state['groups'][gid]['consumed']=True
-        worker.audit_master_optimizer(step-1)
+        if 'initial_actor' in spec:
+            from actor_start import fresh_optimizer
+            fresh_optimizer(worker)
+        else:worker.audit_master_optimizer(step-1)
         receipt=dict(status='no_gradient',optimizer_step=False,optimizer_steps=0,clock=clock.state,
                      prior_clock_sha256=digest(baseline),checkpoint_sha256=ref['sha256'],
                      attempt_id=attempt,group_ids=groups,dataset=packet['dataset'])

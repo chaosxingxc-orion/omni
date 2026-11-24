@@ -24,7 +24,7 @@ def stage(template, config, directory):
             and dynamic.isdisjoint({'receipts', 'cold', 'overlays', 'tools', 'index', 'policy_assets'}),
             'explicit formal input mount roles required')
     target = Path(mounts['formal_input_root'])
-    prior = Path(template['restore_run'])
+    prior = Path(template['source_bundle']) if template.get('initial_actor') else Path(template['restore_run'])
     require(target.parent == prior.parent, 'input custody must use the original local actor namespace')
     allowed = [Path(root) for root in spec['already_visible_roots']]
     if 'continuous_actor' in template:
@@ -91,11 +91,17 @@ def stage(template, config, directory):
                     collect(document['continuous_activation_ref'])
                 elif 'bounded_tp4_ref' in document:
                     collect(document['bounded_tp4_ref'])
+            elif isinstance(document,dict) and document.get('schema')=='expanded-policy-branch-v1':
+                for k in ('policy_ref','clock_ref','learning_ref'):collect(document[k])
+            elif isinstance(document,dict) and document.get('schema')=='expanded-initial-policy-v1':
+                for k in ('origin_ref','parent_ref','profile_ref','assets'):collect(document[k],False)
+            elif isinstance(document,dict) and document.get('schema')=='resident-actor-initialization-v1':
+                collect(document['clock_ref'],False);collect(document['branch_ref'])
             elif isinstance(document,dict) and document.get('schema')=='continuous-training-activation-v1':
-                collect(document['checkpoint_ref'],False);collect(document['precision_lock_ref'])
+                collect(document.get('branch_ref') or document['checkpoint_ref'],False);collect(document['precision_lock_ref'])
                 collect(document['profile_ref'],False);collect(document['lanes'])
             elif isinstance(document,dict) and document.get('purpose')=='precision_alignment':
-                collect(document['accepted_checkpoint'],False)
+                collect(document['accepted_initial_ref']) if 'accepted_initial_ref' in document else collect(document['accepted_checkpoint'],False)
                 for key in ('activation_ref','precision_ref','profile_ref'):collect(document['assets'][key],False)
             elif isinstance(document,dict) and 'activation_depth' in document and 'adapter_sha256' in document:
                 for key in ('activation_ref','precision_ref','cache_ref','switch_ref','previous_activation_ref'):
@@ -104,7 +110,10 @@ def stage(template, config, directory):
                 collect(document)
 
     generation = template['generation']
-    if 'predecessor_step' in roots and ('continuous_actor' not in template or template['prior_step']==config.get('continuous_start_step')):
+    if template.get('initial_actor'):
+        collect(template['initial_actor']['branch_ref'])
+        collect(template['initial_actor']['assets'],False)
+    if not config.get('branch_initial_ref') and 'predecessor_step' in roots and ('continuous_actor' not in template or template['prior_step']==config.get('continuous_start_step')):
         commit=read(roots['predecessor_step']/'COMMITTED.json')
         for row in commit['ranks']:
             for name,digest in row['files'].items():

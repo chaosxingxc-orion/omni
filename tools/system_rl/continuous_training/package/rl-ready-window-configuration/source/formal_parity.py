@@ -74,24 +74,27 @@ def relocate_candidate(policy_ref, checkout, destination):
                     asset_manifest_ref=manifest, assets=assets))
 
 
-def previous_capture(state):
+def previous_capture(state, *, session_ref=None):
     require(state['consumed_cohorts'] and state.get('capture'), 'prior capture evidence missing')
     latest = state['consumed_cohorts'][-1]
     result = read(latest['result']['result_ref'])
     capture = state['capture']
-    release = read(capture['resident_release_ref'])
+    if session_ref:
+        release=read(capture['resident_boundary_ref'])
+        require(release['lease_ref']==session_ref,'previous capture used a different experiment lease')
+    else:release=read(capture['resident_release_ref'])
     terminal = release['terminal']
     require(latest['result']['checkpoint_ref'] == state['resume_ref']
             and result['optimizer_steps'] == 1
             and result['generation_inventory_ref'] == capture['generation_inventory_ref']
-            and release['status'] == 'released'
+            and release['status'] == ('session_held' if session_ref else 'released')
             and terminal['terminal_verified'] is True and terminal['unknown_requests'] == 0
             and terminal['generation_closed_ref'] == capture['generation_closed_ref'],
             'prior actor or capture terminal is not the direct predecessor')
     return capture
 
 
-def publish_inbox(remote, service, checkout, target, previous, successor, step):
+def publish_inbox(remote, service, checkout, target, previous, successor, step, *, session=None):
     """Install exact bytes under the existing guard and publish the marker last."""
     from formal_rollout import provider_modules
     import base64
@@ -102,7 +105,11 @@ def publish_inbox(remote, service, checkout, target, previous, successor, step):
                 sha256=pin(path)['sha256'], data=base64.b64encode(path.read_bytes()).decode())
     # Send the large adapter via stdin; no command-line payload or shared write.
     with provider_modules() as (lease, _, _, _):
-        held=lease.probe(remote)
+        if session:
+            session['local'].check_local()
+            require(session['remote']==remote,'different experiment transport')
+            held=read(session['root']/'REMOTE-LEASE.json')['state']
+        else:held=lease.probe(remote)
         updater=read(remote['config'])['hot_root']
         program = r"""
 import base64, hashlib, json, os, sys, tempfile

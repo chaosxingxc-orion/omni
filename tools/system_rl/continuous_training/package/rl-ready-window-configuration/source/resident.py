@@ -310,12 +310,18 @@ def formal_window(initial, command, last_ref, prior, zero_refs):
             and inventory['files']['INPUT.json']==capture['input_ref'],'mixed generation and scorer intent')
     gen=dict(initial['generation'],generation_inventory_ref=command['generation_inventory_ref'],
              pending_capture_ref=command['pending_capture_ref'])
+    if prior.get('kind')=='branch_initial':
+        require(last_ref==initial['initial_actor']['branch_ref'],'wrong initialization for resident window')
+        spec=dict(initial,generation=gen,continuation=dict(initial['continuation'],prior_step=0,zero_result_refs=zero_refs))
+        verify_continuation(spec,prior)
+        return spec
     sources=prior['contract']['sources']
     c=dict(initial['continuation'],prior_step=prior['step'],zero_result_refs=zero_refs,
            predecessor_driver_sha256=sources['bounded_actor_step.py'],
            predecessor_control_sha256=sources['retained_hf_fsdp_control.py'])
     spec=dict(initial,generation=gen,continuation=c,restore_checkpoint=dict(
         directory=str(Path(last_ref['path']).parent),sha256=last_ref['sha256']))
+    spec.pop('initial_actor',None)
     if command['sequence']>0:spec.pop('batch_migration',None)
     verify_continuation(spec,prior)
     return spec
@@ -346,10 +352,14 @@ def serve_formal(worker,adapted,initial,hot,rank,world,sealed,execute):
         require(not exchange.exists(),'resident exchange already exists; reconcile original owner')
         exchange.mkdir()
         write(exchange/'OWNER.json',dict(protocol=cfg['protocol'],run_id=cfg['run_id'],boot_id=boot,
-              objects=peers,initial_checkpoint=initial['restore_checkpoint']['sha256']))
+              objects=peers,**(dict(initial_branch_ref=initial['initial_actor']['branch_ref']) if 'initial_actor' in initial
+                              else dict(initial_checkpoint=initial['restore_checkpoint']['sha256']))))
     collectively(open_owner)
     # Restore weights, master parameters, Adam and scheduler exactly once.
-    last_ref,prior=restore_continuation(worker,initial)
+    if 'initial_actor' in initial:
+        from actor_start import open_start
+        last_ref,prior=collectively(lambda:open_start(worker,initial))
+    else:last_ref,prior=restore_continuation(worker,initial)
     collectively(lambda:write(exchange/'READY.json',dict(owner_ref=pin(exchange/'OWNER.json'),
         run_id=cfg['run_id'],source_boot=boot,checkpoint_sha256=last_ref['sha256'])) if rank==0 else None)
     last_closed=pin(exchange/'READY.json')

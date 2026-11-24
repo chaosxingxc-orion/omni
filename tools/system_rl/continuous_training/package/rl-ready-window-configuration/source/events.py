@@ -8,7 +8,7 @@ import copy
 from dependencies import require
 
 
-def partition(plan, fields, world, micro=None):
+def partition(plan, fields, world, micro=None, accumulation=1):
     require(type(world) is int and world > 0, 'positive configured world size')
     plan.assert_intact()
     require(plan.base.rows > 0, 'all-empty cohort skips optimizer and clock')
@@ -17,11 +17,12 @@ def partition(plan, fields, world, micro=None):
     lengths = fields['tensors']['attention_mask'].sum(-1).tolist()
     loads = [0]*world; owners = [-1]*plan.base.rows
     if micro is not None:
-        require(type(micro) is int and micro > 0 and plan.base.rows <= world*micro
-                and not any(plan.coefficients.values()), 'configured batch requires at most one policy microbatch per rank')
+        require(type(micro) is int and micro > 0 and type(accumulation) is int and accumulation > 0
+                and plan.base.rows <= world*micro*accumulation
+                and not any(plan.coefficients.values()), 'cohort exceeds configured policy accumulation capacity')
     counts = [0]*world
     for row in sorted(range(plan.base.rows), key=lambda i: (-lengths[i], i)):
-        rank = min((r for r in range(world) if micro is None or counts[r]<micro), key=lambda r: (loads[r], r))
+        rank = min((r for r in range(world) if micro is None or counts[r]<micro*accumulation), key=lambda r: (loads[r], r))
         counts[rank] += 1
         owners[row] = rank; loads[rank] += int(lengths[row])
     lanes = {kind: [[] for _ in range(world)] for kind in ('policy', 'nll', 'pair')}
@@ -41,7 +42,7 @@ def partition(plan, fields, world, micro=None):
         if not count:
             continue
         if micro is not None:
-            count = micro  # incomplete final cohort: zero-weight collective padding
+            count = ((count+micro-1)//micro)*micro  # zero-weight padding only to the last collective
         donor = next(e for items in by_rank for e in items)
         for index in range(count):
             for rank in range(world):
@@ -91,7 +92,7 @@ def transport(fields, schedule, micro=1):
 
 
 def run_existing_actor(actor, fields, plan, scorer, policy_forward, *, actor_sha256, world, rank,
-                       before_step=None, forward_api="tuple", after_probe=None, micro_batch=None):
+                       before_step=None, forward_api="tuple", after_probe=None, micro_batch=None, accumulation=1, lora_dropout=0.):
     """Called by both CPU verification and the configured real worker entry."""
     import inspect
     import torch
@@ -105,12 +106,15 @@ def run_existing_actor(actor, fields, plan, scorer, policy_forward, *, actor_sha
     require(actor.scaler is None, 'BF16/FP32 event callback only')
     require(not any(key in fields['tensors'] for key in ('rollout_log_probs','rollout_is_weights')),
             'event scalars cannot feed token logprob diagnostics or importance correction')
-    require(not any(isinstance(m,torch.nn.modules.dropout._DropoutNd) and m.p for m in actor.actor_module.modules()),
-            'deterministic dropout0 recomputation required')
+    active = [(n,m) for n,m in actor.actor_module.named_modules() if isinstance(m,torch.nn.modules.dropout._DropoutNd) and m.p]
+    require(0 <= lora_dropout < 1 and bool(active)==bool(lora_dropout)
+            and all('.lora_dropout.' in n and m.p==lora_dropout and m.training for n,m in active)
+            and (not active or not any(plan.coefficients.values())),
+            'only configured policy-only PEFT dropout is supported')
     if plan.base.rows == 0:
         return dict(status='no_gradient',optimizer_step=False,advance_successful_step=False)
     micro = 1 if micro_batch is None else micro_batch
-    layout = partition(plan, fields, world, micro_batch)
+    layout = partition(plan, fields, world, micro_batch, accumulation)
     indices = [i for i, owner in enumerate(layout['owners']) if owner == rank]
     task.distributed_contract(plan, indices, world, rank)
     peers = [None]*world

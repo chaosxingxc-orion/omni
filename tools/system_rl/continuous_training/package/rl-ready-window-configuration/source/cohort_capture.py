@@ -221,6 +221,20 @@ def dispatch_draws(draws,prepare,concurrency,unit):
             fill()
 
 
+def admitted_routes(current, endpoint, profile, sampled):
+    from bounded_tp4 import validate_routes
+    from publication import validate_publication
+    if current['kind']=='branch_initial':
+        pub=read(current['admission_ref'])
+        require(sampled and pub['status']=='published_for_fresh_sampling' and
+                pub['initial_publication_ref']==current['publication_ref'] and
+                pub['assets']==current['assets'] and pub['artifact_version']==current['version'],
+                'initial adapter has no matching training admission')
+    else:
+        pub=validate_publication(current['publication_ref'])
+    return validate_routes(pub,endpoint,profile,sampled=sampled)
+
+
 def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lane=None):
     """Real generation via the existing DirectHTTP protocol; actor capture later."""
     root=Path(root);require(execution_enabled is True,'capture disabled')
@@ -238,11 +252,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
     base_transport=read(c['transport_config_ref'])
     routes=None
     if runtime_evidence.get('schema') in ('omni-bounded-tp4-endpoints-v1','continuous-training-endpoints-v1'):
-        from bounded_tp4 import validate_routes
-        from publication import validate_publication
-        pub=validate_publication(current['publication_ref'])
-        routes=validate_routes(pub,c['endpoint_policy_ref'],profile,
-                               sampled=bool(plan.get('sampled_window_ref')))
+        routes=admitted_routes(current,c['endpoint_policy_ref'],profile,bool(plan.get('sampled_window_ref')))
         assignments=lane_plan(plan,c,routes)
     else:
         require(runtime_evidence['target_http_sampling_supported'] is True and runtime_evidence['observed_token_ids_and_logprobs'] is True,'actual target HTTP token/probability protocol not witnessed')

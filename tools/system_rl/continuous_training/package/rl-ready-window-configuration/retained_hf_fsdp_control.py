@@ -54,7 +54,20 @@ def main(spec, inputs_root, out):
         require(int(witness) == world*(world+1)//2, 'first HCCL collective mismatch')
         commit(out/f'rank-{rank}'/'COLLECTIVE-READY.json',
                dict(world_size=world, uid=uid.pw_uid, collective_sum=int(witness)))
+        if 'profile_batch_check' in spec:
+            sealed('qualify_profile_batch.py')
+            from qualify_profile_batch import measure
+            return measure(spec,out,rank,world,cfg,sealed)
         if 'operator_vjp' in spec:
+            if 'lora_profile' in spec['operator_vjp']:
+                sealed('lora_row_precision.py')
+                sealed('check_lora_row_vjp.py')
+                from check_lora_row_vjp import check_profile
+                from lora_row_precision import grouped_linear
+                profile=read(sealed(spec['operator_vjp']['lora_profile']))
+                result=check_profile(grouped_linear,device,profile['training'],spec['training']['seed']+rank)
+                commit(out/f'rank-{rank}'/'RESULT.json',dict(rank=rank,optimizer_steps=0,**result))
+                return
             for name in ('retained_operator_vjp.py','retained_expert_candidate.py','retained_attention_candidate.py'):
                 sealed(name)
             from retained_operator_vjp import measure
@@ -72,7 +85,11 @@ def main(spec, inputs_root, out):
                 sealed(name)
             from bounded_actor_step import prepare, run
             # Preserve the original verl-before-task-adapter import order.
+            if 'initial_actor' in spec:
+                from actor_start import adapter_directory
+                cfg=dict(cfg,expanded_publication=adapter_directory(spec))
             worker, adapted, _ = construct(cfg, out)
+            if 'initial_actor' in spec:worker.initial_policy_version=spec['initial_actor']['version']
             if 'generation' in spec:
                 from bounded_actor_step import finalize_and_run
                 if 'continuous_actor' in spec:

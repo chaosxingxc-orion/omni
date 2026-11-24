@@ -1,6 +1,7 @@
 """Original consumer with selected draws, complete no-gradient and official masks."""
 import contextlib
 import copy
+import math
 import types
 from cohort_io import BASE,load,read,raw,require,digest
 
@@ -63,6 +64,21 @@ def restore(files,config,session=None):
 def build(files,config,session=None):
     return bind_function(legacy.build,restore=restore,unified=unified)(files,config,session)
 
+def retained_shape(value):
+    """Validate a JSON tensor in rows, without allocating a list per scalar."""
+    if not isinstance(value,list):
+        require(type(value) in (float,int) and math.isfinite(value),'invalid tensor scalar')
+        return []
+    if not value:
+        return [0]
+    if not isinstance(value[0],list):
+        require(all(type(v) in (float,int) and math.isfinite(v) for v in value),
+                'invalid tensor scalar or ragged retained tensor')
+        return [len(value)]
+    dims=retained_shape(value[0])
+    require(all(retained_shape(child)==dims for child in value[1:]),'ragged retained tensor')
+    return [len(value),*dims]
+
 def build_with_bundle(files,config):
     """One consumer acceptance: validate selected draws on its freshly read rows.
 
@@ -81,8 +97,20 @@ def build_with_bundle(files,config):
         require(src.count(duplicate)==1 and src.count(before_join)==1,'consumer restore seam changed')
         src=src.replace(before_join,'    validate_draw_binding(files,config,rows)\n'+before_join)
         src=src.replace(duplicate,'        # Fresh draw and group identity validated above.')
+        # These objects just came from json.loads of authenticated bytes in
+        # this restore. Transfer sole ownership when joining offline labels.
+        clone="b = copy.deepcopy(online['behavior_bundle'])"
+        bins="shape(f['audio_features'])[1]"
+        require(src.count(clone)==1 and src.count(bins)==2,
+                'consumer bundle/feature validation seam changed')
+        src=src.replace(clone,"b = online.pop('behavior_bundle')")
+        # The validator compared every actual shape with its declaration above.
+        src=src.replace(bins,"specs['audio_features']['shape'][1]")
         ns=dict(legacy.__dict__,validate_draw_binding=validate_draw_binding)
         exec(compile(src,str(BASE/'training-consumer-successor/adapter.py')+':selected-once','exec'),ns)
+        # restore() privately deserializes the rows before joining supervision.
+        # They have no other consumer once draw binding has passed.
+        ns['shape']=retained_shape
         result=ns['restore'](files,config,session)
         captured.append(result[0])
         return result
