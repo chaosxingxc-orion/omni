@@ -49,7 +49,18 @@ def predecessor(c,lane):
 
 def prepare(root,c):
     src=root/'inputs';dest=root/'bundle'
-    if (root/'PREPARED.json').exists():return
+    if c.get('rank_profile_sha256'):
+        # Weight readback and the first optimizer successor use different
+        # readers. Pin both in the same paired training/service release.
+        required={'policy_identity.py','publication.py','initial_policy.py','rank_profile.py'}
+        if not required<=c['overlays'].keys():
+            raise ValueError('rank-aware checkpoint reader missing from deployment overlay')
+    if (root/'PREPARED.json').exists():
+        receipt=read(root/'PREPARED.json')
+        if receipt['overlays']!=c['overlays'] or any(
+                digest(dest/'parents/jev-system-rl/implementation'/n)!=v for n,v in receipt['overlays'].items()):
+            raise ValueError('prepared service reader differs from locked overlay')
+        return
     if not dest.exists():shutil.copytree(src/'bundle',dest)
     graph=read(src/'graph.json')
     old=Path(read(src/'template.json')['policy_overlay']['bundle'])
