@@ -1,7 +1,55 @@
 {
   "version": "training-continuous-v1-candidate",
-  "reference_batch": {"rows_per_rank": 4, "padded_tokens_per_rank": 32768},
-  "acceptance": {"maximum_step_seconds": 600, "consecutive_steps": 3,
-    "recordings_per_step": 32, "episodes_per_recording": 4,
-    "timing": "first_business_dispatch_to_next_first_business_dispatch"}
+  "reference_batch": {
+    "rows_per_rank": 4,
+    "padded_tokens_per_rank": 32768
+  },
+  "acceptance": {
+    "maximum_step_seconds": 600,
+    "consecutive_steps": 3,
+    "recordings_per_step": 32,
+    "episodes_per_recording": 4,
+    "timing": "first_business_dispatch_to_next_first_business_dispatch"
+  },
+  "source_roles": {
+    "actor": [
+      "rl-ready-window-configuration/bounded_actor_step.py",
+      "rl-ready-window-configuration/retained_hf_fsdp_control.py",
+      "rl-ready-window-configuration/source/actor_arithmetic.py",
+      "rl-ready-window-configuration/capture_runtime.py",
+      "rl-ready-window-configuration/pack_actor_fields.py",
+      "rl-ready-window-configuration/source/events.py",
+      "rl-ready-window-configuration/source/resident.py",
+      "rl-ready-window-configuration/source/formal_actor_receipt.py",
+      "rl-ready-window-configuration/source/lora_row_precision.py",
+      "rl-ready-window-configuration/source/cohort_capture.py",
+      "rl-ready-window-configuration/source/reference_batch.py",
+      "rl-ready-window-configuration/source/fresh_adapter.py"
+    ],
+    "service": [
+      "rl-ready-window-configuration/source/service_bootstrap.py",
+      "rl-ready-window-configuration/source/service_overlay.py",
+      "rl-ready-window-configuration/source/lora_row_precision.py",
+      "rl-ready-window-configuration/source/provider_policy.py"
+    ],
+    "controller": [
+      "rl-ready-window-configuration/source/formal_actor_transport.py",
+      "rl-ready-window-configuration/source/formal_actor_inputs.py",
+      "rl-ready-window-configuration/source/resident_inputs.py",
+      "rl-ready-window-configuration/source/resident_transport.py",
+      "rl-ready-window-configuration/source/formal_rollout.py",
+      "rl-ready-window-configuration/source/formal_parity.py",
+      "rl-ready-window-configuration/source/continuous_policy.py",
+      "rl-ready-window-configuration/source/iteration.py",
+      "rl-ready-window-configuration/stage_bounded_actor_step.py",
+      "rl-ready-window-configuration/launch_retained_hf_fsdp.py",
+      "rl-ready-window-configuration/assemble_sampled_p.py",
+      "rl-ready-window-configuration/report_step_latency.py"
+    ],
+    "shared": [
+      "implementation/finalize_capture.py",
+      "implementation/publication.py",
+      "implementation/bounded_tp4.py"
+    ]
+  }
 }
