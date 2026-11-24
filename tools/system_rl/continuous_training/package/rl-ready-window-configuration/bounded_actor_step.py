@@ -144,6 +144,7 @@ def prepare(spec,sealed,world,packet=None):
 
 def checkpoint_contract(spec):
     return dict(schema='omni-bounded-checkpoint-v1',lineage=spec.get('lineage',spec['name']),
+                **({'publication_norm_atol':spec['publication_norm_atol']} if 'publication_norm_atol' in spec else {}),
                 **(dict(lora_arithmetic=dict(geometry=spec['lora_row_geometry'],source_sha256=spec['files']['lora_row_precision.py']))
                    if 'continuation' in spec and 'lora_row_geometry' in spec else {}),
                 training=spec['training'],devices=spec['devices'],image=spec['image'],
@@ -486,8 +487,26 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
                 and spec['generation']['runtime'].get('reference_batch'),
                 'continuous update requires a sealed rollout and batched reference')
     heard=[]; worker.actor.actor_module.train()
+    timing_mode=spec.get('generation',{}).get('runtime',{}).get('update_timing')
+    require(timing_mode in (None,'stream_events_v1'),'unknown optimizer timing mode')
+    marks=[]
+    def mark(name):
+        import time
+        import torch
+        event=torch.npu.Event(enable_timing=True)
+        event.record()
+        marks.append((name,time.monotonic_ns(),event))
     def evaluate(inputs):
+        if timing_mode:mark('forward_start')
         scores=compact_scores(worker.actor,inputs)
+        if timing_mode:
+            import torch
+            mark('forward_enqueued')
+            def backward_started(grad):
+                mark('scores_backward_start')
+                torch.autograd.Variable._execution_engine.queue_callback(lambda:mark('backward_enqueued'))
+                return grad
+            scores.register_hook(backward_started)
         if continuous:return scores
         mask=inputs['response_mask'].bool()
         identities=list(fields['non_tensors']['record_identity'])
@@ -518,17 +537,26 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
         path=out/f'rank-{rank}'/f'UPDATE-{when}.pt'
         torch.save(rows,path)
     def before_step(actor):
+        if timing_mode:mark('pre_optimizer_checks')
         check_running(out,spec['storage_budget_bytes'])
         if spec.get('trace_update'):capture(actor,'before')
         if not continuous:commit(out/f'rank-{rank}/BACKWARDS.json',dict(actions=heard,rank=rank))
     if step>1:
         commit(out/f'rank-{rank}/UPDATE-INTENT.json',dict(step=step,checkpoint_sha256=ref['sha256'],
             dataset_sha256=spec['dataset_sha256'],group_ids=packet['selected_groups']))
-    result=run_existing_actor(worker.actor,fields,plan,None,evaluate,actor_sha256=runtime['actor_sha256'],
-        world=world,rank=rank,before_step=before_step,forward_api=runtime['forward_api'],
-        lora_dropout=spec['training'].get('lora_dropout',0.),
-        **({'micro_batch':spec['actor_batch']['microbatch_per_card'],
-            'accumulation':spec['actor_batch'].get('gradient_accumulation_steps',1)} if 'actor_batch' in spec else {}))
+    from contextlib import ExitStack
+    with ExitStack() as hooks:
+        if timing_mode:
+            mark('actor_start')
+            optimizer=worker.actor.actor_optimizer
+            hooks.callback(optimizer.register_step_pre_hook(lambda *_:mark('adam_start')).remove)
+            hooks.callback(optimizer.register_step_post_hook(lambda *_:mark('adam_enqueued')).remove)
+        result=run_existing_actor(worker.actor,fields,plan,None,evaluate,actor_sha256=runtime['actor_sha256'],
+            world=world,rank=rank,before_step=before_step,forward_api=runtime['forward_api'],
+            lora_dropout=spec['training'].get('lora_dropout',0.),
+            **({'micro_batch':spec['actor_batch']['microbatch_per_card'],
+                'accumulation':spec['actor_batch'].get('gradient_accumulation_steps',1)} if 'actor_batch' in spec else {}))
+        if timing_mode:mark('native_result')
     if result.get('status')=='no_gradient' and spec.get('formal_sampled'):
         from policy_identity import digest
         from run_package import read
@@ -555,6 +583,11 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
     if spec.get('trace_update'):capture(worker.actor,'after')
     audit=worker.audit_master_optimizer(step)
     worker.actor_lr_scheduler.step()
+    if timing_mode:
+        mark('audit_scheduler_end')
+        marks[-1][2].synchronize()
+        result['update_timing']=[dict(event=name,host_ms=(stamp-marks[0][1])/1e6,
+             stream_ms=marks[0][2].elapsed_time(event)) for name,stamp,event in marks]
     commit(out/f'rank-{rank}/LOSS.json',dict(rank=rank,audit=audit,result=result,actions=heard,step=step))
     from policy_identity import artifact
     if recoverable:

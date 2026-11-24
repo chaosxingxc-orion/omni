@@ -1,3 +1,5 @@
+正式 P 实验的日常入口见 [单配置启动](START-EXPERIMENT.md)。下文保留各阶段接口，供部署和故障排查。
+
 P 节点训练、推理和控制器共同使用 `P-EXPERIMENT.template.json`。实验人员在这里调整 LoRA、microbatch、累积次数、组大小、推理并发和图宽。在站点配置或 `OMNI_DEPLOY_*` 环境变量中设置模型路径、设备和训练内存。每个实验只解析一次。
 
 ```sh

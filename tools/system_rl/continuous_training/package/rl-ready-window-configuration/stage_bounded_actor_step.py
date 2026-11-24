@@ -127,6 +127,8 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
                restore_checkpoint=dict(directory=str(checkpoint),sha256=proof_sha),
                continuation=dict(prior_step=step,predecessor_driver_sha256=proof['contract']['sources']['bounded_actor_step.py']),
                timeout_seconds=c['timeout_seconds'],storage_budget_bytes=c['storage_budget_bytes'])
+    if initial and 'publication_norm_atol' in c:
+        s['publication_norm_atol'] = c['publication_norm_atol']
     if type(s['timeout_seconds']) is not int or s['timeout_seconds']<=0 or s['storage_budget_bytes']<2*1024**3:
         raise ValueError('invalid per-run duration/storage envelope')
     if not initial:

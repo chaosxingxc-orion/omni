@@ -1,0 +1,47 @@
+{
+  "schema": "omni-paired-experiment-v1",
+  "version": "p-r256-b128-v2",
+  "publication_norm_atol": 1e-8,
+  "policy_base": "TRAINING-CONTINUOUS-v6.candidate.json",
+  "model": "qwen3-omni-30b-a3b-instruct",
+  "model_path": "${MODEL_PATH}",
+  "training_devices": "${TRAIN_DEVICES}",
+  "training_memory_gib": "${TRAIN_MEMORY_GIB}",
+  "lanes": {
+    "a": "${LANE_A_DEVICES}",
+    "b": "${LANE_B_DEVICES}"
+  },
+  "lora": {
+    "lora_rank": 256,
+    "lora_alpha": 512,
+    "lora_dropout": 0.1
+  },
+  "actor_batch": {
+    "microbatch_per_card": 8,
+    "gradient_accumulation_steps": 2,
+    "arithmetic": "single_clip_compact_qo_v1"
+  },
+  "transfer_policy": "batch_receipt_v1",
+  "capacity_interval_bytes": 33554432,
+  "group_preparation": "shard_by_draw_v1",
+  "activation_concurrency": 2,
+  "row_encoding": "compact_json_v1",
+  "episodes_per_recording": 4,
+  "episode_concurrency": 128,
+  "dev_cadence": "epoch_end",
+  "graph_widths": [
+    1,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128
+  ],
+  "reader_sources": {
+    "policy_identity.py": "rl-ready-window-configuration/source/policy_identity.py",
+    "publication.py": "implementation/publication.py",
+    "initial_policy.py": "rl-ready-window-configuration/source/initial_policy.py",
+    "rank_profile.py": "rl-ready-window-configuration/rank_profile.py"
+  }
+}

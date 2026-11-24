@@ -53,7 +53,7 @@ def prepare(root,c):
     binding = {}
     snapshot = src/'EXPERIMENT.json'
     if snapshot.is_file() or 'experiment_sha256' in c:
-        from paired_experiment import load, digest as experiment_digest, check_readers, graph as graph_config, rank_profile, check_lane
+        from paired_experiment import load, digest as experiment_digest, check_readers, graph as graph_config, rank_profile, check_lane, check_effective_lane
         experiment = load(snapshot, c.get('experiment_sha256'))
         binding = dict(experiment_sha256=experiment_digest(experiment))
         check_readers(experiment, c['overlays'])
@@ -88,6 +88,10 @@ def prepare(root,c):
         if receipt['overlays']!=c['overlays'] or any(
                 digest(dest/'parents/jev-system-rl/implementation'/n)!=v for n,v in receipt['overlays'].items()):
             raise ValueError('prepared service reader differs from locked overlay')
+        if experiment:
+            adapter = read(dest/'rank-precision/lora_adapter/adapter_config.json')
+            for lane in experiment['lanes']:
+                check_effective_lane(experiment, lane, read(root/('lane-'+lane)/'config.json'), adapter)
         return
     if not dest.exists():shutil.copytree(src/'bundle',dest)
     graph=read(src/'graph.json')
@@ -218,6 +222,8 @@ def prepare(root,c):
             server['local_activation']['reset_audio_on_precision_install']=flag
         if server['release_kind']!='formal' or server['policy_ref']['sha256']!=digest(dest/'checkpoint/candidate/POLICY.json'):raise ValueError('wrong initial policy')
         if profile:server['policy_ref']=ref(area/'POLICY.json')
+        if experiment:
+            check_effective_lane(experiment, lane, cfg, read(init/'adapter_config.json'))
         replace(dest/f'SERVER-{lane}.json',server);save(code/'config.json',cfg)
         save(code/'PINS.json',{n:digest(code/n) for n in ('config.json','launch.py','service.py')})
     save(root/'PREPARED.json',dict(lanes=list(c['old_services']),policy=server['policy_ref']['sha256'],
@@ -273,6 +279,19 @@ def deploy(root):
                     'EngineDeadError' not in (root/'inputs/failed-engine.log').read_text() or
                     not (prev/'natural-comparison/INTENT.json').exists() or (prev/'natural-comparison/RESULT.json').exists()):
                     raise ValueError('failed diagnostic owner not reconciled')
+            elif c.get('released_session_ref'):
+                proof=c['released_session_ref']
+                path=Path(proof['path']).resolve(strict=True)
+                if (path.name!='RELEASE.json' or not path.is_relative_to(prev.resolve()) or
+                        digest(path)!=proof['sha256']):
+                    raise ValueError('release is outside the expected deployment or changed')
+                released=read(path)
+                terminal=read(prev/('lane-'+lane)/'runs'/old_attempt/'state/EXIT.json')
+                if (not released['terminal_verified'] or released['unknown_requests']!=0 or
+                        {row['id'] for row in released['containers'] if row['exit_code']==0}!=set(c['old_ids'].values()) or
+                        read(prev/(lane+'-READY.json'))['container_id']!=old['Id'] or
+                        old['State']['Status']!='exited' or old['State']['ExitCode']!=0 or terminal['exit_code']!=0):
+                    raise ValueError('previous service has no matching clean release')
             elif old['State']['Running']:metric_idle(url)
             else:raise ValueError('old service is not running')
             if (root/(lane+'-INTENT.json')).exists():raise ValueError('existing handover requires reconciliation')

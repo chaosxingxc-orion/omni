@@ -1,10 +1,23 @@
 """Closed DP8 checkpoint -> original policy manifests; no new trainer or RPC."""
 import argparse
 import json
+import math
 from pathlib import Path
 from dependencies import require,sha,HERE,local_path
 from policy_identity import artifact,digest
 from run_package import pin,read,write
+
+
+def check_export_identity(observed, expected, atol):
+    require(type(atol) in (int, float) and math.isfinite(atol) and atol >= 0,
+            'invalid publication norm tolerance')
+    actual = dict(observed)
+    resident = dict(expected)
+    a = actual.pop('effective_delta_norms')
+    b = resident.pop('effective_delta_norms')
+    require(actual == resident and actual['nonzero_effective_delta'] is True and a.keys() == b.keys()
+            and a and all(math.isfinite(a[k]) and math.isfinite(b[k]) and abs(a[k]-b[k]) <= atol for k in a),
+            'actual nonzero exported adapter differs from resident')
 
 
 def checkpoint(ref,*,verify_shards=False):
@@ -24,10 +37,12 @@ def checkpoint(ref,*,verify_shards=False):
                 files[name]=dict(pin(path),path=str(logical_root/name))
     adapter=local_path(logical_root/'lora_adapter/adapter_model.safetensors')
     require('lora_adapter/adapter_model.safetensors' in files and 'lora_adapter/adapter_config.json' in files,'original adapter export absent')
-    observed=artifact(adapter)
-    require(observed==value['resident_identity']['publication'] and observed['nonzero_effective_delta'],'actual nonzero exported adapter differs from resident')
+    training=value['contract']['training'];rank=training['lora_rank'];alpha=training['lora_alpha']
+    observed=artifact(adapter,geometry=dict(rank=rank,alpha=alpha))
+    check_export_identity(observed, value['resident_identity']['publication'],
+                          value['contract'].get('publication_norm_atol', 0.0))
     ac=read(logical_root/'lora_adapter/adapter_config.json')
-    require(ac['r']==8 and ac['lora_alpha']==16 and ac['lora_dropout']==0 and ac['bias']=='none' and not ac.get('use_dora',False),'adapter config differs')
+    require(ac['r']==rank and ac['lora_alpha']==alpha and ac['lora_dropout']==training['lora_dropout'] and ac['bias']=='none' and not ac.get('use_dora',False),'adapter config differs')
     return value,files
 
 

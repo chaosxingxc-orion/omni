@@ -1,0 +1,19 @@
+{
+  "schema": "formal-p-start-v1",
+  "run_id": "p-r256-next",
+  "baseline": "p-r256-b128",
+  "experiment": {
+    "lora": {
+      "lora_rank": 256,
+      "lora_alpha": 512,
+      "lora_dropout": 0.1
+    },
+    "actor_batch": {
+      "microbatch_per_card": 8,
+      "gradient_accumulation_steps": 2,
+      "arithmetic": "single_clip_compact_qo_v1"
+    },
+    "episode_concurrency": 128,
+    "publication_norm_atol": 1e-08
+  }
+}

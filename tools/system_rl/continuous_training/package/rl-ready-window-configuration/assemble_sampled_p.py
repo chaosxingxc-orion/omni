@@ -146,6 +146,8 @@ def assemble(manifest, output, *, bind_live):
                         'live inference deployment belongs to a different experiment')
             base['experiment_ref'] = cfg['experiment_ref']
             train['experiment_sha256'] = policy['experiment_sha256']
+            if 'publication_norm_atol' in exp:
+                train['publication_norm_atol'] = exp['publication_norm_atol']
         require(pin(deployment['policy_ref'])['sha256']==snap['policy_sha256'] and
                 read(precision)['accepted_verdict']['passed'] and cfg.get('actor_batch_ref') and
                 deployment['protocol']=='formal-resident-v1' and
@@ -163,7 +165,7 @@ def assemble(manifest, output, *, bind_live):
         rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
-        for name in ('row_encoding', 'group_preparation'):
+        for name in ('row_encoding', 'group_preparation', 'update_timing'):
             if name in policy:
                 rt[name] = policy[name]
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
@@ -257,6 +259,10 @@ def assemble(manifest, output, *, bind_live):
             'DATA accounting or task identity drift')
     if branch:
         b=read(branch['branch_ref']);parent=read(b['parent_cursor_ref'])
+        if cfg.get('dataset_start_mode') is not None:
+            require(cfg['dataset_start_mode']=='new_epoch' and not cfg.get('closed_undispatched_ref'),
+                    'new epoch requires independent branch initialization')
+            base['dataset_start_mode']='new_epoch'
         require(cfg['run_id']!=read(parent['config_ref'])['run_id'] and
                 not Path(base['output_root']).resolve().is_relative_to(Path(b['parent_cursor_ref']['path']).parent.resolve())
                 and parent['screen']==sealed and read(b['dataset_ref'])['specification']==spec,

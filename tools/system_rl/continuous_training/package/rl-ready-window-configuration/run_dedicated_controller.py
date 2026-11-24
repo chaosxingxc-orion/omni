@@ -102,6 +102,14 @@ if __name__=='__main__':
             raise RuntimeError('release build failed')
         time.sleep(5)
     prefix=[sys.executable,'-B',str(Path(__file__).resolve()),str(a.config)]
+    manifest=json.loads((root/'MANIFEST.json').read_bytes())
+    if manifest.get('branch_input_ref'):
+        # Both projections are made by the same compiler and release. Static
+        # actor mounts must exist before acquiring the rollout lease.
+        preview=root/'staging-preview'
+        subprocess.run(prefix+[c['compiler'],'--manifest',str(root/'MANIFEST.json'),'--output',str(preview)],check=True)
+        stage=Path(c['compiler']).with_name('stage_sampled_actor_release.py')
+        subprocess.run(prefix+[str(stage),'--manifest',str(root/'MANIFEST.json'),'--preview',str(preview)],check=True)
     subprocess.run(prefix+[c['compiler'],'--manifest',str(root/'MANIFEST.json'),'--output',str(out),'--bind-live'],check=True)
     config=out/'ITERATION.json';spec=json.loads(config.read_bytes())
     if spec['formal_rollout']['ssh']['target']!=c['rollout_target'] or spec['formal_actor']['rollout_lanes']!=list(c['lanes']):
@@ -116,4 +124,10 @@ if __name__=='__main__':
         fd=os.open(path.parent,os.O_DIRECTORY)
         try:os.fsync(fd)
         finally:os.close(fd)
+    observer=root/'report_training_updates.py'
+    if (root/'LAUNCH-BINDING.json').is_file() and observer.is_file():
+        with (root/'observer.log').open('ab') as log:
+            subprocess.Popen(prefix+[str(observer),'--release',str(release),'--config',str(config),
+                             '--output',str(root/'OBSERVED-UPDATES.json'),'--watch'],stdin=subprocess.DEVNULL,
+                             stdout=log,stderr=log,start_new_session=True)
     launch(c,[str(Path(c['logical_root'])/'jev-system-rl/implementation/iteration.py'),'--config',str(config)])

@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -25,6 +26,8 @@ def need(ok, message):
 
 def validate(exp):
     from rank_profile import validate as validate_rank
+    atol = exp.get('publication_norm_atol', 0.0)
+    need(type(atol) in (int, float) and math.isfinite(atol) and atol >= 0, 'invalid publication norm tolerance')
     need(exp['schema'] == 'omni-paired-experiment-v1' and exp['version'], 'invalid experiment version')
     need(Path(exp['model_path']).is_absolute() and exp['model'], 'missing model identity')
     devices = exp['training_devices']
@@ -105,6 +108,24 @@ def check_lane(exp, lane, cfg):
          and cfg['cards'] == exp['lanes'][lane] and args.count('--tensor-parallel-size') == 1
          and int(args[args.index('--tensor-parallel-size') + 1]) == len(cfg['cards']),
          'service model or topology differs from experiment')
+
+
+def check_effective_lane(exp, lane, cfg, adapter):
+    check_lane(exp, lane, cfg)
+    expected = rank_profile(exp)
+    fields = {'r': 'lora_rank', 'lora_alpha': 'lora_alpha', 'lora_dropout': 'lora_dropout'}
+    for key, setting in fields.items():
+        need(adapter.get(key) == expected['training'][setting],
+             f'published adapter {key} differs from experiment')
+    args = cfg['serve_args']
+    limits = {'--max-lora-rank': expected['inference']['max_lora_rank'],
+              '--max-num-seqs': graph(exp)['max_num_seqs']}
+    for flag, value in limits.items():
+        matches = [i for i, arg in enumerate(args) if arg == flag or arg.startswith(flag + '=')]
+        need(len(matches) == 1, f'lane {lane} requires one {flag}')
+        i = matches[0]
+        actual = args[i+1:i+2] if args[i] == flag else [args[i].split('=', 1)[1]]
+        need(actual == [str(value)], f'lane {lane} {flag} differs from experiment')
 
 
 def install_projection(path, value):

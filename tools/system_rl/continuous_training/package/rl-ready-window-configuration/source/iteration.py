@@ -391,7 +391,7 @@ def run(config_path, *, resume_placement=None):
                             'baseline_input_ref','baseline_policy_ref','baseline_dev_ref','phase_baseline_dev_ref','deferred_system_dev_ref'):
                     if key in parent:state[key]=parent[key]
                 state.update(phase='endpoint',sampled_dataset_ref=branch['dataset_ref'],sampled_windows=[],
-                             sampled_consumed=window['end'],branch_parent_ref=branch['parent_cursor_ref'],
+                             sampled_consumed=0 if config.get('dataset_start_mode')=='new_epoch' else window['end'],branch_parent_ref=branch['parent_cursor_ref'],
                              excluded_window_ref=branch['excluded_window_ref'])
             elif config.get('branch_plan_ref'):
                 plan=read(config['branch_plan_ref']);parent=read(plan['parent_cursor_ref'])

@@ -59,6 +59,10 @@ def configure(config,output):
                                   FORMAL_ROLLOUT_LANES=list(experiment['lanes']))
         runner['lanes'] = list(experiment['lanes'])
     manifest.pop('branch_plan_ref',None)
+    if 'dataset_start_mode' in c:
+        if c['dataset_start_mode']!='new_epoch' or out.exists() and (out/'run').exists():
+            raise ValueError('new epoch needs a fresh output root')
+        manifest['dataset_start_mode']='new_epoch'
     if c.get('undispatched_release'):manifest['closed_undispatched_ref']=pin(c['undispatched_release'])
     manifest['values']=dict(manifest['values'],FORMAL_RUN_ROOT=str(out/'run'),TRAIN_LAUNCHER_REF=pin(src/'stage_bounded_actor_step.py'))
     if manifest.get('release_capture_binding'):
