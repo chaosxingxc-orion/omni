@@ -1,0 +1,7 @@
+{
+  "version": "training-continuous-v1-candidate",
+  "reference_batch": {"rows_per_rank": 4, "padded_tokens_per_rank": 32768},
+  "acceptance": {"maximum_step_seconds": 600, "consecutive_steps": 3,
+    "recordings_per_step": 32, "episodes_per_recording": 4,
+    "timing": "first_business_dispatch_to_next_first_business_dispatch"}
+}
