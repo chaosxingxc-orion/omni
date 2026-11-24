@@ -49,6 +49,9 @@ def validate(exp):
     need(total % g == 0 and concurrency <= total and concurrency <= widths[-1], 'actor groups or inference capacity differ')
     need(exp.get('row_encoding','original') in ('original','compact_json_v1'), 'unsupported training row encoding')
     need(exp.get('group_preparation','replicated') in ('replicated','shard_by_draw_v1'), 'unsupported group preparation')
+    if 'capacity_interval_bytes' in exp:
+        need(type(exp['capacity_interval_bytes']) is int and exp['capacity_interval_bytes'] > 0,
+             'invalid checkpoint capacity interval')
     width = exp.get('activation_concurrency', 1)
     need(type(width) is int and 1 <= width <= len(lanes), 'invalid activation concurrency')
     validate_rank(rank_profile(exp))
@@ -90,7 +93,7 @@ def check_actor(exp, start, policy):
     need(policy['experiment_sha256'] == digest(exp) and policy['dev_cadence'] == exp['dev_cadence']
          and policy['rollout_dispatch']['episode_concurrency'] == exp['episode_concurrency']
          and all(policy.get(key) == exp.get(key) for key in
-                 ('row_encoding', 'group_preparation', 'activation_concurrency'))
+                 ('row_encoding', 'group_preparation', 'activation_concurrency', 'capacity_interval_bytes'))
          and policy['acceptance']['episodes_per_recording'] == exp['episodes_per_recording']
          and policy['acceptance']['recordings_per_step'] == validate(exp), 'controller differs from experiment')
 
@@ -142,7 +145,7 @@ def compile_experiment(template, profile, output):
     snapshot = save(output / 'EXPERIMENT.json', exp)
     rank = save(output / 'rank-profile.json', rank_profile(exp))
     policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
-    for name in ('row_encoding', 'group_preparation', 'activation_concurrency'):
+    for name in ('row_encoding', 'group_preparation', 'activation_concurrency', 'capacity_interval_bytes'):
         if name in exp:
             policy[name] = exp[name]
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
@@ -150,6 +153,10 @@ def compile_experiment(template, profile, output):
     historical_graph = policy.pop('decode_graph_profile')
     policy['source_roles']['service'].remove(historical_graph)
     policy['runtime_members'].pop('parents/jev-system-rl/' + historical_graph)
+    if 'capacity_interval_bytes' in exp:
+        source = 'rl-ready-window-configuration/source/checkpoint_inventory.py'
+        policy['source_roles']['controller'].append(source)
+        policy['runtime_members']['parents/jev-system-rl/implementation/checkpoint_inventory.py'] = source
     scoring = 'implementation/scorer_extension.py'
     policy['source_roles']['shared'].append(scoring)
     policy['runtime_members']['parents/jev-system-rl/' + scoring] = scoring

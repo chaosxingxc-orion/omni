@@ -1164,7 +1164,8 @@ def unpack_closed(data,destination):
     request=destination.parent/'REQUEST.json'
     run=read(request)['run'] if request.is_file() else {}
     cache=Path(run.get('checkpoint_cache_root',destination.parent/'checkpoint-inventory'))
-    try:return unpack(data,destination,cache,expected_boot=run.get('source_boot'))
+    opts = {'capacity_interval': run['capacity_interval_bytes']} if 'capacity_interval_bytes' in run else {}
+    try:return unpack(data,destination,cache,expected_boot=run.get('source_boot'),**opts)
     finally:_release_pull(destination.parent)
 
 
