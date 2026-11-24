@@ -28,7 +28,12 @@ def configure(template,profile,deployment_template,deployment_profile,budget_con
             deployment_profile=write(root/'COMPLETION-DEPLOYMENT-PROFILE.json',
                 completion_profile(read(deployment_profile)))['path']
     original_resolution=read(compile_profile(template,profile,root/'original-input'))
-    deployment_resolution=read(compile_profile(deployment_template,deployment_profile,root/'storage-input'))
+    # All later consumers of the same profile see the first frozen environment,
+    # including resumed runs after a shell or scheduler change.
+    frozen_profile=original_resolution['profile_snapshot_ref']
+    shared_profile=frozen_profile if original_resolution['schema']=='omni-profile-resolution-v2' else profile
+    deployment_input=shared_profile if deployment_profile==profile else deployment_profile
+    deployment_resolution=read(compile_profile(deployment_template,deployment_input,root/'storage-input'))
     value=copy.deepcopy(read(original_resolution['resolved_ref']))
     deployment=read(deployment_resolution['resolved_ref'])
     require(value['schema']=='omni-dp8-iteration-preparation-v1','original preparation schema required')
@@ -43,7 +48,7 @@ def configure(template,profile,deployment_template,deployment_profile,budget_con
             max_optimizer_updates=workflow['max_optimizer_updates'],
             **({'engineering_update_sequence':workflow['engineering_update_sequence']}
                if workflow.get('engineering_update_sequence') else {})))
-    budget_resolution=read(compile_profile(budget_config,profile,root/'budget-input'))
+    budget_resolution=read(compile_profile(budget_config,shared_profile,root/'budget-input'))
     budget_input=read(budget_resolution['resolved_ref']);budget_input['_config_path']=budget_resolution['resolved_ref']['path']
     budget_input['workflow_kind']=workflow['kind']
     budget_input['max_source_tasks']=max(budget_input['max_source_tasks'],8*workflow['max_optimizer_updates']+12)
@@ -101,7 +106,7 @@ def configure(template,profile,deployment_template,deployment_profile,budget_con
     # The original configure_release runtime-builder carrier still checks its
     # legacy 128GiB input before bind() installs the certified 72GiB run budget.
     value['training_package']['budget']['storage_bytes']=max(128*1024**3,value['training_package']['budget']['storage_bytes'])
-    launch_profile=copy.deepcopy(read(profile));values=launch_profile['values']
+    launch_profile=copy.deepcopy(read(frozen_profile));values=launch_profile['values']
     # The fragment is already the selected numerical policy. Do not reinsert
     # an unrelated legacy macro when the fixed launcher resolves its output.
     if c.get('precision_capture_ref'):

@@ -339,7 +339,8 @@ def reuse_closed_scores(cfg,bundle,hot,guard):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--config',type=Path,required=True)
+    default=os.environ.get('OMNI_ACTOR_CONFIG')
+    p.add_argument('--config',type=Path,default=default,required=not default,help='defaults to OMNI_ACTOR_CONFIG')
     p.add_argument('--check-capture',action='store_true')
     p.add_argument('--recover-scoring-timeout',type=Path)
     a=p.parse_args()

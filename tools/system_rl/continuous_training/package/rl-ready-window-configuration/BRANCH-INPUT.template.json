@@ -1,0 +1,7 @@
+{
+  "schema": "expanded-policy-branch-inputs-v1",
+  "cursor": "${PARENT_CURSOR}",
+  "parent_commit": "${PARENT_CHECKPOINT}",
+  "profile": "${LORA_PROFILE}",
+  "adapter": "${INITIAL_ADAPTER}"
+}

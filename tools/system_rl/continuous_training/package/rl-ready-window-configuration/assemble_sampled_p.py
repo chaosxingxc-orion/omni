@@ -212,12 +212,26 @@ def assemble(manifest, output, *, bind_live):
 
 
 if __name__=='__main__':
-    import json,sys
-    cli=argparse.ArgumentParser();cli.add_argument('--manifest',required=True);cli.add_argument('--output',required=True)
+    import json,os,sys
+    cli=argparse.ArgumentParser()
+    for name,env in [('manifest','OMNI_TRAIN_MANIFEST'),('output','OMNI_TRAIN_OUTPUT')]:
+        default=os.environ.get(env)
+        cli.add_argument('--'+name,default=default,required=not default,help='defaults to '+env)
+    cli.add_argument('--profile',type=Path,default=os.environ.get('OMNI_DEPLOYMENT_PROFILE') or None)
+    cli.add_argument('--release',type=Path,default=os.environ.get('OMNI_TRAIN_RELEASE') or None,
+                     help='assembled runtime for resolving a manifest template')
     mode=cli.add_mutually_exclusive_group()
     mode.add_argument('--bind-live',action='store_true')
     mode.add_argument('--verify-screen',action='store_true');a=cli.parse_args()
-    release=Path(json.loads(Path(a.manifest).read_bytes())['release'])
+    if a.profile and not a.release:cli.error('template requires --release or OMNI_TRAIN_RELEASE')
+    release=a.release or Path(json.loads(Path(a.manifest).read_bytes())['release'])
     sys.path.insert(0,str(release/'tree/parents/jev-system-rl/implementation'))
+    if a.profile:
+        from source.config_profile import compile_profile
+        from run_package import read
+        receipt=read(compile_profile(a.manifest,a.profile,Path(a.output)/'manifest-resolution'))
+        a.manifest=receipt['resolved_ref']['path']
+    if Path(json.loads(Path(a.manifest).read_bytes())['release']).resolve()!=release.resolve():
+        cli.error('manifest and selected training runtime differ')
     result=read_screen(a.manifest,a.output) if a.verify_screen else assemble(a.manifest,a.output,bind_live=a.bind_live)
     print(json.dumps(result))

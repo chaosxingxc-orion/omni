@@ -1,0 +1,10 @@
+{
+  "schema": "omni-local-profile-v2",
+  "values": {},
+  "environment": {
+    "PARENT_CURSOR": "path",
+    "PARENT_CHECKPOINT": "path",
+    "LORA_PROFILE": "path",
+    "INITIAL_ADAPTER": "path"
+  }
+}

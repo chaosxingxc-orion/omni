@@ -1,0 +1,15 @@
+部署配置在启动时解析一次。主机、端口、设备列表及本地根目录可以随环境更换；算法、LoRA 参数、精度、批大小和评测周期留在实验版本里。启动参数只定位配置或输出目录，不覆盖这些实验参数。
+
+使用已有 config_profile.py 的 compile_profile(template, profile, output)，或调用其命令行。v1 配置仍只从文件读取。v2 在本地 profile 的 environment 中声明宏及类型：path 为绝对路径，host 为主机名或 SSH 别名，port 为 1–65535 的端口，int 为整数，devices 为非空且不重复的非负整数 JSON 数组。每个宏优先读 OMNI_DEPLOY_<宏名>，否则读 values；缺失或类型错误会在派发前失败。派生目录可以在 values 中引用其他宏。此配置只放可记录的部署信息，凭据沿用服务现有的认证方式。
+
+例如分支准备：将 OMNI_DEPLOY_PARENT_CURSOR、OMNI_DEPLOY_PARENT_CHECKPOINT、OMNI_DEPLOY_LORA_PROFILE、OMNI_DEPLOY_INITIAL_ADAPTER 设为本机的文件或目录，然后运行：
+
+```sh
+python3 prepare_initial_branch.py --release "$OMNI_TRAIN_RELEASE" \
+  --config BRANCH-INPUT.template.json --profile BRANCH-DEPLOYMENT.example.json \
+  --out "$OMNI_BRANCH_OUTPUT"
+```
+
+同一输出目录只采用第一次解析后的快照；换环境后恢复仍使用它。更换部署应使用新的输出目录。RESOLUTION.json 记录模板、原始配置、生效配置与结果的摘要；ENVIRONMENT.json 只记录声明项的来源及生效配置。以上文件留在本地热目录。
+
+分支准备还支持 OMNI_BRANCH_CONFIG、OMNI_DEPLOYMENT_PROFILE。训练组装使用 OMNI_TRAIN_MANIFEST 和 OMNI_TRAIN_OUTPUT；如果 manifest 是模板，还要提供部署 profile 和 OMNI_TRAIN_RELEASE。显式 CLI 路径优先于对应变量。Actor 使用 OMNI_ACTOR_CONFIG 指定已封闭的训练配置；TP 部署使用 OMNI_ROLLOUT_DEPLOYMENT_ROOT 指定部署根，可用 OMNI_ROLLOUT_CONFIG 指向预解析配置，与已有部署根不一致时拒绝切换。运行时不反复读取环境。
