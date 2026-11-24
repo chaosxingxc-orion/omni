@@ -97,6 +97,15 @@ def build_with_bundle(files,config):
         require(src.count(duplicate)==1 and src.count(before_join)==1,'consumer restore seam changed')
         src=src.replace(before_join,'    validate_draw_binding(files,config,rows)\n'+before_join)
         src=src.replace(duplicate,'        # Fresh draw and group identity validated above.')
+        # These objects just came from json.loads of authenticated bytes in
+        # this restore. Transfer sole ownership when joining offline labels.
+        clone="b = copy.deepcopy(online['behavior_bundle'])"
+        bins="shape(f['audio_features'])[1]"
+        require(src.count(clone)==1 and src.count(bins)==2,
+                'consumer bundle/feature validation seam changed')
+        src=src.replace(clone,"b = online.pop('behavior_bundle')")
+        # The validator compared every actual shape with its declaration above.
+        src=src.replace(bins,"specs['audio_features']['shape'][1]")
         ns=dict(legacy.__dict__,validate_draw_binding=validate_draw_binding)
         exec(compile(src,str(BASE/'training-consumer-successor/adapter.py')+':selected-once','exec'),ns)
         # restore() privately deserializes the rows before joining supervision.

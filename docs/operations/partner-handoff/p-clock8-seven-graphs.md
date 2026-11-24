@@ -11,3 +11,5 @@
 LoRA rank 128, alpha 256, and training dropout 0.1 completed one isolated actor update on the previous out-of-memory batch. Eight workers each owned 16 rows and processed two microbatches of eight, for 128 real trajectories. The slowest worker took 234.13 seconds and peak reserved memory was 35.69 GiB. The committed rank-8 lineage ends at step 9. This replay used its retained actions and did not advance the new policy.
 
 On the same 32 groups, checking retained feature shapes one numeric row at a time reduced the CPU consumer build from 44.47 to 29.30 seconds. The two runs produced identical input tensors, restored trajectory bundles and consumer reports. A changed draw identity was still rejected. The comparison covers the CPU consumer inside a step. Three consecutive on-policy updates are still needed to measure end-to-end step time.
+
+同一批 32 个输入、128 条真实轨迹的固定镜像 CPU 对照：消费者接管刚解码的私有轨迹；校验音频形状后复用已验证的维度。原部署版本 43.47 秒，新版本 25.93 秒，节省 17.53 秒（40.3%）。张量、轨迹和报告相等，错配 draw 仍被拒绝。此耗时仅覆盖输入构建。
