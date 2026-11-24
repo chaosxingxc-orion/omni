@@ -201,6 +201,8 @@ def assemble(manifest, output, *, bind_live):
     if continuous:
         continuous['deadline_epoch']=base['deadline_epoch']
         base['formal_actor']['continuous_actor']=continuous
+        if 'transfer_policy' in policy:
+            base['formal_actor']['transfer_policy'] = policy['transfer_policy']
         if 'capacity_interval_bytes' in policy:
             base['formal_actor']['capacity_interval_bytes'] = policy['capacity_interval_bytes']
         if branch:base['formal_actor']['initial_actor_run']=train['source_bundle']

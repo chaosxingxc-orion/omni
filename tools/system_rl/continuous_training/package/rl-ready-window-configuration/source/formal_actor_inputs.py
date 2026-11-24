@@ -233,4 +233,8 @@ else:
         require(proof==dict(files=len(manifest),archive_sha256=raw_pin['sha256'],projection=str(projection)),
                 'resident input projection not closed')
         write(directory/'PROJECTION.json',dict(proof,source_intent_ref=expected))
-    return write(directory/'INPUT-CLOSED.json', dict(intent_ref=expected, remote=actual, archive_ref=raw_pin))
+    result = write(directory/'INPUT-CLOSED.json', dict(intent_ref=expected, remote=actual, archive_ref=raw_pin))
+    if 'continuous_actor' in template and spec.get('transfer_policy') == 'batch_receipt_v1':
+        from retire_input_transfer import retire
+        retire(directory, apply=True)
+    return result

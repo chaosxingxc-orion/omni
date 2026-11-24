@@ -3,7 +3,7 @@ import argparse, hashlib, json, os, sys, tarfile, io, time
 from pathlib import Path
 from unittest.mock import patch
 
-def check(root, run, step, policy, runtime):
+def check(root, run, step, policy, runtime, batch_only=False):
     sys.path.insert(0,str(runtime))
     from dependencies import load
     from storage import configure_scope
@@ -25,7 +25,8 @@ def check(root, run, step, policy, runtime):
         for digest,desc in wire['objects'].items():
             if desc['member']:out.add(members[digest],arcname=desc['member'],recursive=False)
     results={}
-    for name,module in [('control',control),('candidate',candidate)]:
+    cases = [('batch',candidate)] if batch_only else [('control',control),('candidate',candidate)]
+    for name,module in cases:
         sandbox=root/name;cache=sandbox/'cache';dest=sandbox/'returned'
         configure_scope(sandbox,prior['peak_bytes'],'return-replay-'+name,prior['source_boot'],
             noncheckpoint_limit_bytes=prior['noncheckpoint_limit_bytes'],auxiliary_roots=[run])
@@ -33,17 +34,20 @@ def check(root, run, step, policy, runtime):
             if not desc['member']:
                 with members[digest].open('rb') as f:module.install(cache,digest,desc['bytes'],f)
         cost=[0,0.]
-        full=module.check_running
+        import storage
+        full=storage.allocation if batch_only else module.check_running
         def timed(*args):
             start=time.perf_counter()
             try:return full(*args)
             finally:cost[0]+=1;cost[1]+=time.perf_counter()-start
         start=time.perf_counter()
-        with patch.object(module,'check_running',timed):
+        with patch.object(storage if batch_only else module,'allocation' if batch_only else 'check_running',timed):
             # Bytes input keeps the test envelope intact for both runs.
             module.unpack(stream.read_bytes(),dest,cache,expected_boot=wire['closure']['source_boot'],
-                          **({'capacity_interval':width} if name=='candidate' else {}))
+                          **({'admit_batch':True} if batch_only else {'capacity_interval':width} if name=='candidate' else {}))
         results[name]=dict(seconds=time.perf_counter()-start,capacity_calls=cost[0],capacity_seconds=cost[1])
+        if batch_only and cost[0] != 1:
+            raise ValueError('expected a single complete batch admission')
         for doc in ('CLOSED-MANIFEST.json','WIRE-MANIFEST.json','CLOSED-COMMIT.json'):
             assert (dest/doc).read_bytes()==(source/doc).read_bytes()
         for k,ref in wire['files'].items():
@@ -62,5 +66,6 @@ def check(root, run, step, policy, runtime):
 if __name__=='__main__':
     p=argparse.ArgumentParser()
     for k in ('root','run','policy','runtime'):p.add_argument('--'+k,type=Path,required=True)
+    p.add_argument('--batch-only',action='store_true')
     p.add_argument('--step',type=int,required=True)
     print(json.dumps(check(**vars(p.parse_args()))))

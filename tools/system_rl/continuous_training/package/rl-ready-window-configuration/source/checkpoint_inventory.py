@@ -77,11 +77,12 @@ def check_open_filesystem(fd, remaining, write_bytes):
             'orderly stop: local filesystem capacity fell during transfer')
 
 
-def install(cache, sha, size, stream, *, capacity_interval=None):
+def install(cache, sha, size, stream, *, capacity_interval=None, batch_reserve=None):
     cache=Path(cache)
     if verified(cache,sha,size):
         target=object_path(cache,sha);claim_object(target,sha,size);return target
-    environment(cache,0)
+    if batch_reserve is None:
+        environment(cache,0)
     target=object_path(cache,sha);target.parent.mkdir(parents=True,exist_ok=True)
     pending=target.with_name(sha+'.pending-'+uuid.uuid4().hex)
     h=hashlib.sha256(); copied=0
@@ -94,7 +95,9 @@ def install(cache, sha, size, stream, *, capacity_interval=None):
                 credit, reserve = capacity_window(cache, size-copied, capacity_interval)
             chunk=stream.read(min(1024**2, credit) if credit else 1024**2)
             if not chunk: break
-            if capacity_interval is None:
+            if batch_reserve is not None:
+                check_open_filesystem(f.fileno(), batch_reserve, len(chunk))
+            elif capacity_interval is None:
                 check_running(cache,size-copied)
             else:
                 require(len(chunk) <= credit, 'object exceeds admitted capacity')
@@ -148,7 +151,7 @@ def validate_manifest(manifest):
     return files
 
 
-def unpack(data,destination,cache,*,expected_boot=None,capacity_interval=None):
+def unpack(data,destination,cache,*,expected_boot=None,capacity_interval=None,admit_batch=False):
     destination=Path(destination);cache=Path(cache)
     incoming=destination.with_name(destination.name+'.incoming')
     with manifest_from_tar(data) as tar:
@@ -160,6 +163,22 @@ def unpack(data,destination,cache,*,expected_boot=None,capacity_interval=None):
         incoming.mkdir(parents=True,exist_ok=True)
         good={}
         wire={r['member']:s for s,r in manifest['objects'].items() if r['member'] is not None}
+        batch_reserve = None
+        if admit_batch:
+            # Round each member to a filesystem block and reserve space for
+            # the receipts, manifests and directory entries published with it.
+            block = os.statvfs(incoming).f_frsize
+            def rounded(n):
+                return ((n + block - 1) // block) * block
+            size = sum(rounded(manifest['objects'][sha]['bytes']) for sha in wire.values())
+            budget = size + 4 * rounded(members[0].size) + block * (4 * len(files) + 16)
+            admission = environment(cache, budget)[0]
+            from storage import current_scope
+            scope = current_scope()
+            if scope and scope.get('noncheckpoint_limit_bytes') is not None and admission['scope'] == scope['identity']:
+                require(budget <= scope['noncheckpoint_limit_bytes'] - admission['noncheckpoint_bytes'],
+                        'orderly stop: insufficient capacity for complete return')
+            batch_reserve = admission['remaining_bytes']
         seen=set()
         for item in members[1:]:
             require(item.isfile() and item.name in wire and item.name not in seen,'duplicate/unknown closed object member')
@@ -171,7 +190,8 @@ def unpack(data,destination,cache,*,expected_boot=None,capacity_interval=None):
                     h=hashlib.sha256()
                     for chunk in iter(lambda:stream.read(1024**2),b''):h.update(chunk)
                     require(h.hexdigest()==sha,'redundant wire object drift')
-                else: install(cache,sha,row['bytes'],stream,capacity_interval=capacity_interval)
+                else: install(cache,sha,row['bytes'],stream,capacity_interval=None if admit_batch else capacity_interval,
+                              batch_reserve=batch_reserve)
                 good[sha]=True
             seen.add(item.name)
         require(seen==set(wire),'missing transmitted object')

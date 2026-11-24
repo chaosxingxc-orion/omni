@@ -336,6 +336,7 @@ def train(config, state, directory, guard):
     write(directory/'REQUEST.json', dict(run=dict(host=host, source_boot=spec['source_boot'],
           checkpoint_cache_root=config['checkpoint_cache_root'],
           closed_pull_timeout_seconds=spec['return_timeout_seconds'],
+          **({'transfer_policy': spec['transfer_policy']} if 'transfer_policy' in spec else {}),
           **({'capacity_interval_bytes': spec['capacity_interval_bytes']} if 'capacity_interval_bytes' in spec else {}))))
     if call is not None:return resident_train(config,state,directory,guard,template,staged,call)
     lease = directory/('MEASURED-BATCH-SUBMIT.json' if adopted else 'SUBMIT-INTENT.json')
