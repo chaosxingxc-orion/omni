@@ -123,6 +123,7 @@ def assemble(manifest, output, *, bind_live):
         for key,name in [('command_source_ref','formal_command.py'),('input_projection_source_ref','resident_inputs.py')]:
             require(pin(continuous[key])['sha256']==snap['roles']['controller']['rl-ready-window-configuration/source/'+name],
                     'resident command/input source is not bound by training snapshot')
+        rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
         for role,rel in rt['sources'].items():
@@ -186,7 +187,10 @@ def assemble(manifest, output, *, bind_live):
     base['unified_workflow']=dict(read(cfg['workflow_ref'])['configuration'],max_optimizer_updates=total,
                                   sampled_training=spec)
     replicas=read(start['learning_config_ref'])['kernel']['G']
-    require(1 <= rollout['episode_concurrency'] <= replicas,'formal episode concurrency exceeds group size')
+    unit=rollout.get('dispatch_unit','recording')
+    require(unit in ('recording','training_batch') and type(rollout['episode_concurrency']) is int and
+            1<=rollout['episode_concurrency']<=(replicas*n if unit=='training_batch' else replicas),
+            'invalid formal rollout concurrency')
     calls=n*replicas
     from prompt_capacity import prompt_bound
     envelope=calls*(prompt_bound(start['budget'],'P')+rollout['window_capacity']['completion_tokens_upper_per_call'])

@@ -51,7 +51,8 @@
       "rl-ready-window-configuration/source/pull_closed.py",
       "rl-ready-window-configuration/verify_runtime_sources.py",
       "rl-ready-window-configuration/build_continuous_release.py",
-      "rl-ready-window-configuration/source/capture_stage.py"
+      "rl-ready-window-configuration/source/capture_stage.py",
+      "rl-ready-window-configuration/source/fresh_rails.py"
     ],
     "shared": [
       "implementation/finalize_capture.py",
@@ -83,10 +84,15 @@
     "parents/fresh-cohort-successor/cohort_capture.py": "rl-ready-window-configuration/source/cohort_capture.py",
     "parents/fresh-cohort-successor/reference_batch.py": "rl-ready-window-configuration/source/reference_batch.py",
     "parents/fresh-cohort-successor/cohort.py": "rl-ready-window-configuration/source/cohort.py",
-    "parents/fresh-cohort-successor/consumer.py": "rl-ready-window-configuration/source/consumer.py"
+    "parents/fresh-cohort-successor/consumer.py": "rl-ready-window-configuration/source/consumer.py",
+    "parents/fresh-cohort-successor/rails.py": "rl-ready-window-configuration/source/fresh_rails.py"
   },
   "actor_fields": "reuse_accepted_v1",
   "inherited_capture_members": {
     "training-consumer-successor/adapter.py": "169f984eed645829bc7fca72b605d6a621611779ee992542519c9298150f1b02"
+  },
+  "rollout_dispatch": {
+    "dispatch_unit": "training_batch",
+    "episode_concurrency": 8
   }
 }

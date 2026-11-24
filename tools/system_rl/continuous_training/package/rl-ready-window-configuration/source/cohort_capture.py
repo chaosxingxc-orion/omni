@@ -7,7 +7,7 @@ import base64
 import copy
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 import subprocess
 import sys
@@ -151,8 +151,11 @@ def episode_concurrency(config, plan, lane, replicates):
     require(plan.get('sampled_window_ref') and lane is not None and
             set(settings) == set(capture['lanes']),
             'episode concurrency requires an explicit formal TP4 lane profile')
-    require(all(type(n) is int and 1 <= n <= replicates for n in settings.values()),
-            'per-lane in-flight count exceeds replicate count')
+    mode=capture.get('dispatch_unit','recording')
+    require(mode in ('recording','training_batch'),'unknown rollout dispatch unit')
+    limit=replicates if mode=='recording' else len(plan['draws'])*replicates
+    require(all(type(n) is int and n>=1 and (mode=='training_batch' or n<=limit) for n in settings.values()),
+            'invalid per-lane in-flight capacity')
     return settings[lane]
 
 
@@ -174,6 +177,48 @@ def complete_wave(episodes, concurrency):
         for i, request in requests.items():
             replies[i] = request.result()
     return [finish(replies[i]) for i, (_, _, finish) in enumerate(episodes)]
+
+
+def dispatch_draws(draws,prepare,concurrency,unit):
+    """Schedule a whole policy window; keep admission and result writes serial."""
+    if unit=='recording':
+        for draw in draws:
+            pending=[]
+            for item in prepare(draw):
+                pending.append(item)
+                if len(pending)==concurrency:
+                    for (_,store),result in zip(pending,complete_wave([p for p,_ in pending],concurrency),strict=True):store(result)
+                    pending.clear()
+            if pending:
+                for (_,store),result in zip(pending,complete_wave([p for p,_ in pending],concurrency),strict=True):store(result)
+        return
+    require(unit=='training_batch' and concurrency>=1,'wrong training dispatch mode')
+    # Prepare all lane-owned requests, reconciling every old intent before
+    # any new contact. This also handles partial groups and the last short batch.
+    pending=[];seen=set()
+    for draw in draws:
+        for (transport,packet,finish),store in prepare(draw):
+            rid=packet['request_id']
+            require(rid not in seen,'duplicate request in training batch');seen.add(rid)
+            if transport.inspect(packet)['state']=='absent':pending.append((transport,packet,finish,store))
+            else:store(finish(request_once(transport,packet)))
+    remaining=iter(pending)
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        active={}
+        def fill():
+            while len(active)<concurrency:
+                job=next(remaining,None)
+                if job is None:break
+                transport,packet,finish,store=job
+                active[pool.submit(request_once,transport,packet)]=finish,store
+        fill()
+        while active:
+            ready,_=wait(active,return_when=FIRST_COMPLETED)
+            results=[]
+            for future in ready:
+                finish,store=active.pop(future);results.append((finish,store,future.result()))
+            for finish,store,reply in results:store(finish(reply))
+            fill()
 
 
 def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lane=None):
@@ -212,6 +257,8 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
     origins={r['recording_ref_id']:r for r in mapping['records']}
     replicates=learning['kernel']['G']
     concurrency=episode_concurrency(config,plan,lane,replicates)
+    batch_dispatch=c.get('dispatch_unit','recording')=='training_batch'
+    if batch_dispatch:require(plan.get('sampled_window_ref') and lane is not None,'batch dispatch requires a sampled lane')
     from official import sources
     with sources(config) as (official_sources,_), business_scope():
         from direct_transport import DirectHTTP
@@ -220,25 +267,27 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
         # Shared asset index remains ORIGINAL. Each episode owns isolated mutable
         # business state; duplicate query draws cannot share request identities.
         boot=read(save(root/'RUN-BOOT.json',dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())))['boot_id'] if not (root/'RUN-BOOT.json').exists() else read(pin(root/'RUN-BOOT.json'))['boot_id']
-        for d in plan['draws']:
+        def prepare_draw(d):
+            nonlocal screened_p_parser
             index=d['draw_index']
-            if draw_index is not None and index!=draw_index:continue
-            if lane is not None and assignments[index]!=lane:continue
+            if draw_index is not None and index!=draw_index:return
+            if lane is not None and assignments[index]!=lane:return
             directory=root/'groups'/str(d['draw_index']);directory.mkdir(parents=True,exist_ok=True)
-            if (directory/'GENERATED.json').exists():continue
+            if (directory/'GENERATED.json').exists():return
             origin=origins[d['record']['recording_ref_id']]
             assets=[origin['audio_ref']]+origin.get('context_audio_refs',[])
             annotation=selected_annotation(d,c,root,official_sources)
             snapshot=clock['groups'][d['group_id']]['snapshot']
-            require(concurrency==1 or (snapshot['rollout_scope']=='node' and snapshot['target_nodes']==['P']),
+            require((concurrency==1 and not batch_dispatch) or (snapshot['rollout_scope']=='node' and snapshot['target_nodes']==['P']),
                     'concurrent capture requires a single independent P request per episode')
             episodes={}
-            wave=[]
-            wave_indices=[]
-            def finish_wave():
-                episodes.update(zip(wave_indices,complete_wave(wave,concurrency),strict=True))
-                wave.clear()
-                wave_indices.clear()
+            def remember(k,episode):
+                require(k not in episodes and episode['replicate']==k and
+                        episode['episode_id']==d['group_id']+':e'+str(k),'episode belongs to another draw')
+                episodes[k]=episode
+                if len(episodes)==replicates:
+                    save(directory/'GENERATED.json',dict(group_id=d['group_id'],query_draw_id=d['query_draw_id'],
+                        episodes=[episodes[i] for i in range(replicates)],policy=config['policy']))
             def prepare_episode(replicate):
                 nonlocal screened_p_parser
                 started=time.monotonic()
@@ -348,7 +397,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                             runtime.request=lambda inner:transform(original_request(inner),[])
                             session.runtime[p['sample_id']]=runtime
                             parser=lambda q,r:session.parse_d([q],[r])
-                        if concurrency>1:
+                        if concurrency>1 or batch_dispatch:
                             require(len(targets)==1 and p['stage']=='P','expected one P wire')
                             admit(p)
                             supply=ep/'SUPPLY.json'
@@ -385,17 +434,12 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
             for replicate in range(replicates):
                 saved=directory/f'episode-{replicate}'/'GENERATED.json'
                 if saved.exists():
-                    episodes[replicate]=read(pin(saved))
-                    continue
-                if concurrency==1:
-                    episodes[replicate]=prepare_episode(replicate)
+                    remember(replicate,read(pin(saved)))
+                elif concurrency==1 and not batch_dispatch:
+                    remember(replicate,prepare_episode(replicate))
                 else:
-                    wave.append(prepare_episode(replicate))
-                    wave_indices.append(replicate)
-                    if len(wave)==concurrency:finish_wave()
-            if wave:finish_wave()
-            save(directory/'GENERATED.json',dict(group_id=d['group_id'],query_draw_id=d['query_draw_id'],
-                episodes=[episodes[i] for i in range(replicates)],policy=config['policy']))
+                    yield prepare_episode(replicate),lambda episode,k=replicate:remember(k,episode)
+        dispatch_draws(plan['draws'],prepare_draw,concurrency,c.get('dispatch_unit','recording'))
     if draw_index is None and lane is None:
         close_generation(root,plan)
 

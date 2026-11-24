@@ -11,3 +11,5 @@ report_step_latency.py --run RUN --config TRAINING-CONTINUOUS-v1.candidate.json 
 正式控制器的首步启动和后续命令使用同一个训练进程，命令按运行身份、序号和前一步 checkpoint 绑定；本地 checkpoint 保留在训练机，返回控制端的封闭产物含 LoRA、loss、采样身份和恢复清单。package/ 保存本次源码快照所列的完整成员，部署仍需原封闭工程依赖。旧版三个整步实测 80.6–81.4 分钟，其中 rollout 159–175 秒、带梯度前后向 233–241 秒。新版通过真实历史 checkpoint 的启动合同与控制端接收验证，尚无新 NPU 整步实测。
 
 The sampled worker publishes the accepted consumer fields once per window. Readers verify the generation, dataset, report and tensor file. To compare with the previous implementation, run `replay_packet_container.py` against a completed training container, its sealed config and cohort, with separate local scratch. It mounts original inputs read-only, requests no accelerator and compares the complete packet on every reader.
+
+The candidate schedules one complete rollout per training batch. Each lane prepares its assigned requests, reconciles old intents, then refills its HTTP pool as individual requests finish. The pool limit is independent of recordings per step and GRPO samples per recording. Group membership, seeds, observations and optimizer batch boundaries are unchanged.
