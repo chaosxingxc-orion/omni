@@ -11,7 +11,7 @@ def run(worker,adapted,config,hot,rank):
     return restored_worker(worker,adapted,config,hot,rank)
 
 
-def restored_worker(worker,adapted,config,hot,rank,*,sources=None):
+def restored_worker(worker,adapted,config,hot,rank,*,sources=None,accepted_sink=None):
     """Finalize on the caller's already authenticated and restored worker."""
     from fresh_adapter import scope,clone_generation
     import torch.distributed as dist
@@ -52,6 +52,7 @@ def restored_worker(worker,adapted,config,hot,rank,*,sources=None):
         require(Path(origins['forward']['path']).resolve()==(ROOT/'native-model-integration/forward.py').resolve(),'wrong actual forward namespace')
         require(Path(origins['inputs_for']['path']).resolve()==(ROOT/'native-training-successor/validate_npu.py').resolve(),'wrong actual input namespace')
         module.finalize_on_worker(worker,adapted,native,hot,rank,directory=directory,resident=True,
+            **({'accepted_sink':accepted_sink} if accepted_sink is not None else {}),
             cost_receipt=dict(dp8_reserved_logical_upper=config['update_token_upper']))
     dist.barrier()
     write(Path(hot)/f'rank-{rank}/FINALIZE-RESULT.json',dict(trajectory_ref=pin(directory/'COMPLETE.json'),

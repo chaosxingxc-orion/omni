@@ -55,6 +55,10 @@ def capture_runtime(spec):
     reuse_scores = config.get('reuse_group_current_scores', False)
     if type(reuse_scores) is not bool:
         raise ValueError('reuse_group_current_scores must be boolean')
+    actor_fields=config.get('actor_fields')
+    if actor_fields is not None and (actor_fields!='reuse_accepted_v1' or not spec.get('formal_sampled') or
+                                     not config.get('reference_batch')):
+        raise ValueError('accepted field reuse requires a formal batched reference')
     batch=config.get('reference_batch')
     if batch is not None and (not isinstance(batch,dict) or set(batch)!={'rows_per_rank','padded_tokens_per_rank'}
             or any(type(v) is not int or v<1 for v in batch.values())):
@@ -65,7 +69,7 @@ def capture_runtime(spec):
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
             raise ValueError(f'invalid parity threshold: {name}')
     return dict(cohort_dir=str(relative_path(config['cohort_dir'])),
-                prepared_cache_bytes=cache_bytes, reuse_group_current_scores=reuse_scores,
+                prepared_cache_bytes=cache_bytes, reuse_group_current_scores=reuse_scores,actor_fields=actor_fields,
                 **({'reference_batch':batch} if batch is not None else {}),
                 targets=targets, index_root=str(targets['index']),
                 **{name: str(targets['overlays']/path) for name, path in sources.items()})

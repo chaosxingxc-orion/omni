@@ -409,9 +409,19 @@ def finalize_and_run(worker,adapted,spec,out,rank,world,sealed,*,live=None):
     with generation_sources(spec) as runtime:
         from finalize_capture import restored_worker as finalize
         from fresh_adapter import scope
-        finalize(worker,adapted,config,out,rank,sources=runtime)
-        with scope():
-            packet=build_packet(out/runtime['cohort_dir'])
+        root=out/runtime['cohort_dir']
+        if runtime.get('actor_fields')=='reuse_accepted_v1':
+            from pack_actor_fields import seal_packet,load_packet
+            require(live is not None and spec.get('formal_sampled'),'reuse requires a resident sampled actor')
+            inventory=config['generation_inventory_ref']
+            finalize(worker,adapted,config,out,rank,sources=runtime,
+                     accepted_sink=lambda folder,fields,report:seal_packet(folder,fields,report,inventory))
+            from resident import collectively
+            packet=collectively(lambda:load_packet(root,inventory))
+        else:
+            finalize(worker,adapted,config,out,rank,sources=runtime)
+            with scope():
+                packet=build_packet(root)
     # Canonical consumer receipt plus exact sealed rollout bytes identify the
     # in-memory handoff; there is no second deserialization or model restore.
     spec=dict(spec,dataset_sha256=packet['dataset']['sha256'],

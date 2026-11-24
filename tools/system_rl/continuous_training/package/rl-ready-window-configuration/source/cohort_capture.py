@@ -437,7 +437,7 @@ def execute_system(session,sample,prepared,stages,ps,call,transform):
 
 
 def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
-                       resident=False,cost_receipt=None):
+                       resident=False,cost_receipt=None,accepted_sink=None):
     """Current/reference fixed-action forwards on the ORIGINAL resident worker.
 
     Uses original inputs_for and forward. No worker, optimizer or trainer copy.
@@ -647,7 +647,9 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
                         break
                 if parity_first:break
             if parity_first:break
-    if rank==0:
+    def close_on_publisher():
+        nonlocal config
+        if rank!=0:return
         # Reuse actual first actor row for original checkpoint->rollout parity.
         # Generated from real capture, never user-supplied future hashes.
         if parity_first:
@@ -658,13 +660,18 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
             save(target/'capture.json',dict(records=[dict(prompt_token_ids=item['prompt_token_ids'],token_ids=item['token_ids'])]))
             save(target/'positions.json',dict(positions=positions))
             config=copy.deepcopy(config);config['native'].update(parity_input_refs={k:pin(target/name) for k,name in dict(prepared='prepared.pt',capture='capture.json',positions='positions.json').items()},parity_record_index=0)
-        release=publish(config,directory,**({'consumer_ref':consumer_ref} if native_config.get('local_consumer_ref') else {}))
+        release=publish(config,directory,**({'accepted_sink':accepted_sink} if accepted_sink else {}),**({'consumer_ref':consumer_ref} if native_config.get('local_consumer_ref') else {}))
         generated_native=read(release['native_config_ref']);generated_native['enabled']=True
         from execution import cost_plan
         generated_native.update(cost_receipt if cost_receipt is not None else cost_plan(config,directory,worker.tokenizer))
         generated_native.pop('pending_capture_ref',None)
         save(directory/'NATIVE.accepted.json',generated_native)
-    dist.barrier()
+    if accepted_sink is not None:
+        from resident import collectively
+        collectively(close_on_publisher)
+    else:
+        close_on_publisher()
+        dist.barrier()
     return read(pin(directory/'NATIVE.accepted.json'))
 
 

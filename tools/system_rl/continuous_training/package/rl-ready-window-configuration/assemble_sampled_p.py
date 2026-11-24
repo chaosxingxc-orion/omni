@@ -123,10 +123,13 @@ def assemble(manifest, output, *, bind_live):
         for key,name in [('command_source_ref','formal_command.py'),('input_projection_source_ref','resident_inputs.py')]:
             require(pin(continuous[key])['sha256']==snap['roles']['controller']['rl-ready-window-configuration/source/'+name],
                     'resident command/input source is not bound by training snapshot')
-        rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch']
+        rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']
         for role,rel in rt['sources'].items():
-            if role not in ('consumer_source','consumer_wrapper','cohort_source'):
+            if role in ('consumer_source','consumer_wrapper'):
+                require(pin(parents/rel)['sha256']==policy['inherited_capture_members'][rel],
+                        'inherited consumer differs from qualified training release: '+role)
+            else:
                 filename=Path(rel).name
                 wanted={v for a in snap['roles'].values() for k,v in a.items() if Path(k).name==filename}
                 require(wanted=={pin(parents/rel)['sha256']},'capture release differs from training snapshot: '+role)

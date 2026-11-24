@@ -16,7 +16,7 @@ def main():
     assert old['devices']==list(range(8)) and commit['step']==a.step
     original=read(next((a.run/f'step-{a.step+1:06d}/update').glob('TRAIN-REQUEST*.json')))
     generation=copy.deepcopy(original['generation']);rt=generation['runtime']
-    rt['reference_batch']=read(a.policy)['reference_batch']
+    rt['reference_batch']=read(a.policy)['reference_batch'];rt['actor_fields']=read(a.policy)['actor_fields']
     name='fresh-cohort-successor/reference_batch.py';rt['sources']['reference_batch_source']=name
     mounts=copy.deepcopy(original['capture_mounts']);parents=a.release/'tree/parents'
     for path in [*mounts['overlays'],name]:mounts['overlays'][path]=pin(parents/path)['sha256']
