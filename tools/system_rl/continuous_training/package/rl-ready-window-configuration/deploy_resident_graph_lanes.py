@@ -39,8 +39,15 @@ def call(args, timeout=180):
     return subprocess.check_output(args,timeout=timeout,text=True).strip()
 
 
+def predecessor(c,lane):
+    if 'predecessors' not in c:
+        return Path(c['previous']),c['old_attempt']
+    if set(c['predecessors'])!=set(c['old_services']):raise ValueError('incomplete lane predecessors')
+    entry=c['predecessors'][lane]
+    return Path(entry['root']),entry['attempt']
+
+
 def prepare(root,c):
-    base=Path(c['previous'])
     src=root/'inputs';dest=root/'bundle'
     if (root/'PREPARED.json').exists():return
     if not dest.exists():shutil.copytree(src/'bundle',dest)
@@ -123,10 +130,11 @@ def prepare(root,c):
     replace(dest/'LOCATIONS.json',locations)
     inbox=root/'updates';inbox.mkdir(exist_ok=True)
     for lane,expected in c['old_services'].items():
+        base,old_attempt=predecessor(c,lane)
         orig=base/('lane-'+lane);code=root/('lane-'+lane);code.mkdir(exist_ok=True)
         cfg=read(orig/'config.json')
         if not all(digest(orig/k)==v for k,v in read(orig/'PINS.json').items()):raise ValueError('old service code drift')
-        if cfg['host_boot_id']!=c['boot'] or cfg['name']+'-'+c['old_attempt']!=expected:raise ValueError('wrong lane')
+        if cfg['host_boot_id']!=c['boot'] or cfg['name']+'-'+old_attempt!=expected:raise ValueError('wrong lane')
         for f in ('launch.py','service.py'):shutil.copyfile(orig/f,code/f)
         cfg['root']=str(code)
         cfg['serve_args'][cfg['serve_args'].index('--max-num-seqs')+1]=str(graph['max_num_seqs'])
@@ -211,14 +219,13 @@ def deploy(root):
             old=m.inspect(c['old_services'][lane])
             failed=c.get('failed_startup_predecessor',False)
             if old['Id']!=c['old_ids'][lane]:raise ValueError('old service changed')
+            prev,old_attempt=predecessor(c,lane)
             if failed:
-                prev=Path(c['previous'])
                 first=read(prev/(lane+'-STARTED.json'))
                 if (old['State']['Status']!='exited' or old['State']['ExitCode']==0 or first['container_id']!=old['Id']
-                        or (prev/(lane+'-READY.json')).exists() or not (prev/('lane-'+lane)/'runs'/c['old_attempt']/'state/EXIT.json').exists()):
+                        or (prev/(lane+'-READY.json')).exists() or not (prev/('lane-'+lane)/'runs'/old_attempt/'state/EXIT.json').exists()):
                     raise ValueError('predecessor is not the failed startup')
             elif c.get('failed_diagnostic_predecessor'):
-                prev=Path(c['previous'])
                 receipt=read(prev/(lane+'-READY.json'))
                 witness=read(root/'inputs/failed-diagnostic.json')
                 if (receipt['container_id']!=old['Id'] or old['State']['Status']!='exited' or
