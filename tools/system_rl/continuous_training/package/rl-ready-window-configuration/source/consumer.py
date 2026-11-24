@@ -19,6 +19,11 @@ def unified(config):
         # validation. The original scalar reducer already supports empty sums.
         namespace=dict(learning.__dict__)
         source=(BASE/'unified-learning/learning.py').read_text()
+        copied="adapted = copy.deepcopy(g)"
+        require(source.count(copied)==1,'group projection changed')
+        # evaluate only replaces each episode's calls list when masking nodes;
+        # reuse its immutable tensor lists and create new group/episode dicts.
+        source=source.replace(copied,"adapted = dict(g, episodes=[dict(e) for e in g['episodes']])")
         anchor="            require(ae['calls'], 'no sampled trainable calls')"
         require(source.count(anchor)==1,'original frozen-call admission seam changed')
         anchor="            require(all(components[n]['mask'] == 1 for n in targets), 'target supervision missing; no node admission')"

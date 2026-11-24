@@ -143,6 +143,9 @@ def compile_experiment(template, profile, output):
     historical_graph = policy.pop('decode_graph_profile')
     policy['source_roles']['service'].remove(historical_graph)
     policy['runtime_members'].pop('parents/jev-system-rl/' + historical_graph)
+    scoring = 'implementation/scorer_extension.py'
+    policy['source_roles']['shared'].append(scoring)
+    policy['runtime_members']['parents/jev-system-rl/' + scoring] = scoring
     for name in ('paired_experiment.py', 'configure_branch_training.py', 'deploy_resident_graph_lanes.py',
                  'P-EXPERIMENT.template.json', 'EXPERIMENT-DEPLOYMENT.example.json', base_name,
                  'BRANCH-TRAINING.template.json', 'BRANCH-TRAINING-DEPLOYMENT.example.json'):
