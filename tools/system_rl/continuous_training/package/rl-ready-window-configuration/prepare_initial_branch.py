@@ -10,6 +10,13 @@ def prepare(config,out):
     from scorer_extension import install
     c=read(config)
     require(c['schema']=='expanded-policy-branch-inputs-v1','unexpected branch config')
+    experiment = None
+    if 'package' in c:
+        from paired_experiment import load, rank_profile
+        package = read(c['package'])
+        experiment = load(pin(package['experiment_ref'])['path'], package['experiment_sha256'])
+        require(read(package['rank_profile_ref']) == rank_profile(experiment), 'initial profile differs from experiment')
+        c['profile'] = pin(package['rank_profile_ref'])['path']
     parent=read(c['cursor']);prior=read(parent['capture_source_input_ref'])
     committed=read(c['parent_commit'])
     require(pin(c['parent_commit'])['sha256']==parent['resume_ref']['sha256'] and
@@ -41,6 +48,8 @@ def prepare(config,out):
     require(len(learning['phases'])==1 and learning['phases'][0]['target_nodes']==['P']
             and learning['phases'][0]['rollout_scope']=='node' and learning['phases'][0]['start_step']==0
             and not learning['phases'][0]['required_validations'],'expected existing P learning phase')
+    if experiment:
+        learning['kernel']['G'] = experiment['episodes_per_recording']
     learning['version']+='@'+version
     for name in ('behavior_policy_vector','current_policy_vector'):
         require(all(v==old['version'] for v in learning['kernel'][name].values()),'parent vector drift')

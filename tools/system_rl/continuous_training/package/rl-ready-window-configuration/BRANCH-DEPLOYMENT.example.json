@@ -4,7 +4,7 @@
   "environment": {
     "PARENT_CURSOR": "path",
     "PARENT_CHECKPOINT": "path",
-    "LORA_PROFILE": "path",
+    "EXPERIMENT_PACKAGE": "path",
     "INITIAL_ADAPTER": "path"
   }
 }

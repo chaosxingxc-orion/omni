@@ -8,14 +8,32 @@ from build import pin,save
 
 def configure(config,output):
     def read(p):return json.loads(Path(p).read_bytes())
-    def checked(ref):
+    def checked_path(ref):
         if pin(ref['path'])!=ref:raise ValueError('changed input: '+ref['path'])
-        return read(ref['path'])
+        return ref['path']
+    def checked(ref):
+        return read(checked_path(ref))
     c=read(config);out=Path(output).resolve()
+    experiment = None
+    if 'package' in c:
+        from paired_experiment import load
+        package = read(c['package'])
+        experiment = load(checked_path(package['experiment_ref']), package['experiment_sha256'])
+        c['policy'] = checked_path(package['policy_ref'])
     old=read(c['manifest']);runner=read(c['runner'])
     buildfile=Path(c['build']);build=read(buildfile);release=buildfile.parent/'release'
     lock=checked(build['source_lock_ref']);precision=checked(build['precision_lock_ref'])
     start=checked(precision['accepted_initial_ref']);branch=checked(start['branch_ref'])
+    policy = read(c['policy'])
+    if 'experiment_sha256' in policy and experiment is None:
+        raise ValueError('paired training policy requires its experiment package')
+    if experiment is not None:
+        from paired_experiment import check_actor, check_readers
+        check_actor(experiment, start, policy)
+        impl = release / 'tree/parents/jev-system-rl/implementation'
+        check_readers(experiment, {name: pin(impl / name)['sha256'] for name in experiment['readers']})
+        if checked(branch['policy_ref'])['model'] != experiment['model']:
+            raise ValueError('branch model differs from experiment')
     inputs=pin(c['branch_input'])
     if (checked(inputs)['branch_initial_ref']!=start['branch_ref'] or
             build['build_complete_ref']!=pin(release/'BUILD-COMPLETE.json') or
@@ -35,6 +53,11 @@ def configure(config,output):
     manifest=dict(old,run_id=start['lineage'],branch_input_ref=inputs,branch_actor_source=c['actor_source'],
                   actor_capture_root=c['actor_capture_root'],actor_batch_ref=save(out/'ACTOR-BATCH.json',start['actor_batch']),
                   continuous_deployment_ref=save(out/'DEPLOYMENT.json',dep),release=str(release),live_provider_ready_path=c['providers'])
+    if experiment is not None:
+        manifest['experiment_ref'] = save(out/'EXPERIMENT.json', experiment)
+        manifest['values'] = dict(manifest['values'], TRAIN_MEMORY_GIB=experiment['training_memory_gib'],
+                                  FORMAL_ROLLOUT_LANES=list(experiment['lanes']))
+        runner['lanes'] = list(experiment['lanes'])
     manifest.pop('branch_plan_ref',None)
     if c.get('undispatched_release'):manifest['closed_undispatched_ref']=pin(c['undispatched_release'])
     manifest['values']=dict(manifest['values'],FORMAL_RUN_ROOT=str(out/'run'),TRAIN_LAUNCHER_REF=pin(src/'stage_bounded_actor_step.py'))

@@ -5,7 +5,7 @@
     "RUNNER": "path",
     "MANIFEST": "path",
     "BUILD": "path",
-    "POLICY": "path",
+    "EXPERIMENT_PACKAGE": "path",
     "BRANCH_INPUT": "path",
     "PROVIDERS": "path",
     "ACTOR_SOURCE": "path",

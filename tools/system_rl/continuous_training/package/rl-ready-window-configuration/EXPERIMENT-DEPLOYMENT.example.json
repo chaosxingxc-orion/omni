@@ -1,0 +1,5 @@
+{
+  "schema": "omni-local-profile-v2",
+  "environment": {"MODEL_PATH":"path","TRAIN_DEVICES":"devices","TRAIN_MEMORY_GIB":"int","LANE_A_DEVICES":"devices","LANE_B_DEVICES":"devices"},
+  "values": {"TRAIN_DEVICES":[0,1,2,3,4,5,6,7],"TRAIN_MEMORY_GIB":1280,"LANE_A_DEVICES":[0,1,2,3],"LANE_B_DEVICES":[4,5,6,7]}
+}

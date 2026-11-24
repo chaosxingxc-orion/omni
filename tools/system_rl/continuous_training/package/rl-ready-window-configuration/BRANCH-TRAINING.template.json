@@ -2,7 +2,7 @@
   "runner": "${RUNNER}",
   "manifest": "${MANIFEST}",
   "build": "${BUILD}",
-  "policy": "${POLICY}",
+  "package": "${EXPERIMENT_PACKAGE}",
   "branch_input": "${BRANCH_INPUT}",
   "providers": "${PROVIDERS}",
   "actor_source": "${ACTOR_SOURCE}",

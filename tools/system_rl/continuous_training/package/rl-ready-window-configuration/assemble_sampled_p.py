@@ -54,7 +54,8 @@ def assemble(manifest, output, *, bind_live):
     screen=read(cfg['screen_config_ref']);check=read(cfg['actor_check_ref'])
     if cfg.get('actor_batch_ref'):
         batch=read(pin(cfg['actor_batch_ref']))
-        micro=batch['microbatch_per_card'];devices=check['devices'];g=read(start['learning_config_ref'])['kernel']['G']
+        micro=batch['microbatch_per_card'];devices=check['devices'];group_source=read(cfg['branch_input_ref']) if cfg.get('branch_input_ref') else start
+        g=read(group_source['learning_config_ref'])['kernel']['G']
         acc=batch.get('gradient_accumulation_steps',1)
         require(type(acc) is int and acc>0 and not set(batch)-{'microbatch_per_card','arithmetic','gradient_accumulation_steps'} and
                 ('arithmetic' not in batch or batch['arithmetic']=='single_clip_compact_qo_v1') and type(micro) is int and micro>0 and
@@ -134,6 +135,17 @@ def assemble(manifest, output, *, bind_live):
         lock=pin(deployment['source_lock_ref']);precision=pin(deployment['precision_lock_ref'])
         snap=training_snapshot(lock,precision['sha256'])
         policy=read(deployment['policy_ref'])
+        if 'experiment_sha256' in policy or cfg.get('experiment_ref'):
+            from paired_experiment import load, check_actor
+            exp = load(pin(cfg['experiment_ref'])['path'], policy['experiment_sha256'])
+            check_actor(exp, branch, policy)
+            require(train['devices'] == exp['training_devices'] and train['training_memory_gib'] == exp['training_memory_gib']
+                    and set(lanes) == set(exp['lanes']), 'training resource assignment differs from experiment')
+            if bind_live:
+                require(handoff.get('experiment_sha256') == policy['experiment_sha256'],
+                        'live inference deployment belongs to a different experiment')
+            base['experiment_ref'] = cfg['experiment_ref']
+            train['experiment_sha256'] = policy['experiment_sha256']
         require(pin(deployment['policy_ref'])['sha256']==snap['policy_sha256'] and
                 read(precision)['accepted_verdict']['passed'] and cfg.get('actor_batch_ref') and
                 deployment['protocol']=='formal-resident-v1' and

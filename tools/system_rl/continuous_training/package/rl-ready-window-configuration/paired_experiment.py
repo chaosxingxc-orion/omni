@@ -1,0 +1,165 @@
+"""Shared, transportable configuration consumed before training or inference starts."""
+import argparse
+import hashlib
+import json
+import os
+import re
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+READERS = {'policy_identity.py', 'publication.py', 'initial_policy.py', 'rank_profile.py'}
+
+
+def digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def file_hash(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def need(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+def validate(exp):
+    from rank_profile import validate as validate_rank
+    need(exp['schema'] == 'omni-paired-experiment-v1' and exp['version'], 'invalid experiment version')
+    need(Path(exp['model_path']).is_absolute() and exp['model'], 'missing model identity')
+    devices = exp['training_devices']
+    lanes = exp['lanes']
+    for group in (devices, *lanes.values()):
+        need(isinstance(group, list) and group and all(type(i) is int and i >= 0 for i in group)
+             and len(set(group)) == len(group), 'invalid devices')
+    physical = [i for group in lanes.values() for i in group]
+    need(lanes and len(physical) == len(set(physical)), 'overlapping service devices')
+    batch = exp['actor_batch']
+    need(set(batch) == {'microbatch_per_card', 'gradient_accumulation_steps', 'arithmetic'}
+         and batch['arithmetic'] == 'single_clip_compact_qo_v1', 'unsupported actor batch')
+    micro, accum = batch['microbatch_per_card'], batch['gradient_accumulation_steps']
+    g, concurrency = exp['episodes_per_recording'], exp['episode_concurrency']
+    widths = exp['graph_widths']
+    need(all(type(n) is int and n > 0 for n in (micro, accum, g, concurrency, exp['training_memory_gib'])),
+         'batch, concurrency and memory must be positive integers')
+    need(exp['training_memory_gib'] > 1024 and exp['dev_cadence'] == 'epoch_end', 'invalid training memory or DEV cadence')
+    need(isinstance(widths, list) and widths and all(type(n) is int and 1 <= n <= 128 for n in widths)
+         and widths == sorted(set(widths)) and widths[0] == 1, 'unsupported decode graph widths')
+    total = len(devices) * micro * accum
+    need(total % g == 0 and concurrency <= total and concurrency <= widths[-1], 'actor groups or inference capacity differ')
+    validate_rank(rank_profile(exp))
+    need(set(exp['readers']) == READERS and all(re.fullmatch('[a-f0-9]{64}', h) for h in exp['readers'].values()),
+         'incomplete paired reader lock')
+    return total // g
+
+
+def rank_profile(exp):
+    return dict(schema='p-lora-profile-v1', training={k: exp['lora'][k] for k in ('lora_rank','lora_alpha','lora_dropout')},
+                inference={'max_lora_rank': exp['lora']['lora_rank']}, actor_batch={k: exp['actor_batch'][k] for k in ('microbatch_per_card','gradient_accumulation_steps','arithmetic')},
+                dev_cadence=exp['dev_cadence'])
+
+
+def graph(exp):
+    widths = exp['graph_widths']
+    return dict(schema='tp4-decode-graph-widths-v1', batch_sizes=widths, tiled_attention_batch=widths[-1],
+                max_num_seqs=widths[-1])
+
+
+def load(path, expected=None):
+    exp = json.loads(Path(path).read_bytes())
+    validate(exp)
+    if expected is not None:
+        need(digest(exp) == expected, 'different experiment snapshot')
+    return exp
+
+
+def check_readers(exp, installed):
+    for name, expected in exp['readers'].items():
+        need(installed.get(name) == expected, 'different paired adapter reader: ' + name)
+
+
+def check_actor(exp, start, policy):
+    training = start['training']
+    need(start['devices'] == exp['training_devices'] and training['world_size'] == len(exp['training_devices'])
+         and start['actor_batch'] == exp['actor_batch'] and training['model_path'] == exp['model_path']
+         and all(training[k] == v for k, v in exp['lora'].items()), 'actor differs from experiment')
+    need(policy['experiment_sha256'] == digest(exp) and policy['dev_cadence'] == exp['dev_cadence']
+         and policy['rollout_dispatch']['episode_concurrency'] == exp['episode_concurrency']
+         and policy['acceptance']['episodes_per_recording'] == exp['episodes_per_recording']
+         and policy['acceptance']['recordings_per_step'] == validate(exp), 'controller differs from experiment')
+
+
+def check_lane(exp, lane, cfg):
+    args = cfg['serve_args']
+    need(cfg['served_model_name'] == exp['model'] and cfg['model'] == exp['model_path']
+         and cfg['cards'] == exp['lanes'][lane] and args.count('--tensor-parallel-size') == 1
+         and int(args[args.index('--tensor-parallel-size') + 1]) == len(cfg['cards']),
+         'service model or topology differs from experiment')
+
+
+def install_projection(path, value):
+    """Same bytes as build.save, including key order, on either host."""
+    import tempfile
+    raw = (json.dumps(value, ensure_ascii=False, indent=2) + '\n').encode()
+    with tempfile.NamedTemporaryFile(dir=path.parent) as temp:
+        temp.write(raw)
+        temp.flush()
+        os.fsync(temp.fileno())
+        try:
+            os.link(temp.name, path)
+        except FileExistsError:
+            need(path.read_bytes() == raw, 'immutable projection changed')
+    fd = os.open(path.parent, os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def compile_experiment(template, profile, output):
+    from build import save, pin
+    from source.config_profile import compile_profile
+    receipt = compile_profile(template, profile, output / 'resolution')
+    resolution = json.loads(Path(receipt['path']).read_bytes())
+    exp = json.loads(Path(resolution['resolved_ref']['path']).read_bytes())
+    base_name = exp.pop('policy_base')
+    need(base_name == Path(base_name).name, 'expected a packaged policy')
+    parent = HERE / base_name
+    policy = json.loads(parent.read_bytes())
+    exp['policy_base_sha256'] = file_hash(parent)
+    exp['readers'] = {}
+    roster = {p for members in policy['source_roles'].values() for p in members}
+    for name, member in exp.pop('reader_sources').items():
+        need(member in roster and Path(member).name == name, 'reader outside policy source roster')
+        exp['readers'][name] = file_hash(HERE.parent / member)
+    recordings = validate(exp)
+    snapshot = save(output / 'EXPERIMENT.json', exp)
+    rank = save(output / 'rank-profile.json', rank_profile(exp))
+    policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
+    policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
+    policy['acceptance'].update(recordings_per_step=recordings, episodes_per_recording=exp['episodes_per_recording'])
+    historical_graph = policy.pop('decode_graph_profile')
+    policy['source_roles']['service'].remove(historical_graph)
+    policy['runtime_members'].pop('parents/jev-system-rl/' + historical_graph)
+    for name in ('paired_experiment.py', 'configure_branch_training.py', 'deploy_resident_graph_lanes.py',
+                 'P-EXPERIMENT.template.json', 'EXPERIMENT-DEPLOYMENT.example.json', base_name,
+                 'BRANCH-TRAINING.template.json', 'BRANCH-TRAINING-DEPLOYMENT.example.json'):
+        member = 'rl-ready-window-configuration/' + name
+        policy['source_roles']['controller'].append(member)
+        policy['runtime_members']['parents/jev-system-rl/' + member] = member
+    return save(output / 'PACKAGE.json', dict(experiment_ref=snapshot, experiment_sha256=digest(exp),
+                resolution_ref=receipt, rank_profile_ref=rank, graph_ref=save(output / 'graph.json', graph(exp)),
+                policy_ref=save(output / 'TRAINING-POLICY.json', policy), policy_base_ref=pin(parent)))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--template', type=Path, default=HERE / 'P-EXPERIMENT.template.json')
+    parser.add_argument('--profile', type=Path, default=os.getenv('OMNI_DEPLOYMENT_PROFILE') or HERE / 'EXPERIMENT-DEPLOYMENT.example.json')
+    parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--release', type=Path, default=os.getenv('OMNI_TRAIN_RELEASE') or None)
+    args = parser.parse_args()
+    if args.release:
+        import sys
+        sys.path.insert(0, str(args.release / 'tree/parents/jev-system-rl/implementation'))
+    print(json.dumps(compile_experiment(args.template, args.profile, args.output)))

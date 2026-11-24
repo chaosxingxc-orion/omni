@@ -49,6 +49,32 @@ def predecessor(c,lane):
 
 def prepare(root,c):
     src=root/'inputs';dest=root/'bundle'
+    experiment = None
+    binding = {}
+    snapshot = src/'EXPERIMENT.json'
+    if snapshot.is_file() or 'experiment_sha256' in c:
+        from paired_experiment import load, digest as experiment_digest, check_readers, graph as graph_config, rank_profile, check_lane
+        experiment = load(snapshot, c.get('experiment_sha256'))
+        binding = dict(experiment_sha256=experiment_digest(experiment))
+        check_readers(experiment, c['overlays'])
+        if set(c['old_services']) != set(experiment['lanes']):
+            raise ValueError('inference lane roster differs from experiment')
+        for lane in c['old_services']:
+            previous, _ = predecessor(c, lane)
+            check_lane(experiment, lane, read(previous/('lane-'+lane)/'config.json'))
+        for filename, projection in [('graph.json', graph_config(experiment)), ('rank-profile.json', rank_profile(experiment))]:
+            path = src/filename
+            if path.exists():
+                if read(path) != projection:
+                    raise ValueError('staged input differs from experiment: '+filename)
+            else:
+                # Match the training publisher's serialization for weight provenance.
+                from paired_experiment import install_projection
+                install_projection(path, projection)
+        actual_rank = digest(src/'rank-profile.json')
+        if c.get('rank_profile_sha256', actual_rank) != actual_rank:
+            raise ValueError('service rank projection differs from the initial publication')
+        c = dict(c, rank_profile_sha256=actual_rank)
     if c.get('rank_profile_sha256'):
         # Weight readback and the first optimizer successor use different
         # readers. Pin both in the same paired training/service release.
@@ -57,6 +83,8 @@ def prepare(root,c):
             raise ValueError('rank-aware checkpoint reader missing from deployment overlay')
     if (root/'PREPARED.json').exists():
         receipt=read(root/'PREPARED.json')
+        if receipt.get('experiment_sha256') != binding.get('experiment_sha256'):
+            raise ValueError('prepared deployment has a different experiment identity')
         if receipt['overlays']!=c['overlays'] or any(
                 digest(dest/'parents/jev-system-rl/implementation'/n)!=v for n,v in receipt['overlays'].items()):
             raise ValueError('prepared service reader differs from locked overlay')
@@ -193,7 +221,7 @@ def prepare(root,c):
         replace(dest/f'SERVER-{lane}.json',server);save(code/'config.json',cfg)
         save(code/'PINS.json',{n:digest(code/n) for n in ('config.json','launch.py','service.py')})
     save(root/'PREPARED.json',dict(lanes=list(c['old_services']),policy=server['policy_ref']['sha256'],
-                                    graph=graph,overlays=c['overlays']))
+                                    graph=graph,overlays=c['overlays'],**binding))
 
 
 def launch_module(path):
@@ -280,7 +308,9 @@ def deploy(root):
         # Both idle predecessors share the original guard. Keep it until both
         # real requests and activation receipts have been accounted for.
         with concurrent.futures.ThreadPoolExecutor(len(mods)) as pool:list(pool.map(cutover,mods))
-        save(root/'READY.json',dict(lanes={k:digest(root/(k+'-READY.json')) for k in mods},profile=read(root/'inputs/graph.json')))
+        prepared=read(root/'PREPARED.json')
+        binding={k:prepared[k] for k in ('experiment_sha256',) if k in prepared}
+        save(root/'READY.json',dict(**binding,lanes={k:digest(root/(k+'-READY.json')) for k in mods},profile=read(root/'inputs/graph.json')))
 
 
 if __name__=='__main__':
@@ -289,6 +319,9 @@ if __name__=='__main__':
                    help='prepared bundle directory; defaults to OMNI_ROLLOUT_DEPLOYMENT_ROOT')
     p.add_argument('--config',type=Path,default=os.environ.get('OMNI_ROLLOUT_CONFIG') or None,
                    help='resolved deployment config, installed once in a prepared root')
+    p.add_argument('--experiment',type=Path,default=os.environ.get('OMNI_EXPERIMENT_CONFIG') or None,
+                   help='local copy of the shared effective EXPERIMENT.json')
+    p.add_argument('--prepare-only', action='store_true', help='build the service package without taking the guard or starting containers')
     args=p.parse_args()
     if args.root is None:p.error('provide root or OMNI_ROLLOUT_DEPLOYMENT_ROOT')
     root=args.root.resolve(strict=True)
@@ -299,4 +332,12 @@ if __name__=='__main__':
             if read(target)!=resolved:p.error('resolved deployment differs from the prepared root')
         else:
             save(target,resolved)
-    deploy(root)
+    if args.experiment:
+        from paired_experiment import load
+        save(root/'inputs/EXPERIMENT.json', load(args.experiment))
+    if not (root/'PREPARED.json').exists() and (root/'inputs/initial-adapter').exists() and not (root/'inputs/EXPERIMENT.json').exists():
+        p.error('new formal adapter deployment needs the shared EXPERIMENT.json')
+    if args.prepare_only:
+        prepare(root, read(root/'CONFIG.json'))
+    else:
+        deploy(root)
