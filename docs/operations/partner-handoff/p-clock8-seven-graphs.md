@@ -7,3 +7,7 @@
 训练候选将远端资源探测移出 128 路请求线程：实验持有一个资源租约，由独立进程核对远端 owner；worker 派发前读本机带时效的心跳，过期或变更则停止新派发。资源检查的实机对照中，128 次本机准入只触发 1 次后台远端探测，未调用模型。新正式规模采样已进入两个常驻实例；三次完整更新尚未验收。
 
 控制端观察器新增 `--controller-only`，无需访问训练机即可按本机回执分解整步。历史三个窗口采样 158.7–175.4 秒，末响应到清单封闭 1.1–1.2 秒，清单封闭到训练提交意图 13.8–15.3 秒，提交意图到更新回执 3235.6–3262.6 秒，更新回执到新策略发布 1389.2–1419.1 秒，发布到下窗首派发 10.6 秒。更新回执到发布是整段区间，不能解释为单独的 LoRA 加载耗时。
+
+LoRA rank 128, alpha 256, and training dropout 0.1 completed one isolated actor update on the previous out-of-memory batch. Eight workers each owned 16 rows and processed two microbatches of eight, for 128 real trajectories. The slowest worker took 234.13 seconds and peak reserved memory was 35.69 GiB. The committed rank-8 lineage ends at step 9. This replay used its retained actions and did not advance the new policy.
+
+On the same 32 groups, checking retained feature shapes one numeric row at a time reduced the CPU consumer build from 44.47 to 29.30 seconds. The two runs produced identical input tensors, restored trajectory bundles and consumer reports. A changed draw identity was still rejected. The comparison covers the CPU consumer inside a step. Three consecutive on-policy updates are still needed to measure end-to-end step time.
