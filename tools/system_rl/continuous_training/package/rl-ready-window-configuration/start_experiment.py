@@ -90,6 +90,12 @@ def start(path,site_path,plan=False,rehearse=False):
     binding=dict(config=pin(path),site=pin(site_path),experiment_sha256=digest(exp))
     info=dict(run_id=run_id,output=str(root),recordings_per_step=rows,training_memory_gib=exp['training_memory_gib'],
               graph=graph(exp),experiment_sha256=digest(exp),controller='run_dedicated_controller.py')
+    frozen=b.get('dispatch_inputs')
+    if frozen is not None:
+        if (set(frozen)!={'static','lengths','threads'} or type(frozen['threads']) is not int
+                or not 1<=frozen['threads']<=32):
+            raise ValueError('invalid registered dispatch inputs')
+        checked(frozen['static']);checked(frozen['lengths'])
     if plan: return info
     if root.resolve()!=root:raise ValueError('run root escaped')
     root.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -151,10 +157,20 @@ def start(path,site_path,plan=False,rehearse=False):
             dataset_start_mode='new_epoch',actor_capture_root=str(Path(training['actor_capture_root']).parent/(run_id+'-capture')))
         stage('configure',lambda:inside('configure_branch_training.py','--config',save(root/'training.local.json',training)['path'],'--output',root))
         runner=root/'RUNNER.json'
+        if frozen is not None:save(root/'DISPATCH-INPUTS.json',frozen)
         if rehearse:
             stage('actor_preview',lambda:execute([sys.executable,'-B',HERE/'run_dedicated_controller.py',
                    runner,read(runner)['compiler'],'--manifest',root/'MANIFEST.json','--output',root/'preview']))
-            return dict(info,submitted=False,rehearsal=True,actor=pin(root/'preview/ACTOR.json'))
+            preview=dict(info,submitted=False,rehearsal=True,actor=pin(root/'preview/ACTOR.json'))
+            if frozen is not None:
+                from prepare_transition_config import build as build_transition
+                folder=root/'dispatch-transition';folder.mkdir(exist_ok=True);candidate=folder/'TRANSITION.json'
+                build_transition(runner,root/'preview/PREVIEW-NOT-FOR-LAUNCH.json',HERE,frozen['lengths']['path'],
+                                 frozen['static']['path'],candidate,frozen['threads'])
+                stage('dispatch_preview',lambda:execute([sys.executable,'-B',HERE/'run_dedicated_controller.py',
+                      runner,folder/'transition_controller.py',candidate,'--check']))
+                preview['dispatch']=pin(candidate)
+            return preview
         shutil.copyfile(HERE/'report_training_updates.py',root/'report_training_updates.py')
         save(root/'SUBMIT-INTENT.json',dict(run_id=run_id,runner=pin(runner),binding=pin(root/'LAUNCH-BINDING.json')))
         # No re-dispatch on a lost acknowledgement. The fixed controller takes the runtime guard.

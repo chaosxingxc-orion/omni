@@ -123,11 +123,27 @@ def bounded(config_ref, root, operation, draw_index=None, lane=None):
                 consumer['pad_token_id']=model_padding_id(Path(config['native']['model_path']))
                 config['consumer_config_ref']=write(root/'CAPTURE-CONSUMER.json',consumer)
                 plan,_,_=cohort.prepare(config,root)
-                write(root/'RUN-BOOT.json',dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip()))
                 from official import sources, annotation
-                with sources(config) as (official,_):
-                    for draw in plan['draws']:annotation(draw,official)
-                return dict(prepared=len(plan['draws']),can_dispatch=True)
+                result=dict(prepared=len(plan['draws']),can_dispatch=True)
+                static_rows=None
+                if config['capture'].get('static_supply_ref'):
+                    from transition_static_inputs import for_window
+                    static_rows=for_window(config,plan)
+                if static_rows is not None:
+                    result['annotation_batch_ref']=write(root/'ANNOTATION-BATCH.json',dict(
+                        selected_ref=pin(root/'SELECTED.json'),source_ref=config['capture']['official_source_config_ref'],
+                        rows=[entry['annotation'] for entry in static_rows]))
+                else:
+                    with sources(config) as (official,_):
+                        if formal and config['sampling'].get('node')=='P':
+                            rows=[annotation(draw,official) for draw in plan['draws']]
+                            result['annotation_batch_ref']=write(root/'ANNOTATION-BATCH.json', dict(
+                                selected_ref=pin(root/'SELECTED.json'),
+                                source_ref=config['capture']['official_source_config_ref'], rows=rows))
+                        else:
+                            for draw in plan['draws']:annotation(draw,official)
+                write(root/'RUN-BOOT.json',dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip()))
+                return result
             config=read(root/'INPUT.json')
             plan=read(root/'SELECTED.json')
             if operation=='lane':

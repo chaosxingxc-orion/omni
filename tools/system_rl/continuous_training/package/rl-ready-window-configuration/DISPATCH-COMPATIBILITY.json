@@ -1,0 +1,7 @@
+{
+  "schema": "dispatch-overlay-bases-v1",
+  "bases": {
+    "capture_stage": "c148b598ddca271c5a1ec1eafb7a35d193af761ca19d7e666b6bbad3e799d48e",
+    "formal_rollout": "7b58b67ce28b801f3e70db2ab4cb56af2d59b77d19ced5df4022be06b04730d5"
+  }
+}

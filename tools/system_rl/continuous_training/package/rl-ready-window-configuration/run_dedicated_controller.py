@@ -130,4 +130,16 @@ if __name__=='__main__':
             subprocess.Popen(prefix+[str(observer),'--release',str(release),'--config',str(config),
                              '--output',str(root/'OBSERVED-UPDATES.json'),'--watch'],stdin=subprocess.DEVNULL,
                              stdout=log,stderr=log,start_new_session=True)
-    launch(c,[str(Path(c['logical_root'])/'jev-system-rl/implementation/iteration.py'),'--config',str(config)])
+    frozen_path=root/'DISPATCH-INPUTS.json'
+    if frozen_path.exists():
+        from prepare_transition_config import build
+        frozen=json.loads(frozen_path.read_bytes())
+        for role in ('static','lengths'):
+            if pin(Path(frozen[role]['path']))!=frozen[role]:raise ValueError('changed registered '+role)
+        directory=root/'dispatch-transition';directory.mkdir(exist_ok=True)
+        candidate=directory/'TRANSITION.json'
+        build(a.config,config,Path(__file__).parent,frozen['lengths']['path'],frozen['static']['path'],
+              candidate,frozen['threads'])
+        launch(c,[str(directory/'transition_controller.py'),str(candidate)])
+    else:
+        launch(c,[str(Path(c['logical_root'])/'jev-system-rl/implementation/iteration.py'),'--config',str(config)])

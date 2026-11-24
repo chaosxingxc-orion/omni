@@ -456,6 +456,10 @@ def capture(config, request_ref, request, root):
     source['native']['attempt_id'] = source['cohort_id']
     if 'official_index_cache_root' in spec:
         source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
+    if 'static_supply_ref' in spec:
+        source['capture']['static_supply_ref']=spec['static_supply_ref']
+    if 'prompt_length_index_ref' in spec:
+        source['capture']['prompt_length_index_ref'] = spec['prompt_length_index_ref']
     if spec.get('continuous_training'):source['capture']['screened_p_parser_member']=spec['screened_p_parser_member']
     if 'dispatch_unit' in spec:source['capture']['dispatch_unit']=spec['dispatch_unit']
     source['capture'].update(lanes=list(providers),episode_concurrency={k:spec['episode_concurrency'] for k in providers},
@@ -474,7 +478,8 @@ def capture(config, request_ref, request, root):
             result=bounded(source_ref, cohort, 'prepare')
             require(result['can_dispatch'] is True,'capture preparation incomplete')
             write(prepared,dict(source=source_ref,input=pin(cohort/'INPUT.json'),
-                                selected=pin(cohort/'SELECTED.json')))
+                                selected=pin(cohort/'SELECTED.json'),
+                                **{k:result[k] for k in ('annotation_batch_ref',) if k in result}))
         if session_owner:
             write(fence/'REMOTE-LEASE.json',read(session_owner['root']/'REMOTE-LEASE.json'))
             session_owner['local'].check_local()

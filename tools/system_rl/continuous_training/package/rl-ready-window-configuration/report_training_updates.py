@@ -189,6 +189,17 @@ def controller_guard_owner(root, config_path):
     cmd=(Path('/proc')/str(pid)/'cmdline').read_bytes().rstrip(b'\0').split(b'\0')
    except (PermissionError,FileNotFoundError,ProcessLookupError):
     return None
+   if len(cmd)>=3 and Path(os.fsdecode(cmd[-2])).name=='transition_controller.py':
+    try:
+     spec=json.loads(Path(os.fsdecode(cmd[-1])).read_bytes())
+     src=Path(os.fsdecode(cmd[-2])).resolve()
+     ref=spec['sources']['transition_controller']
+     cfg=Path(config_path).resolve()
+     if (spec['schema']=='dispatch-transition-v1' and Path(ref['path'])==src
+         and hashlib.sha256(src.read_bytes()).hexdigest()==ref['sha256']
+         and Path(spec['iteration_ref']['path'])==cfg
+         and hashlib.sha256(cfg.read_bytes()).hexdigest()==spec['iteration_ref']['sha256']):return pid
+    except (OSError,ValueError,KeyError):return None
    entry = Path(os.fsdecode(cmd[-3])).name if len(cmd) >= 4 else ''
    if len(cmd)>=4 and (entry=='iteration.py' or
       entry!='' and any(Path(os.fsdecode(arg)).name=='run_sampled_iteration.py' for arg in cmd[:-2])) and cmd[-2]==b'--config' and (
