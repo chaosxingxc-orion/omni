@@ -123,6 +123,9 @@ def assemble(manifest, output, *, bind_live):
         for key,name in [('command_source_ref','formal_command.py'),('input_projection_source_ref','resident_inputs.py')]:
             require(pin(continuous[key])['sha256']==snap['roles']['controller']['rl-ready-window-configuration/source/'+name],
                     'resident command/input source is not bound by training snapshot')
+        parser=policy['screened_p_parser_member']
+        require(pin(parents/parser['path'])['sha256']==parser['sha256'],'packaged P parser differs from training policy')
+        rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']

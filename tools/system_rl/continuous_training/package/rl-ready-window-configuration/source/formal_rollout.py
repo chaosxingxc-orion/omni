@@ -431,6 +431,7 @@ def capture(config, request_ref, request, root):
     source['native']['attempt_id'] = source['cohort_id']
     if 'official_index_cache_root' in spec:
         source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
+    if spec.get('continuous_training'):source['capture']['screened_p_parser_member']=spec['screened_p_parser_member']
     if 'dispatch_unit' in spec:source['capture']['dispatch_unit']=spec['dispatch_unit']
     source['capture'].update(lanes=list(providers),episode_concurrency={k:spec['episode_concurrency'] for k in providers},
         endpoint_policy_ref=request['endpoint_witness_ref'],lane_transports={k:dict(

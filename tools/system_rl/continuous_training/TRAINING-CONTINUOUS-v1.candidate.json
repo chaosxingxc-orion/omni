@@ -52,7 +52,8 @@
       "rl-ready-window-configuration/verify_runtime_sources.py",
       "rl-ready-window-configuration/build_continuous_release.py",
       "rl-ready-window-configuration/source/capture_stage.py",
-      "rl-ready-window-configuration/source/fresh_rails.py"
+      "rl-ready-window-configuration/source/fresh_rails.py",
+      "rl-ready-window-configuration/source/fresh_execution.py"
     ],
     "shared": [
       "implementation/finalize_capture.py",
@@ -85,7 +86,8 @@
     "parents/fresh-cohort-successor/reference_batch.py": "rl-ready-window-configuration/source/reference_batch.py",
     "parents/fresh-cohort-successor/cohort.py": "rl-ready-window-configuration/source/cohort.py",
     "parents/fresh-cohort-successor/consumer.py": "rl-ready-window-configuration/source/consumer.py",
-    "parents/fresh-cohort-successor/rails.py": "rl-ready-window-configuration/source/fresh_rails.py"
+    "parents/fresh-cohort-successor/rails.py": "rl-ready-window-configuration/source/fresh_rails.py",
+    "parents/fresh-cohort-successor/execution.py": "rl-ready-window-configuration/source/fresh_execution.py"
   },
   "actor_fields": "reuse_accepted_v1",
   "inherited_capture_members": {
@@ -94,5 +96,10 @@
   "rollout_dispatch": {
     "dispatch_unit": "training_batch",
     "episode_concurrency": 8
+  },
+  "screened_p_parser_member": {
+    "path": "jev-system-rl/original-contact-package/speech_aware_evidence_acquisition/rails/ranked_candidate_indices.py",
+    "bytes": 3624,
+    "sha256": "fe149a8c06609d82e61748ba58f0b478ee0f98ffc58daec7e8a50407f2a5656f"
   }
 }

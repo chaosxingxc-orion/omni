@@ -23,20 +23,28 @@ def node_p_parser(capture):
     import os
     from cohort_io import BASE, load
 
-    config_ref = capture.get('screened_p_parser_config_ref')
-    if config_ref is None:
-        # A pending window retains its sealed INPUT. The launcher can supply
-        # the existing parser config separately, by digest, for that window.
-        config_ref = json.loads(os.environ['OMNI_SCREENED_P_PARSER_CONFIG_REF'])
-    config = read(config_ref)
-    require(config['schema'] == 'full-system-cpu-collection-v1' and config['thinking'] is False,
-            'bound system parser configuration required')
-    root = BASE.parents[1]
-    relative = Path(config['package_src'])/'speech_aware_evidence_acquisition/rails/ranked_candidate_indices.py'
-    ref, = [item for item in config['code_pins'] if Path(item['path']) == relative]
+    member=capture.get('screened_p_parser_member')
+    if member is not None:
+        rel=Path(member['path'])
+        require(not rel.is_absolute() and '..' not in rel.parts and
+                rel.name=='ranked_candidate_indices.py','invalid packaged P parser')
+        source=(BASE/rel).resolve(strict=True)
+        require(source.is_relative_to(BASE.resolve()),'P parser outside release')
+        ref=dict(member,path=str(source))
+    else:
+        config_ref = capture.get('screened_p_parser_config_ref')
+        if config_ref is None:
+            config_ref = json.loads(os.environ['OMNI_SCREENED_P_PARSER_CONFIG_REF'])
+        config = read(config_ref)
+        require(config['schema'] == 'full-system-cpu-collection-v1' and config['thinking'] is False,
+                'bound system parser configuration required')
+        root = BASE.parents[1]
+        relative = Path(config['package_src'])/'speech_aware_evidence_acquisition/rails/ranked_candidate_indices.py'
+        ref, = [item for item in config['code_pins'] if Path(item['path']) == relative]
+        source=root/relative
+        ref=dict(ref,path=str(source))
     parser = types.ModuleType('fresh_ranked_candidate_indices')
-    source = root/relative
-    exec(compile(raw(dict(ref, path=str(source))), str(source), 'exec'), parser.__dict__)
+    exec(compile(raw(ref), str(source), 'exec'), parser.__dict__)
     cls = load(BASE/'full-system-collection-adapter/adapter.py', 'fresh_original_p_adapter').Adapter
     adapter = cls.__new__(cls)
     adapter.parse_indices = parser.parse
