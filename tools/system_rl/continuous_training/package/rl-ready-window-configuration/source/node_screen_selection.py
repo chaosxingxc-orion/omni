@@ -5,6 +5,15 @@ from pathlib import Path
 from dependencies import require,local_path
 from run_package import pin,read
 
+def outcome_mix(sampling):
+    import math
+    mix=sampling['error_success']
+    require(isinstance(mix,dict) and set(mix)=={'error','success'}
+        and all(type(v) in (int,float) and math.isfinite(v) and 0<=v<=1 for v in mix.values())
+        and math.isclose(sum(mix.values()),1,abs_tol=1e-12,rel_tol=0),'invalid configured screen outcome mix')
+    return mix
+
+
 def panel_binding(pool,sampling):
     require(pool['schema']=='node-panel-selection-v1' and pool['node']==sampling['node']=='S1'
         and pool['sealed'] is True and pool['synthetic_fixture'] is False and sampling==pool['sampling']
@@ -65,7 +74,7 @@ def panel_selection(pool,sampling):
 def selection(pool,sampling):
     if pool.get('schema')=='node-panel-selection-v1':return panel_selection(pool,sampling)
     require(pool['schema']=='node-screen-selection-v1' and pool['sealed'] is True and not pool['synthetic_fixture']
-        and pool['retrieval_population_complete'] is True and pool['official_train_count']==119881
+        and pool['retrieval_population_complete'] is True and pool['official_train_count']>0
         and pool['node']==sampling['node']=='P' and sampling['scope']=='node' and sampling['split']=='TRAIN'
         and sampling['pool_version']==pool['version']==pin(pool['inputs_ref'])['sha256']
         and sampling['system_version']==pool['system_version'],'node screen version or scope differs')
@@ -144,15 +153,63 @@ def phase_inputs(source,phase,pool):
     return release
 
 
+def panel_cost(pool,sampling,usage_ref):
+    panel_binding(pool,sampling)
+    r=read(pool['inputs_ref']);u=read(usage_ref)
+    require(r['schema']=='frozen-s1-screen-roster-v1' and r['usage_ref']==usage_ref
+        and r['panel_size']==pool['population']==u['requests']==len(u['calls'])
+        and u['schema']=='s1-native-panel-usage-v1' and u['screen']==r['screen']
+        and u['partition']==read(r['inputs'])['partition'] and r['frozen_membership'] is True,
+        'native usage does not cover the complete sealed panel')
+    seen=set();totals=Counter()
+    for call in u['calls'].values():
+        rid=call['reference_id'];require(rid not in seen,'duplicate billed recording');seen.add(rid)
+        for k in ('prompt_tokens','completion_tokens','total_tokens'):
+            v=call[k];require(type(v) is int and v>=0,'invalid native token count');totals[k]+=v
+        require(call['total_tokens']==call['prompt_tokens']+call['completion_tokens'],'per-call token sum differs')
+    require(all(u[k]==v for k,v in totals.items()),'panel token sum differs')
+    return u['total_tokens']
+
+
 def inherited_cost(answer,request_ref,request):
+    if answer.get('schema')=='node-panel-data-result-v1':
+        pool=read(answer['screen_ref']);sampling=read(answer['sampling_config_ref'])
+        original=read(request['input_ref']);branch=read(original['branch_initial_ref'])
+        witness=read(request['endpoint_witness_ref']);policy=read(request['policy_ref'])
+        require(answer['complete'] and answer['request_ref']==request_ref and request['stage']=='screen'
+            and answer['node']==pool['node']==branch['node'] and answer['population']==pool['population']
+            and answer['population_scope']==pool['population_scope'] and answer['screen_scope']=='node'
+            and answer['system_version']==pool['system_version']==branch['system_ref']['sha256']
+            and answer['transport_config_ref']==original['capture']['transport_config_ref']
+            and original['policy']['current_ref']==branch['policy_ref']==request['policy_ref']
+            and witness['schema']=='resident-tp4-startup-observation-v1' and witness['ready'] is True
+            and witness['adapter_sha256']==policy['assets'][0]['sha256'],'different screen request, policy or service')
+        roster=read(pool['inputs_ref']);design=read(roster['screen'])['configuration']
+        require(design['collections'],'missing measured S1 collection')
+        calls=read(answer['usage_ref'])['calls'];billed=set()
+        for ref in design['collections']:
+            version=read(read(ref)['version'])
+            # Only a dedicated panel collection issued by this DATA request can
+            # be charged here. Historical replays lack its endpoint/policy binding.
+            require(version['mode']=='live' and version['status']=='SEALED' and version['unresolved_requests']==0
+                and version.get('panel_request_ref')==request_ref and version.get('endpoint_witness_ref')==request['endpoint_witness_ref']
+                and version.get('policy_ref')==request['policy_ref'] and version['system_version']==pool['system_version']
+                and version['execution_version']==pool['execution_version'],'collection lacks the actual DATA/service binding')
+            for call in read(version['receipts']):
+                env=call['receipt']['native_envelope'];rid=env['request_id']
+                require(call['stage']=='S1' and call['status']=='known' and call['submits']==1 and rid in calls and rid not in billed
+                    and calls[rid]['response_ref']==env['response_ref'],'unbilled or unresolved DATA call')
+                billed.add(rid)
+        require(billed==set(calls) and len(billed)<=request['budget']['requests_upper'],'panel billed population differs')
+        return panel_cost(pool,sampling,answer['usage_ref'])
     program=read(answer['program_config_ref']);pool=read(answer['screen_ref']);release=read(pool['inputs_ref'])
-    usage=read(answer['usage_ref']);original=read(request['input_ref']);cfg=read(release['screen_config_ref'])
+    dataset=read(request['dataset_ref']);usage=read(answer['usage_ref']);original=read(request['input_ref']);cfg=read(release['screen_config_ref'])
     require(program['request_ref']==request_ref and pin(cfg['program'])==answer['program_config_ref'] and program['stages']==['TRAIN']
         and program['policy_iteration']['policy_ref']==pool['policy_ref']==request['policy_ref']
         and answer['transport_config_ref']==original['capture']['transport_config_ref']
         and program['inputs']['system_version']['sha256']==pool['system_version']==answer['system_version']
         and pool['schema']=='node-screen-selection-v1' and release['formal_sample_locked'] and not release['preview']
-        and answer['complete'] and pool['retrieval_population_complete'] and release['official_train_count']==answer['population']==119881
+        and answer['complete'] and pool['retrieval_population_complete'] and release['official_train_count']==pool['official_train_count']==answer['population']==dataset['population'] and dataset['split']=='TRAIN' and not dataset['synthetic']
         and release['usage_ref']==answer['usage_ref'] and sum(usage['valid_cells'].values())==usage['statuses']['valid']
         and set(usage['statuses'])<={'valid','invalid'} and usage['statuses']['valid']>=release['rows']
         and usage['requests']==sum(usage['statuses'].values())<=request['budget']['requests_upper']

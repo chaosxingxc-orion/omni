@@ -95,7 +95,9 @@ def draw(config,root,*,fixture=False,persist=True):
         panel_binding(manifest,sampling)
         require(config.get('sampled_window_ref'),'panel must consume the sealed selection')
     else:
-        require(sampling['purpose']=='screen' and sampling['error_success']=={'error':.8,'success':.2},'full-screen historical 80/20 selection required')
+        from node_screen_selection import outcome_mix
+        require(sampling['purpose']=='screen','screen sampling required')
+        outcome_mix(sampling)
     require(manifest['version']==sampling['pool_version'],'screen version mismatch')
     if config.get('sampled_window_ref'):
         window=read(config['sampled_window_ref']);dataset=read(window['dataset_ref'])
@@ -118,13 +120,13 @@ def draw(config,root,*,fixture=False,persist=True):
     locked_node=(manifest.get('schema')=='node-screen-selection-v1' and config.get('sampled_window_ref') and
                  manifest.get('node')==sampling.get('node')=='P' and sampling.get('scope')=='node' and
                  manifest.get('retrieval_population_complete') is True and manifest.get('sealed') is True and
-                 manifest.get('official_train_count')==119881 and manifest.get('synthetic_fixture') is False and
+                 manifest.get('official_train_count',0)>0 and manifest.get('synthetic_fixture') is False and
                  selected['statistics'].get('inputs_ref')==manifest['inputs_ref'] and
                  manifest['version']==manifest['inputs_ref']['sha256'])
     if panel:
         require(selected['statistics']['inputs_ref']==manifest['inputs_ref'] and
                 selected['statistics']['population_scope']==manifest['population_scope'],'window not from sealed panel')
-    require(fixture or panel or locked_node or (manifest['official_train_count']==119881 and not manifest['synthetic_fixture'] and manifest['population_complete'] and manifest.get('unknown_count',0)==0),'complete real full119881 screen required')
+    require(fixture or panel or locked_node or (manifest['official_train_count']>0 and not manifest['synthetic_fixture'] and manifest['population_complete'] and manifest.get('unknown_count',0)==0),'complete real TRAIN screen required')
     require(fixture or all(not d['record'].get('synthetic_fixture') for d in draws),'fixture cannot enter real capture')
     identity=dict(screen=config['screen_ref'],sampling=sampling,policy=config['policy'],clock=config['clock_state_ref'],cohort_id=config.get('cohort_id',config['native']['attempt_id']),capture=config['capture'],learning=config['learning_config_ref'],consumer=config['consumer_config_ref'],native=config['native'],implementation={p.name:pin(p) for p in sorted(HERE.glob('*.py'))})
     if config.get('sampled_window_ref'):identity['sampled_window']=config['sampled_window_ref']

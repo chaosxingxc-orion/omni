@@ -1,0 +1,8 @@
+--- a/validate_closeout.py
++++ b/validate_closeout.py
+@@ -17 +17 @@
+-    require(result['official_train_count']==1 and marker['sampling']['status']=='WAITING_FULL119881' and not marker['production_population_complete'],'CONFIGURED_CLOSEOUT_SAMPLING_GATE')
++    require(result['official_train_count']==1 and marker['sampling']['status']=='WAITING_FULL_TRAIN' and not marker['production_population_complete'],'CONFIGURED_CLOSEOUT_SAMPLING_GATE')
+@@ -27 +27 @@
+-    save(root/'RESULT.json',dict(status='PASS',bounded=True,population=1,missing=119880,sampling=marker['sampling'],actual_config_verified=True,controls=CHECKS,model_calls=0,seconds=time.monotonic()-start))
++    save(root/'RESULT.json',dict(status='PASS',bounded=True,population=1,missing=result['missing_population'],sampling=marker['sampling'],actual_config_verified=True,controls=CHECKS,model_calls=0,seconds=time.monotonic()-start))

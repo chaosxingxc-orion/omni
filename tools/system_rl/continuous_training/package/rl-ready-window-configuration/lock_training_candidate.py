@@ -1,6 +1,7 @@
 """Identify exact training candidate sources separately from numerical qualification."""
 import argparse,hashlib,json
 from pathlib import Path
+from release_source import source_path
 
 def lock(root,policy,precision,output):
     from run_package import pin,read,write
@@ -13,8 +14,7 @@ def lock(root,policy,precision,output):
         for name in files:
             path=Path(name)
             if path.is_absolute() or '..' in path.parts or str(path)!=name:raise ValueError('invalid source member')
-            p=(root/path).resolve(strict=True)
-            if not p.is_relative_to(root.resolve()):raise ValueError('source escapes checkout')
+            p=source_path(root,name)
             assets[role][name]=hashlib.sha256(p.read_bytes()).hexdigest()
     identity=dict(schema='continuous-training-source-snapshot-v1',precision_lock_sha256=pin(precision)['sha256'],
                   policy_sha256=pin(policy)['sha256'],roles=assets,version=spec['version'])

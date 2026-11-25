@@ -8,7 +8,7 @@ from pathlib import Path
 from build import pin,save
 from prepare_s1_recordings import read,checked,needed
 from s1_panel_selection import observed,sample
-from source.config_profile import resolve,bind_environment
+from source.config_profile import stage_config,bind_environment
 
 
 def member(s,obs,static,out):
@@ -36,6 +36,24 @@ def member(s,obs,static,out):
                 fold_probability=s['fold_probability'],outcome_conditional_inclusion=s['outcome_conditional_inclusion'])
 
 
+def panel_usage(found):
+    """Every matched native call is charged, including checks, capped and protocol outcomes."""
+    import base64,hashlib
+    calls={};totals=Counter()
+    for rid,o in found.items():
+        env=o['receipt'];response=read(checked(env['response_ref']))
+        raw=base64.b64decode(response['response_b64'],validate=True)
+        needed(env['stage']=='S1' and response['request_id']==env['request_id'] and env['request_id'] not in calls
+            and hashlib.sha256(raw).hexdigest()==response['response_sha256'],'duplicate or different billed response')
+        usage=json.loads(raw).get('usage')
+        keys=('prompt_tokens','completion_tokens','total_tokens')
+        needed(isinstance(usage,dict) and all(type(usage.get(k)) is int and usage[k]>=0 for k in keys)
+            and usage['total_tokens']==usage['prompt_tokens']+usage['completion_tokens'],'missing or inconsistent native token counts')
+        amounts={k:usage[k] for k in keys};totals.update(amounts)
+        calls[env['request_id']]=dict(reference_id=rid,response_ref=env['response_ref'],**amounts)
+    return dict(schema='s1-native-panel-usage-v1',requests=len(calls),calls=calls,**totals)
+
+
 def seal(cfg):
     out=Path(cfg['output']);evidence=read(checked(cfg['screen']));static=read(checked(cfg['static_inputs']))
     needed(static['schema']=='s1-static-training-inputs-v1' and evidence['schema']=='s1-outcome-screen-v1'
@@ -50,8 +68,9 @@ def seal(cfg):
         rid=s['reference_id'];needed(rid not in seen and rows[rid]['split']==s['split']=='selection' and s['component'] not in reserved,
                                     'duplicate selection or independent-check leakage')
         seen.add(rid);draws.append(member(s,found[rid],rows[rid],out))
+    usage=save(out/'USAGE.json',dict(panel_usage(found),screen=cfg['screen'],partition=static['partition']))
     roster=save(out/'ROSTER.json',dict(schema='frozen-s1-screen-roster-v1',split='TRAIN',node='S1',
-        inputs=cfg['static_inputs'],screen=cfg['screen'],system_version=design['system_version'],
+        inputs=cfg['static_inputs'],screen=cfg['screen'],usage_ref=usage,system_version=design['system_version'],
         execution_version=design['execution_version'],folds=actual['training_folds'],draws=draws,
         cells=dict(Counter(d['fold']+'/'+d['outcome'] for d in draws)),count=len(draws),
         panel_size=actual['panel_size'],frozen_membership=True,fresh_actions=False))
@@ -71,7 +90,7 @@ if __name__=='__main__':
     cli=argparse.ArgumentParser(description=__doc__);cli.add_argument('config');cli.add_argument('--profile',required=True)
     a=cli.parse_args();profile=read(a.profile)
     if profile['schema']=='omni-local-profile-v2':profile,_=bind_environment(profile,os.environ)
-    c=resolve(read(a.config),profile);needed(c['schema']=='s1-screen-roster-config-v1','unexpected roster config')
+    c=stage_config(read(a.config),profile,'s1-screen-roster-config-v1');needed(c['schema']=='s1-screen-roster-config-v1','unexpected roster config')
     from multimodal_jev.local_runtime_storage import check_paths
     check_paths({'roster':Path(c['output']).parent},min_free_fraction=.1,min_free_bytes=20<<30)
     print(json.dumps(seal(c)))

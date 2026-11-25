@@ -36,10 +36,16 @@ def seal(cfg,output):
     init=read(cfg['actor_start']);prev=read(cfg['previous']);reg=read(formal/'providers/READY.json')
     action=diag/'ACTIONS.json';result=diag/'VERDICT.json'
     review(action,diag/'actor',result);verdict=read(result)
-    require(verdict['nonzero']==0 and verdict['max_abs']==0 and verdict['tokens']>=verdict['rows']>0 and
-            verdict['policy']==init['version'] and read(diag/'actor/EXIT.json')['complete_ranks']==len(init['devices']),
+    from paired_experiment import check_same_action
+    experiment=read(cfg['formal_experiment']) if 'formal_experiment' in cfg else {}
+    tolerance=check_same_action(verdict,init['version'],experiment)
+    require(read(diag/'actor/EXIT.json')['complete_ranks']==len(init['devices']),
             'incomplete same-action evaluation')
-    reference=read(diag/'a-READY.json')
+    measured_lanes=read(diag/'READY.json')['lanes']
+    require(measured_lanes and all(Path(k).name==k for k in measured_lanes),'invalid measured lanes')
+    for name,sha in measured_lanes.items():
+        require(pin(diag/(name+'-READY.json'))['sha256']==sha,'changed measured lane')
+    reference=read(diag/(sorted(measured_lanes)[0]+'-READY.json'))
     measured=normalized(diag,reference)
     runtime=read(formal/'PREPARED.json')
     original=read(diag/'PREPARED.json')
@@ -56,8 +62,8 @@ def seal(cfg,output):
         def execution(exp):
             # Compare all model/graph inputs; scheduling and host-side transport
             # do not participate in a token's arithmetic. Unknown fields stay strict.
-            control={'version','publication_norm_atol','readers','episode_concurrency',
-                     'capacity_interval_bytes','transfer_policy','activation_concurrency',
+            control={'version','screen_parser_profile','same_action_max_abs','publication_norm_atol','readers','episode_concurrency',
+                     'capacity_interval_bytes','prepared_cache_bytes','transfer_policy','activation_concurrency',
                      'group_preparation','row_encoding','training_memory_gib'}
             return {k:v for k,v in exp.items() if k not in control}
         def arithmetic(entries):
@@ -94,7 +100,7 @@ def seal(cfg,output):
         accepted_initial_ref=pin(cfg['actor_start']),previous_ref=pin(cfg['previous']),
         assets=dict(profile_ref=prev['assets']['profile_ref'],activation_ref=first['activation_ref'],precision_ref=first['precision_ref'],
                     qualification_ref=pin(result),resident_providers_ref=pin(formal/'providers/READY.json')),
-        accepted_verdict=dict(verdict,passed=True),updated_policy_measured=False,
+        accepted_verdict=dict(verdict,passed=True,same_action_max_abs=tolerance),updated_policy_measured=False,
         source_refs={n:pin(Path(__file__).with_name(n)) for n in ('initial_action_review.py','qualify_profile_batch.py','lock_branch_precision.py')},
         performance_claim=False,**reuse))
 

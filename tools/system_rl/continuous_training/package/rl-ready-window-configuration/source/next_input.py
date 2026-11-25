@@ -75,18 +75,21 @@ def bind_screen_sampling(source,screen):
                 and screen['population_scope']==pool['population_scope'] and screen['population']==pool['population']
                 and screen['system_version']==pool['system_version'],'different S1 panel receipt')
     else:
-        require(screen.get('population')==119881,'full official TRAIN screen required')
+        population=pool['official_train_count']
+        require(type(population) is int and population>0 and screen.get('population')==population,
+                'official TRAIN population differs from the sealed screen')
         if scoped:
             require(screen.get('screen_scope')=='node' and screen.get('node')==pool.get('node')=='P' and
                     pool.get('retrieval_population_complete') is True and pool.get('sealed') is True and
-                    not pool['synthetic_fixture'] and pool['official_train_count']==119881 and
+                    not pool['synthetic_fixture'] and
                     pool['version']==pool['inputs_ref']['sha256'],'node screen release identity')
-        else:require(pool.get('population_complete') is True and pool.get('official_train_count')==119881
+        else:require(pool.get('population_complete') is True
                 and pool.get('synthetic_fixture') is False and pool.get('unknown_count',0)==0,
                 'formal sampling requires closed full population')
         require(sampling['schema']=='dataset-sampling-config-v1' and sampling['purpose']=='screen'
-                and sampling['split']=='TRAIN' and sampling['scope']==('node' if scoped else 'system')
-                and sampling['error_success']==dict(error=.8,success=.2), 'formal historical sampling contract')
+                and sampling['split']=='TRAIN' and sampling['scope']==('node' if scoped else 'system'), 'formal historical sampling contract')
+        from node_screen_selection import outcome_mix
+        outcome_mix(sampling)
         require(sampling['pool_version']==pool['version'] and
                 sampling['system_version']==screen['system_version'],'formal sampling version differs')
         require(set(sampling['domain_mix'])=={'real','synthetic'} and
@@ -143,15 +146,21 @@ def migrate(input_ref,policy_ref,checkpoint_ref,output):
 
 def capture_input(input_ref,screen,policy,witness,learning,resume,output,*,root_seed=None,sampling_round=0,cohort_sequence=0):
     nxt=copy.deepcopy(read(input_ref));root=Path(output)
-    require(screen['population']==119881 and screen['complete'],'full TRAIN source required')
+    pool=read(screen['screen_ref'])
+    panel=pool.get('schema')=='node-panel-selection-v1'
+    require(screen['complete'] and (bool(screen.get('sampling_config_ref')) if panel else screen['population']==pool['official_train_count']>0),
+            'complete panel or full TRAIN source required')
     if screen.get('sampling_config_ref'):bind_screen_sampling(nxt,screen)
     require(nxt.get('prepare_mode') not in ('bounded_train_probe','finite_diagnostic_capture') and
             nxt['sampling'].get('purpose')=='screen','formal capture cannot retain diagnostic selector')
-    pool=read(screen['screen_ref']);nxt['screen_ref']=screen['screen_ref']
-    nxt['sampling'].update(pool_version=pool['version'],system_version=screen['system_version'],error_success=dict(error=.8,success=.2))
+    nxt['screen_ref']=screen['screen_ref']
+    if not panel:
+        nxt['sampling'].update(pool_version=pool['version'],system_version=screen['system_version'])
     if root_seed is not None:
         seeds=derive_seeds(root_seed,sampling_round,cohort_sequence)
-        nxt['sampling']['seed']=seeds['sampling'];nxt['capture']['seed']=seeds['generation']
+        if panel:seeds['sampling']=nxt['sampling']['seed']
+        else:nxt['sampling']['seed']=seeds['sampling']
+        nxt['capture']['seed']=seeds['generation']
         nxt['sampling_lineage']=dict(root_seed=root_seed,sampling_round=sampling_round,cohort_sequence=cohort_sequence,**seeds)
     nxt['policy'].update(current_ref=policy,runtime_evidence_ref=witness)
     nxt['capture'].update(endpoint_policy_ref=witness,transport_config_ref=screen['transport_config_ref'])
@@ -163,6 +172,9 @@ def capture_input(input_ref,screen,policy,witness,learning,resume,output,*,root_
     install(task)
     consumer=read(nxt['consumer_config_ref']);clock=task.create_clock(read(learning),read(nxt['clock_state_ref']),consumer_config=consumer)
     phase=clock.phase();nxt['rollout_scope']=phase['rollout_scope']
+    if panel:
+        from node_screen_selection import phase_inputs
+        phase_inputs(nxt,phase,pool)
     if phase['rollout_scope']=='node':
         release=nxt.get('phase_frozen_upstream_ref')
         require(release is not None and pin(release)['sha256']==phase['frozen_upstream_release'],'phase-frozen upstream release missing/drifted')
@@ -183,7 +195,21 @@ def bind_phase(input_ref,screen,output):
         existing=nxt.get('phase_binding')
         if existing and existing['phase_id']==phase['id']:
             require(existing['release_ref']['sha256']==phase['frozen_upstream_release'],'phase upstream release drift')
-            return dict(input_ref=pin(input_ref),learning_ref=nxt['learning_config_ref'])
+            if read(release).get('schema')!='node-panel-selection-v1':
+                return dict(input_ref=pin(input_ref),learning_ref=nxt['learning_config_ref'])
+            require(phase['target_nodes']==[nxt['sampling']['node']]
+                    and nxt.get('phase_frozen_upstream_ref')==existing['release_ref'],'branch panel identity differs')
+            if existing['release_ref']==release:
+                if read(input_ref)!=nxt:
+                    return dict(input_ref=write(root/'INPUT.json',nxt),learning_ref=nxt['learning_config_ref'])
+                return dict(input_ref=pin(input_ref),learning_ref=nxt['learning_config_ref'])
+            # At the first screen the branch pins the knowledge used to BUILD
+            # the panel. It cannot pin a pool containing responses not yet made.
+            branch=read(nxt['branch_initial_ref'])
+            require(step==branch['step']==0 and not any(state[k] for k in ('groups','attempts','validations'))
+                    and branch['node']==nxt['sampling']['node'] and branch['learning_ref']==nxt['learning_config_ref']
+                    and branch['clock_ref']==nxt['clock_state_ref'] and branch['frozen_upstream_ref']==existing['release_ref']
+                    and branch['policy_ref']==nxt['policy']['current_ref'],'cannot replace consumed panel or original branch')
         # Future node phases get a valid initial lineage pin; each is rebound
         # once on its actual entry, never from a caller-written future hash.
         for future in learning['phases']:
@@ -261,8 +287,8 @@ def diagnostic_input(input_ref,screen,policy,witness,output,*,root_seed,sampling
     nxt['authorization']=dict(nxt['authorization'],native_training=False)
     nxt['native']=dict(nxt['native'],enabled=False)
     if screen:
-        require(screen['complete'] and screen['population']==119881,'diagnostic source needs complete TRAIN pool')
-        pool=read(screen['screen_ref']);nxt['screen_ref']=screen['screen_ref']
+        require(screen['complete'] and screen['population']==pool['official_train_count']>0,'diagnostic source needs complete TRAIN pool')
+        nxt['screen_ref']=screen['screen_ref']
         nxt['sampling'].update(pool_version=pool['version'],system_version=screen['system_version'])
         nxt['capture']['transport_config_ref']=screen['transport_config_ref']
     if sampling:
@@ -274,10 +300,10 @@ def diagnostic_input(input_ref,screen,policy,witness,output,*,root_seed,sampling
     return write(root/'INPUT.json',nxt)
 
 
-def phase_validation(input_ref,dev_ref,quality_ref,passed,output):
+def phase_validation(input_ref,dev_ref,quality_ref,passed,output,*,dataset_ref):
     """Attach full DEV business evidence through the original Clock API."""
     require(passed,'phase DEV business gate rejected; configured stop_preserve')
-    report=read(dev_ref);require(report['evaluation_complete'] and report['denominator']==report['scored']==8690,'phase validation needs full DEV')
+    dataset=read(dataset_ref);report=read(dev_ref);require(dataset['split']=='DEV' and dataset['synthetic'] is False and report['evaluation_complete'] and report['denominator']==report['scored']==dataset['population']>0,'phase validation needs full DEV')
     quality=read(quality_ref)
     require(quality.get('passed') is True if quality.get('schema')=='omni-phase-acceptance-v1'
             else quality['business_acceptance']['dev_selection_eligible'],'paired phase DEV gate failed')

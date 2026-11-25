@@ -273,12 +273,12 @@ def inherited_screen(config, state, witness):
             and origin['program_template_ref'] == config['program_template_ref']
             and origin['program_predecessor_output'] == config['program_predecessor_output'],
             'initial DATA result belongs to a different policy, population or configuration')
-    if answer.get('schema')=='node-screen-data-result-v1':
+    if answer.get('schema') in ('node-screen-data-result-v1','node-panel-data-result-v1'):
         from node_screen_selection import inherited_cost
         actual_tokens=inherited_cost(answer,request_ref,request)
         upper=request['budget']['tokens_upper']
         require(actual_tokens<=upper and state['charged_tokens_upper']+upper<=config['budget']['total_tokens'],
-                'initial P screen exceeds the recorded envelope')
+                'initial node screen exceeds the recorded envelope')
         state['charged_tokens_upper']+=upper
         state['inherited_screen']=dict(response_ref=response_ref,request_ref=request_ref,usage_ref=answer['usage_ref'],
             actual_cost_units=actual_tokens,tokens_upper=upper)
@@ -290,7 +290,7 @@ def inherited_screen(config, state, witness):
     require(result['status'] == 'COMPLETE' and result['sample']['status'] == 'SCREEN_SAMPLE_COMPLETE'
             and program['request_ref'] == request_ref and program['stages'] == ['TRAIN']
             and cursor['stage'] == 'DONE' and cursor['output'] == answer['program_predecessor_output']
-            and answer['population'] == result['sample']['observed'] == 119881
+            and answer['population'] == result['sample']['observed'] == read(request['dataset_ref'])['population'] > 0
             and result['sample']['pool'] == answer['screen_ref']
             and pool['population_complete'] and not pool['synthetic_fixture'],
             'initial DATA result requires a closed original full TRAIN screen')
@@ -712,7 +712,7 @@ def run(config_path, *, resume_placement=None):
                         state['phase']='phase_stopped' if sample_spec(config) else 'freeze'
                         persist();continue
                     from next_input import phase_validation
-                    state['input_ref']=phase_validation(state['input_ref'],dev['score_ref'],phase_ref,True,root/f'validation-{step:06d}')
+                    state['input_ref']=phase_validation(state['input_ref'],dev['score_ref'],phase_ref,True,root/f'validation-{step:06d}',dataset_ref=config['datasets']['DEV'])
                     state['phase_baseline_dev_ref']=dev['score_ref']
                     state['monitor_phase']=[p for p in learning['phases'] if p['start_step']<=step][-1]['id']
                     state['node_best']=None;state['stale']=0;state['node_stale']=0;state['system_stale']=0

@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 from build import save
-from source.config_profile import resolve, bind_environment, digest
+from source.config_profile import stage_config, bind_environment, digest
 
 
 def read(path):
@@ -62,6 +62,12 @@ def build(cfg,out,space):
     assets={Path(ref['path']).name:ref for ref in seal['artifacts']}
     knowledge,cache,runtime=(read(checked(assets[n])) for n in ('knowledge.private.json','retrieval.private.json','s1.runtime.json'))
     needed(cache['knowledge_id']==knowledge['knowledge_id'] and runtime['s1_consumption']['cache_id']==cache['cache_id'],'different S1 policy/bank')
+    if 'max_ranked_neighbors' in cfg:
+        depth=cfg['max_ranked_neighbors']
+    else:
+        # Compatibility with the original stage profile. New experiments supply depth explicitly.
+        depth=read(Path(__file__).with_name('S1-RECORDINGS.template.json'))['max_ranked_neighbors']
+    needed(type(depth) is int and depth>0,'invalid neighbor depth')
     folds={v['fold_id']:v['types'] for v in knowledge['folds']}
     bank={v['source_id']:v['source_component'] for v in cache['bank']}
     needed(len(bank)==len(cache['bank']) and folds,'duplicate bank or empty folds')
@@ -95,7 +101,7 @@ def build(cfg,out,space):
                 needed(domain==shard['domain'] and v['source_id']==domain+':'+uid and
                        v['recording_file']==file and v['source_record_sha256']==record_sha,'label/source mismatch')
                 ranked=ranks.pop(rid);keys=[(-score,str(sid)) for sid,score in ranked]
-                needed(keys==sorted(keys) and len(ranked)<=32 and len({i for i,_ in ranked})==len(ranked)
+                needed(keys==sorted(keys) and len(ranked)<=depth and len({i for i,_ in ranked})==len(ranked)
                        and all(math.isfinite(s) and i in bank and bank[i]!=v['component_id'] for i,s in ranked),'illegal S1 neighbor')
                 domains[domain]+=1;decisions[v['source_decision']]+=1
                 if v['source_decision']!='allowed' or types is None:continue
@@ -115,7 +121,7 @@ def prepare(template,site):
     from multimodal_jev.local_runtime_storage import check_paths
     profile=read(site)
     if profile['schema']=='omni-local-profile-v2':profile,_=bind_environment(profile,os.environ)
-    cfg=resolve(read(template),profile);out=Path(cfg['output'])
+    cfg=stage_config(read(template),profile,'s1-recording-pages-v1');out=Path(cfg['output'])
     def space():
         checks=check_paths({'s1_pages':out},min_free_fraction=.10)
         needed(all(v['free_bytes']>=20*1024**3+cfg['storage_budget_bytes'] for v in checks),'storage reserve')

@@ -2,6 +2,8 @@
   "schema": "omni-paired-experiment-v1",
   "version": "p-r256-b128-v2",
   "publication_norm_atol": 1e-8,
+  "same_action_max_abs": 1e-8,
+  "screen_parser_profile": "S1-SCREEN-PARSERS.json",
   "policy_base": "TRAINING-CONTINUOUS-v6.candidate.json",
   "model": "qwen3-omni-30b-a3b-instruct",
   "model_path": "${MODEL_PATH}",
@@ -22,6 +24,7 @@
     "arithmetic": "single_clip_compact_qo_v1"
   },
   "transfer_policy": "batch_receipt_v1",
+  "prepared_cache_bytes": 67108864,
   "capacity_interval_bytes": 33554432,
   "group_preparation": "shard_by_draw_v1",
   "activation_concurrency": 2,

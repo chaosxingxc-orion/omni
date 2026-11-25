@@ -9,13 +9,13 @@ from seal_s1_training_roster import seal
 from source.config_profile import digest
 
 
-def check(history,release,output):
+def check(history,release,output,branch_ref=None):
     sys.path.insert(0,str(release/'tree/parents/jev-system-rl/implementation'))
     import dependencies  # Root paths are derived from the actual packaged module.
     sys.path[:0]=[str(Path(__file__).resolve().parent/'source'),str(release/'tree/parents/jev-system-rl/implementation'),
                   str(release/'tree/parents/fresh-cohort-successor')]
     from next_input import bind_screen_sampling
-    from node_screen_selection import selection,phase_inputs
+    from node_screen_selection import selection,phase_inputs,panel_cost
     from sampled_training import prepare,bind_window
     from training_references import window_draws
     from fresh_adapter import policy as scope_policy
@@ -67,6 +67,10 @@ def check(history,release,output):
         cfg=dict(output=str(tmp/'seal'),screen=save(tmp/'score.json',evidence),static_inputs=save(tmp/'inputs.json',
                  dict(schema='s1-static-training-inputs-v1',partition=sr,rows=static)))
         seal(cfg);pr=pin(tmp/'seal/NODE-POOL.json');pool=read(checked(pr));sampling=pool['sampling'];n=sampling['sample_count']
+        roster=read(checked(pool['inputs_ref']))
+        total=panel_cost(pool,sampling,roster['usage_ref'])
+        usage=read(checked(roster['usage_ref']))
+        needed(usage['requests']==len(rows)>n and total==sum(x['total_tokens'] for x in usage['calls'].values()),'omitted non-selected screen costs')
         response=dict(complete=True,screen_scope='node',node='S1',screen_ref=pr,sampling_config_ref=pin(tmp/'seal/SAMPLING.json'),
             population_scope=pool['population_scope'],population=pool['population'],system_version=pool['system_version'])
         phase=dict(id='historical reader replay',start_step=0,target_nodes=['S1'],rollout_scope='node',frozen_upstream_release=pr['sha256'])
@@ -77,7 +81,25 @@ def check(history,release,output):
         conf=dict(execution_mode='formal',sampled_training=spec,max_optimizer_updates=n,root_seed=design['seed'])
         initial=save(tmp/'source.json',source);state=dict(input_ref=initial,screen=response);prepare(conf,state,tmp)
         ds=read(checked(state['sampled_dataset_ref']));selected=read(checked(ds['selected_ref']))
-        ids=[];sizes=[]
+        ids=[];sizes=[];capture_checked=False
+        if branch_ref:
+            from next_input import bind_phase,capture_input
+            from run_package import pin as dp_pin
+            branch=read(branch_ref);lr=branch['learning_ref'];clock=branch['clock_ref']
+            parents=release/'tree/parents'
+            pins={k:dp_pin(parents/g/k) for g,names in [('unified-learning',('kernel.py','learning.py','scoring.py','schedule.py','dataset.py','fixtures.py')),
+                  ('system-objective-cpu',('objective.py','runtime.py'))] for k in names}
+            src=dict(source,clock_state_ref=clock,learning_config_ref=lr,branch_initial_ref=pin(branch_ref),policy=dict(current_ref=branch['policy_ref']),
+                     phase_frozen_upstream_ref=branch['frozen_upstream_ref'],
+                     phase_binding=dict(phase_id=read(checked(lr))['phases'][0]['id'],entry_step=0,release_ref=branch['frozen_upstream_ref']),
+                     consumer_config_ref=save(tmp/'pinned-consumer.json',dict(source_pins=pins)))
+            bound=bind_phase(save(tmp/'initial-branch-input.json',src),response,tmp/'bound')
+            actual=capture_input(bound['input_ref'],dict(response,transport_config_ref=h['seal']),branch['policy_ref'],h['seal'],
+                    bound['learning_ref'],None,tmp/'capture',root_seed=19,cohort_sequence=2)
+            created=read(checked(actual))
+            needed(created['sampling']==sampling and created['sampling_lineage']['sampling']==sampling['seed']
+                   and created['capture']['seed']==created['sampling_lineage']['generation'] and created['rollout_scope']=='node','capture changed sampling')
+            capture_checked=True
         for i in range(0,n,3):
             state['sampled_consumed']=i;wr=bind_window(conf,state,initial,tmp/'windows'/str(i));src=read(checked(wr))
             plan=cohort.draw(src,tmp,persist=False); w=read(checked(src['sampled_window_ref']))
@@ -92,10 +114,11 @@ def check(history,release,output):
         rejected('wrong population',lambda:bind_screen_sampling({},dict(response,population=119881)))
         rejected('wrong selection seed',lambda:selection(pool,dict(sampling,seed=sampling['seed']+1)))
         rejected('incomplete panel',lambda:seal(dict(cfg,screen=save(tmp/'partial.json',dict(evidence,observed=0,panel_complete=False)))))
-    return save(output,dict(source_collection=h['seal'],screened=len(rows),selected=n,window_sizes=sizes,rejected=errors,
+    return save(output,dict(source_collection=h['seal'],screened=len(rows),selected=n,window_sizes=sizes,rejected=errors,screen_calls_charged=usage['requests'],screen_tokens=total,actual_clock_capture_checked=capture_checked,
                             production_panel_responses_added=0,model_calls=0,formal_training_set=False))
 
 if __name__=='__main__':
     cli=argparse.ArgumentParser(description=__doc__)
     for k in ('history','release','output'):cli.add_argument(k,type=Path)
-    a=cli.parse_args();print(json.dumps(check(a.history,a.release,a.output)))
+    cli.add_argument('--branch',type=Path)
+    a=cli.parse_args();print(json.dumps(check(a.history,a.release,a.output,a.branch)))

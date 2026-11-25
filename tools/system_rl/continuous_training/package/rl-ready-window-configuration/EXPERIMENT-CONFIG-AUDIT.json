@@ -1,0 +1,106 @@
+{
+  "runtime_members": {
+    "start_experiment.py": [
+      119881,
+      8690,
+      5000
+    ],
+    "lock_branch_precision.py": [
+      119881,
+      8690,
+      5000
+    ],
+    "assemble_sampled_p.py": [
+      119881,
+      8690,
+      5000
+    ],
+    "prepare_s1_recordings.py": [
+      119881,
+      8690,
+      32
+    ],
+    "sample_s1_folds.py": [
+      119881,
+      94533,
+      480,
+      17
+    ],
+    "s1_panel_selection.py": [
+      119881,
+      94533,
+      480,
+      17
+    ],
+    "seal_s1_training_roster.py": [
+      119881,
+      94533,
+      480,
+      17
+    ],
+    "source/next_input.py": [
+      119881,
+      8690,
+      0.8,
+      0.2
+    ],
+    "source/node_screen_selection.py": [
+      119881,
+      8690,
+      0.8,
+      0.2
+    ],
+    "source/cohort.py": [
+      119881,
+      8690,
+      0.8,
+      0.2
+    ],
+    "source/recording_inputs.py": [
+      119881,
+      8690
+    ],
+    "source/sampled_training.py": [
+      119881,
+      8690
+    ],
+    "source/iteration.py": [
+      119881,
+      8690
+    ],
+    "source/preparation_executor.py": [
+      "general_quirky",
+      "qa_factoid"
+    ]
+  },
+  "transition_members": {
+    "collection-dispatch-integration/pool_union.py": [
+      119881,
+      50628,
+      69253
+    ],
+    "collection-dispatch-integration/sampling.py": [
+      119881,
+      50628,
+      69253,
+      0.8,
+      0.2
+    ],
+    "collection-scale-successor/code/stream_pool.py": [
+      119881,
+      50628,
+      69253
+    ],
+    "unified-learning/dataset.py": [
+      119881
+    ],
+    "p-card-field-repair/export.py": [
+      "general_quirky",
+      "qa_factoid"
+    ],
+    "p-card-field-repair/repair.py": [
+      "general_quirky",
+      "qa_factoid"
+    ]
+  }
+}

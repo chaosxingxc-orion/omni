@@ -6,5 +6,6 @@
   "knowledge_release": "${KNOWLEDGE_RELEASE}",
   "output": "${OUTPUT}",
   "recordings_per_macro": 128,
-  "storage_budget_bytes": 1073741824
+  "storage_budget_bytes": 1073741824,
+  "max_ranked_neighbors": 32
 }

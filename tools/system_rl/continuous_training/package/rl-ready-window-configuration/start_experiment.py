@@ -33,6 +33,11 @@ def execute(argv, **kwargs):
 
 def spec(path, site):
     request = read(path)
+    if request.get('schema')=='recording-screen-experiment-v1':
+        from source.config_profile import stage_config
+        profile=read(site['profile'])
+        if profile['schema']=='omni-local-profile-v2':profile,_=bind_environment(profile,os.environ)
+        request=stage_config(request,profile,'formal-target-start-v2')
     scoped=request.get('schema') in ('formal-target-start-v1','formal-target-start-v2')
     fields={'schema','run_id','baseline','experiment'}|({'target'} if scoped else set())
     if request.get('schema')=='formal-target-start-v2':fields.update(('initialization','training_input_ref'))
@@ -142,9 +147,8 @@ def start(path,site_path,plan=False,rehearse=False):
         if data['input_ref']!=req['training_input_ref'] or data['policy_ref']!=reg['policy_ref']:
             raise ValueError('DATA request belongs to another starting policy or roster')
         verdict=read(checked(b['diagnostic_ready']).parent/'VERDICT.json')
-        if (verdict['policy']!=info['initial_policy_version'] or verdict['tokens']<verdict['rows'] or
-                verdict['rows']<=0 or verdict['nonzero']!=0 or verdict['max_abs']!=0):
-            raise ValueError('same-action evidence belongs to a different policy')
+        from paired_experiment import check_same_action
+        check_same_action(verdict,info['initial_policy_version'],exp)
 
     frozen=b.get('dispatch_inputs')
     if frozen is not None:

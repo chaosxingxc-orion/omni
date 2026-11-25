@@ -1,6 +1,7 @@
 """Materialize reviewed training/control changes using the original release composer."""
 import argparse,json
 from pathlib import Path
+from release_source import source_path
 from build import build_delta,pin,save
 from verify_runtime_sources import training_snapshot
 
@@ -16,9 +17,7 @@ def build(root,policy,locked,precision,base,logical,composer,budget,output):
             raise ValueError('invalid release member')
         if Path(source).is_absolute() or '..' in Path(source).parts or source not in table:
             raise ValueError('source not named in release snapshot: '+source)
-        path=(root/source).resolve(strict=True)
-        if not path.is_relative_to(root.resolve()) or not path.is_file():
-            raise ValueError('invalid release file: '+source)
+        path=source_path(root,source)
         src=pin(path)
         if table[source]!=src['sha256']:raise ValueError('source outside release snapshot: '+source)
         original=base/'tree'/rel

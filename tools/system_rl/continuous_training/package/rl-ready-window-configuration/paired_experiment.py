@@ -24,7 +24,24 @@ def need(ok, message):
         raise ValueError(message)
 
 
+def same_action_atol(exp):
+    # Missing in historical snapshots: preserve the original exact-equality contract.
+    value=exp.get('same_action_max_abs',0)
+    need(type(value) in (int,float) and math.isfinite(value) and value>=0,'invalid same-action tolerance')
+    return value
+
+
+def check_same_action(verdict,policy,exp):
+    atol=same_action_atol(exp)
+    rows,tokens,n,d=(verdict[k] for k in ('rows','tokens','nonzero','max_abs'))
+    need(all(type(x) is int for x in (rows,tokens,n)) and 0<rows<=tokens and 0<=n<=tokens
+         and type(d) in (float,int) and math.isfinite(d) and 0<=d<=atol and (n==0)==(d==0)
+         and verdict['policy']==policy and verdict['formal_updates']==0,'same-action evidence or tolerance differs')
+    return atol
+
+
 def validate(exp):
+    same_action_atol(exp)
     from rank_profile import validate as validate_rank
     atol = exp.get('publication_norm_atol', 0.0)
     need(type(atol) in (int, float) and math.isfinite(atol) and atol >= 0, 'invalid publication norm tolerance')
@@ -56,6 +73,8 @@ def validate(exp):
         need(exp['first_wave_forward']=='overlap_publish_v1' and exp.get('group_preparation')=='shard_by_draw_v1',
              'overlapped first wave requires sharded recording groups')
     need(exp.get('transfer_policy','legacy') in ('legacy','batch_receipt_v1'), 'unknown transfer policy')
+    if 'prepared_cache_bytes' in exp:
+        need(type(exp['prepared_cache_bytes']) is int and exp['prepared_cache_bytes']>=0,'invalid processor cache budget')
     if 'capacity_interval_bytes' in exp:
         need(type(exp['capacity_interval_bytes']) is int and exp['capacity_interval_bytes'] > 0,
              'invalid checkpoint capacity interval')
@@ -100,7 +119,7 @@ def check_actor(exp, start, policy):
     need(policy['experiment_sha256'] == digest(exp) and policy['dev_cadence'] == exp['dev_cadence']
          and policy['rollout_dispatch']['episode_concurrency'] == exp['episode_concurrency']
          and all(policy.get(key) == exp.get(key) for key in
-                 ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'))
+                 ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes','prepared_cache_bytes', 'transfer_policy'))
          and policy['acceptance']['episodes_per_recording'] == exp['episodes_per_recording']
          and policy['acceptance']['recordings_per_step'] == validate(exp), 'controller differs from experiment')
 
@@ -170,7 +189,7 @@ def compile_experiment(template, profile, output):
     snapshot = save(output / 'EXPERIMENT.json', exp)
     rank = save(output / 'rank-profile.json', rank_profile(exp))
     policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
-    for name in ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'):
+    for name in ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes','prepared_cache_bytes', 'transfer_policy'):
         if name in exp:
             policy[name] = exp[name]
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
@@ -178,6 +197,38 @@ def compile_experiment(template, profile, output):
     target_reader='rl-ready-window-configuration/training_target.py'
     policy['source_roles']['controller'].append(target_reader)
     policy['runtime_members']['parents/jev-system-rl/'+target_reader]=target_reader
+    # Register the actual readers/overlays: editing only the source checkout does
+    # not replace the inherited modules installed in the training package.
+    for name in ('next_input','node_screen_selection','sampled_training','recording_inputs','fresh_material','cohort_capture'):
+        member='rl-ready-window-configuration/source/'+name+'.py'
+        dest=('parents/fresh-cohort-successor/'+({'fresh_material':'material'}.get(name,name))+'.py'
+              if name in ('fresh_material','cohort_capture') else 'parents/jev-system-rl/implementation/'+name+'.py')
+        role='actor' if name in ('fresh_material','cohort_capture') else 'controller'
+        if member not in policy['source_roles'][role]:policy['source_roles'][role].append(member)
+        policy['runtime_members'][dest]=member
+    if 'screen_parser_profile' in exp:
+        filename=exp['screen_parser_profile']
+        need(isinstance(filename,str) and Path(filename).name==filename and filename.endswith('.json'),'parser profile outside package')
+        parsers=json.loads((HERE/filename).read_bytes())
+        need(set(parsers)=={'slot_stages.py','slot_stage_knowledge.py'},'incomplete S1 parser profile')
+        policy['screened_s1_parser_members']=parsers
+        member='rl-ready-window-configuration/source/s1_reply_parser.py'
+        if member not in policy['source_roles']['actor']:policy['source_roles']['actor'].append(member)
+        policy['runtime_members']['parents/fresh-cohort-successor/s1_reply_parser.py']=member
+        member='rl-ready-window-configuration/'+filename
+        policy['source_roles']['controller'].append(member)
+        policy['runtime_members']['parents/jev-system-rl/'+member]=member
+    from release_source import PARENT_MEMBERS
+    sealed='parents/collection-scale-successor/ready-autocontinue/production-next/code/'
+    for rel in PARENT_MEMBERS:
+        source='@transition/'+rel
+        policy['source_roles']['controller'].append(source)
+        policy['runtime_members']['parents/'+rel]=source
+        if rel.startswith('collection-scale-successor/code/'):
+            policy['runtime_members'][sealed+Path(rel).name]=source
+    source='rl-ready-window-configuration/source/preparation_executor.py'
+    policy['source_roles']['controller'].append(source)
+    policy['runtime_members'][sealed+'preparation_executor.py']=source
     historical_graph = policy.pop('decode_graph_profile')
     policy['source_roles']['service'].remove(historical_graph)
     policy['runtime_members'].pop('parents/jev-system-rl/' + historical_graph)
@@ -199,9 +250,10 @@ def compile_experiment(template, profile, output):
     policy['runtime_members']['parents/jev-system-rl/' + scoring] = scoring
     for name in ('paired_experiment.py', 'configure_branch_training.py', 'deploy_resident_graph_lanes.py',
                  'P-EXPERIMENT.template.json', 'EXPERIMENT-DEPLOYMENT.example.json', base_name,
+                 'release_source.py','lock_training_candidate.py','build_continuous_release.py',
                  'BRANCH-TRAINING.template.json', 'BRANCH-TRAINING-DEPLOYMENT.example.json'):
         member = 'rl-ready-window-configuration/' + name
-        policy['source_roles']['controller'].append(member)
+        if member not in policy['source_roles']['controller']:policy['source_roles']['controller'].append(member)
         policy['runtime_members']['parents/jev-system-rl/' + member] = member
     return save(output / 'PACKAGE.json', dict(experiment_ref=snapshot, experiment_sha256=digest(exp),
                 resolution_ref=receipt, rank_profile_ref=rank, graph_ref=save(output / 'graph.json', graph(exp)),

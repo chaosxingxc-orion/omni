@@ -1,0 +1,120 @@
+{
+  "schema": "recording-screen-experiment-v1",
+  "parameters": {
+    "RECORDINGS_PER_MACRO": 128,
+    "STORAGE_BUDGET_BYTES": 1073741824,
+    "MAX_RANKED_NEIGHBORS": 32,
+    "SEED": 17,
+    "FOLDS": "all",
+    "PER_FOLD_DOMAIN": {
+      "present": 12,
+      "absent": 12
+    },
+    "HOLDOUT_PERCENT": 20,
+    "TRAINING_FOLDS": "all",
+    "CAP_PER_DOMAIN_FOLD_OUTCOME": {
+      "miss": 12,
+      "extra": 12,
+      "mixed": 12,
+      "correct_positive": 2,
+      "correct_empty": 2
+    }
+  },
+  "stages": {
+    "s1-recording-pages-v1": {
+      "schema": "s1-recording-pages-v1",
+      "recall": "${RECALL}",
+      "dataset": "${DATASET}",
+      "shards": "${SHARDS}",
+      "knowledge_release": "${KNOWLEDGE_RELEASE}",
+      "output": "${OUTPUT}",
+      "recordings_per_macro": "${RECORDINGS_PER_MACRO}",
+      "storage_budget_bytes": "${STORAGE_BUDGET_BYTES}",
+      "max_ranked_neighbors": "${MAX_RANKED_NEIGHBORS}"
+    },
+    "s1-fold-panel-v1": {
+      "schema": "s1-fold-panel-v1",
+      "seed": "${SEED}",
+      "per_fold_domain": "${PER_FOLD_DOMAIN}",
+      "folds": "${FOLDS}",
+      "pages": "${PAGES}",
+      "admission": "${ADMISSION}",
+      "kb_sha256": "${KB}",
+      "recall_results_sha256": "${RECALL_RESULTS_SHA256}",
+      "expected_admissions": "${GATE_COUNT}",
+      "output": "${PANEL_OUT}"
+    },
+    "s1-partition-config-v1": {
+      "schema": "s1-partition-config-v1",
+      "inputs": "${S1_INPUTS}",
+      "seed": "${SEED}",
+      "holdout_percent": "${HOLDOUT_PERCENT}",
+      "output": "${S1_PARTITION_OUTPUT}"
+    },
+    "s1-outcome-config-v1": {
+      "schema": "s1-outcome-config-v1",
+      "partition": "${S1_PARTITION}",
+      "collections": "${S1_CLOSED_COLLECTIONS}",
+      "system_version": "${S1_FROZEN_SYSTEM_VERSION}",
+      "execution_version": "${S1_FROZEN_EXECUTION_VERSION}",
+      "seed": "${SEED}",
+      "training_folds": "${TRAINING_FOLDS}",
+      "cap_per_domain_fold_outcome": "${CAP_PER_DOMAIN_FOLD_OUTCOME}",
+      "output": "${S1_OUTCOME_OUTPUT}"
+    },
+    "s1-static-training-input-config-v1": {
+      "schema": "s1-static-training-input-config-v1",
+      "partition": "${S1_PARTITION}",
+      "output": "${S1_TRAIN_INPUT_OUTPUT}"
+    },
+    "s1-screen-roster-config-v1": {
+      "schema": "s1-screen-roster-config-v1",
+      "static_inputs": "${S1_PREPARED_INPUTS}",
+      "screen": "${S1_OBSERVED_OUTCOMES}",
+      "output": "${S1_ROSTER_OUTPUT}"
+    },
+    "formal-target-start-v2": {
+      "schema": "formal-target-start-v2",
+      "target": "S1",
+      "run_id": "s1-independent-r256-01",
+      "baseline": "s1-r256-b128",
+      "initialization": {
+        "mode": "base_adapter",
+        "source_ref": "${INITIAL_SOURCE_REF}"
+      },
+      "training_input_ref": "${TRAINING_INPUT_REF}",
+      "experiment": {
+        "same_action_max_abs": 1e-08,
+        "actor_batch": {
+          "microbatch_per_card": 8,
+          "gradient_accumulation_steps": 2
+        },
+        "lora": {
+          "lora_rank": 256,
+          "lora_alpha": 512,
+          "lora_dropout": 0.1
+        },
+        "episodes_per_recording": 4,
+        "episode_concurrency": 128,
+        "graph_widths": [
+          1,
+          4,
+          8,
+          16,
+          32,
+          64,
+          128
+        ],
+        "prepared_cache_bytes": 67108864
+      }
+    },
+    "node-panel-data-return-v1": {
+      "schema": "node-panel-data-return-v1",
+      "request_ref": "${DATA_REQUEST}",
+      "pool_ref": "${NODE_POOL}",
+      "sampling_ref": "${PANEL_SAMPLING}",
+      "release": "${TRAIN_RELEASE}",
+      "output": "${DATA_RESPONSE_PATH}"
+    }
+  }
+}

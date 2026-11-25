@@ -34,6 +34,24 @@ def resolve(template,profile):
         return out
     return visit(template)
 
+def stage_config(template,profile,stage):
+    """Resolve only the requested stage: later receipt macros need not exist yet."""
+    if template.get('schema')!='recording-screen-experiment-v1':
+        return resolve(template,profile)
+    if set(template)!={'schema','parameters','stages'} or stage not in template['stages']:
+        raise ValueError('missing or invalid recording experiment stage: '+stage)
+    params=template['parameters']
+    if not isinstance(params,dict) or params.keys() & profile['values'].keys():
+        raise ValueError('experiment and deployment macros overlap')
+    values={**profile['values'],**params}
+    if stage=='s1-fold-panel-v1' and 'RECALL_RESULTS_SHA256' not in values and isinstance(values.get('RECALL'),str):
+        values['RECALL_RESULTS_SHA256']=values['RECALL']  # old panel-only site profile
+    combined=dict(profile,values=values)
+    cfg=resolve(template['stages'][stage],combined)
+    if cfg.get('schema')!=stage:raise ValueError('different configured stage: '+stage)
+    return cfg
+
+
 def typed_value(name, value, kind, from_env):
     if from_env and kind in ('int', 'port', 'devices'):
         try:

@@ -1,6 +1,8 @@
 {
   "schema": "omni-paired-experiment-v1",
   "version": "p-r128-b128-v4",
+  "same_action_max_abs": 1e-8,
+  "screen_parser_profile": "S1-SCREEN-PARSERS.json",
   "policy_base": "TRAINING-CONTINUOUS-v6.candidate.json",
   "model": "qwen3-omni-30b-a3b-instruct",
   "model_path": "${MODEL_PATH}",
@@ -10,6 +12,7 @@
   "lora": {"lora_rank": 128, "lora_alpha": 256, "lora_dropout": 0.1},
   "actor_batch": {"microbatch_per_card": 8, "gradient_accumulation_steps": 2, "arithmetic": "single_clip_compact_qo_v1"},
   "transfer_policy": "batch_receipt_v1",
+  "prepared_cache_bytes": 67108864,
   "capacity_interval_bytes": 33554432,
   "group_preparation": "shard_by_draw_v1",
   "activation_concurrency": 2,

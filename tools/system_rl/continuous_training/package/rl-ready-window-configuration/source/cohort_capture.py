@@ -573,8 +573,12 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
     def broadcast_cache(value):
         objects=[value];dist.broadcast_object_list(objects,src=0);return objects[0]
     parity_first=None
-    prepared_cache=PreparedPacketCache(processor,native_config.get('prepared_cache_bytes',
-        config['capture'].get('prepared_cache_bytes',64*1024*1024)))
+    if 'prepared_cache_bytes' in config['capture']:
+        budget=config['capture']['prepared_cache_bytes']
+        require(native_config.get('prepared_cache_bytes',budget)==budget,'native cache differs from experiment')
+    else:
+        budget=native_config.get('prepared_cache_bytes',64*1024*1024)  # legacy snapshot
+    prepared_cache=PreparedPacketCache(processor,budget)
     batched_reference=None
     if native_config.get('reference_batch'):
         from reference_batch import frozen_reference_window

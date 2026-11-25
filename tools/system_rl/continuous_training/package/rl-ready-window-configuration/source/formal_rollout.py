@@ -426,6 +426,16 @@ def rearm_unissued_capture(config, request_ref, request, cohort, fence, lanes):
             os.close(fd)
 
 
+def project_screen_parser(source,spec):
+    """Pass the packaged parser selected at assembly to the capture reader."""
+    sampling=source['sampling']
+    if sampling['scope']!='node':return
+    key={'P':'screened_p_parser_member','S1':'screened_s1_parser_refs'}.get(sampling['node'])
+    if key:
+        require(spec.get(key),'missing configured parser for '+sampling['node'])
+        source['capture'][key]=spec[key]
+
+
 def capture(config, request_ref, request, root):
     spec, provider = settings(config)
     source = copy.deepcopy(read(request['input_ref']))
@@ -456,13 +466,14 @@ def capture(config, request_ref, request, root):
     source['native']['attempt_id'] = source['cohort_id']
     if 'official_index_cache_root' in spec:
         source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
-    for k in ('recording_macros_ref','training_input_layout','lane_storage'):
+    for k in ('recording_macros_ref','training_input_layout','lane_storage','prepared_cache_bytes'):
         if k in spec:source['capture'][k]=spec[k]
     if 'static_supply_ref' in spec:
         source['capture']['static_supply_ref']=spec['static_supply_ref']
     if 'prompt_length_index_ref' in spec:
         source['capture']['prompt_length_index_ref'] = spec['prompt_length_index_ref']
-    if spec.get('continuous_training'):source['capture']['screened_p_parser_member']=spec['screened_p_parser_member']
+    if spec.get('continuous_training'):
+        project_screen_parser(source,spec)
     if 'dispatch_unit' in spec:source['capture']['dispatch_unit']=spec['dispatch_unit']
     source['capture'].update(lanes=list(providers),episode_concurrency={k:spec['episode_concurrency'] for k in providers},
         endpoint_policy_ref=request['endpoint_witness_ref'],lane_transports={k:dict(

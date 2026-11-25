@@ -7,7 +7,7 @@ from pathlib import Path
 
 from build import save
 from prepare_s1_recordings import read, checked, needed
-from source.config_profile import resolve, bind_environment
+from source.config_profile import stage_config, bind_environment
 import os
 
 
@@ -65,4 +65,4 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('config');p.add_argument('--profile',required=True)
     a=p.parse_args();profile=read(a.profile)
     if profile['schema']=='omni-local-profile-v2':profile,_=bind_environment(profile,os.environ)
-    cfg=resolve(read(a.config),profile);print(json.dumps(save(cfg['output'],select(cfg))))
+    cfg=stage_config(read(a.config),profile,'s1-fold-panel-v1');print(json.dumps(save(cfg['output'],select(cfg))))

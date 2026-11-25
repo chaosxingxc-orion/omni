@@ -10,7 +10,7 @@ import random
 
 from build import pin, save
 from prepare_s1_recordings import checked, needed, read
-from source.config_profile import bind_environment, resolve
+from source.config_profile import bind_environment, stage_config
 
 
 def digest(value):
@@ -163,7 +163,7 @@ def main():
     p.add_argument('config');p.add_argument('--profile',required=True);a=p.parse_args()
     site=read(a.profile)
     if site['schema']=='omni-local-profile-v2':site,_=bind_environment(site,os.environ)
-    cfg=resolve(read(a.config),site);out=Path(cfg['output']);check_paths({'screen':out.parent},min_free_fraction=.10)
+    cfg=stage_config(read(a.config),site,'s1-partition-config-v1' if a.action=='split' else 's1-outcome-config-v1');out=Path(cfg['output']);check_paths({'screen':out.parent},min_free_fraction=.10)
     if a.action=='split':
         needed(cfg['schema']=='s1-partition-config-v1','split configuration required')
         result=partition(cfg)

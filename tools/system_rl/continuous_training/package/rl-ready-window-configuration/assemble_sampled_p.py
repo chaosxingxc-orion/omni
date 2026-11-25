@@ -24,20 +24,31 @@ def read_screen(manifest, output):
     draws,stats=selection(pool,source['sampling'])
     spec=read(cfg['workflow_ref'])['configuration']['sampled_training']
     require(0<len(draws)<=spec['sample_count'],'screen exceeds the configured training cap')
-    for draw in draws:
-        record=draw['record'];o=read(draw['recording_origin_ref'])
-        packet=read(record['online']['node_input_ref'])
-        labels=record['offline_supervision']['labels']
-        require(labels['gold_intent_id'] in packet['actual_returned_ranked_intent_ids']
-                and o['domain']==record['domain'],'gold label or recording domain differs from served packet')
-        audio=pin(o['audio_ref'])
-        with wave.open(audio['path'],'rb') as wav:
-            require(wav.getnchannels()==1 and wav.getnframes()>0 and wav.getsampwidth()==2
-                    and wav.getframerate()==16000,'invalid selected recording')
-        part,=[item for msg in packet['wire']['messages'] if isinstance(msg['content'],list)
-               for item in msg['content'] if item.get('type')=='input_audio']
-        require(hashlib.sha256(base64.b64decode(part['input_audio']['data'],validate=True)).hexdigest()
-                ==audio['sha256'],'selected recording differs from the served audio')
+    if pool['schema']=='node-panel-selection-v1':
+        from fresh_adapter import scope
+        with scope():
+            from official import sources,annotation
+            from material import node_screen_packet
+            with sources(source) as (bound,_):
+                for draw in draws:
+                    origin=read(draw['recording_origin_ref'])
+                    node_screen_packet(draw,dict(rollout_scope='node',target_nodes=[pool['node']]),
+                                       annotation(draw,bound),origin)
+    else:
+        for draw in draws:
+            record=draw['record'];o=read(draw['recording_origin_ref'])
+            packet=read(record['online']['node_input_ref'])
+            labels=record['offline_supervision']['labels']
+            require(labels['gold_intent_id'] in packet['actual_returned_ranked_intent_ids']
+                    and o['domain']==record['domain'],'gold label or recording domain differs from served packet')
+            audio=pin(o['audio_ref'])
+            with wave.open(audio['path'],'rb') as wav:
+                require(wav.getnchannels()==1 and wav.getnframes()>0 and wav.getsampwidth()==2
+                        and wav.getframerate()==16000,'invalid selected recording')
+            part,=[item for msg in packet['wire']['messages'] if isinstance(msg['content'],list)
+                   for item in msg['content'] if item.get('type')=='input_audio']
+            require(hashlib.sha256(base64.b64decode(part['input_audio']['data'],validate=True)).hexdigest()
+                    ==audio['sha256'],'selected recording differs from the served audio')
     return write(Path(output)/'SCREEN-CONSUMED.json',dict(screen_ref=ref,rows=len(draws),
                  cells=stats['cells'],actual_screen_tokens=tokens))
 
@@ -156,6 +167,7 @@ def assemble(manifest, output, *, bind_live):
                         'live inference deployment belongs to a different experiment')
             base['experiment_ref'] = cfg['experiment_ref']
             train['experiment_sha256'] = policy['experiment_sha256']
+            if 'prepared_cache_bytes' in exp:rollout['prepared_cache_bytes']=exp['prepared_cache_bytes']
             if 'publication_norm_atol' in exp:
                 train['publication_norm_atol'] = exp['publication_norm_atol']
         require(pin(deployment['policy_ref'])['sha256']==snap['policy_sha256'] and

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from build import pin,save
 from prepare_s1_recordings import read,checked,needed
-from source.config_profile import resolve,bind_environment,digest
+from source.config_profile import stage_config,bind_environment,digest
 
 
 def pcm(root,raw):
@@ -79,7 +79,7 @@ def main():
     cli=argparse.ArgumentParser(description=__doc__);cli.add_argument('config');cli.add_argument('--profile',required=True)
     a=cli.parse_args();profile=read(a.profile)
     if profile['schema']=='omni-local-profile-v2':profile,_=bind_environment(profile,os.environ)
-    cfg=resolve(read(a.config),profile)
+    cfg=stage_config(read(a.config),profile,'s1-static-training-input-config-v1')
     needed(cfg['schema']=='s1-static-training-input-config-v1','unexpected S1 input config')
     print(json.dumps(prepare(cfg,Path(cfg['output']))))
 if __name__=='__main__':main()

@@ -1,0 +1,12 @@
+{
+  "slot_stages.py": {
+    "path": "jev-system-rl/original-contact-package/speech_aware_evidence_acquisition/rails/slot_stages.py",
+    "bytes": 30148,
+    "sha256": "ff96f9d840e4d89e7aab0232438d24c0902b4033ca7277d7be6168ad466b71e8"
+  },
+  "slot_stage_knowledge.py": {
+    "path": "jev-system-rl/original-contact-package/speech_aware_evidence_acquisition/rails/slot_stage_knowledge.py",
+    "bytes": 23521,
+    "sha256": "9add84f52c69c9babf170f593651dc5963b1903f6927aa3817306ae1a70cb5d2"
+  }
+}
