@@ -88,8 +88,14 @@ def draw(config,root,*,fixture=False,persist=True):
     sampling=copy.deepcopy(config['sampling'])
     from policy import validate_scope
     validate_scope(config,fixture=fixture)
-    require(sampling['purpose']=='screen' and sampling['error_success']=={'error':.8,'success':.2},'full-screen historical 80/20 selection required')
     manifest=read(config['screen_ref'])
+    panel=manifest.get('schema')=='node-panel-selection-v1'
+    if panel:
+        from node_screen_selection import panel_binding
+        panel_binding(manifest,sampling)
+        require(config.get('sampled_window_ref'),'panel must consume the sealed selection')
+    else:
+        require(sampling['purpose']=='screen' and sampling['error_success']=={'error':.8,'success':.2},'full-screen historical 80/20 selection required')
     require(manifest['version']==sampling['pool_version'],'screen version mismatch')
     if config.get('sampled_window_ref'):
         window=read(config['sampled_window_ref']);dataset=read(window['dataset_ref'])
@@ -115,7 +121,10 @@ def draw(config,root,*,fixture=False,persist=True):
                  manifest.get('official_train_count')==119881 and manifest.get('synthetic_fixture') is False and
                  selected['statistics'].get('inputs_ref')==manifest['inputs_ref'] and
                  manifest['version']==manifest['inputs_ref']['sha256'])
-    require(fixture or locked_node or (manifest['official_train_count']==119881 and not manifest['synthetic_fixture'] and manifest['population_complete'] and manifest.get('unknown_count',0)==0),'complete real full119881 screen required')
+    if panel:
+        require(selected['statistics']['inputs_ref']==manifest['inputs_ref'] and
+                selected['statistics']['population_scope']==manifest['population_scope'],'window not from sealed panel')
+    require(fixture or panel or locked_node or (manifest['official_train_count']==119881 and not manifest['synthetic_fixture'] and manifest['population_complete'] and manifest.get('unknown_count',0)==0),'complete real full119881 screen required')
     require(fixture or all(not d['record'].get('synthetic_fixture') for d in draws),'fixture cannot enter real capture')
     identity=dict(screen=config['screen_ref'],sampling=sampling,policy=config['policy'],clock=config['clock_state_ref'],cohort_id=config.get('cohort_id',config['native']['attempt_id']),capture=config['capture'],learning=config['learning_config_ref'],consumer=config['consumer_config_ref'],native=config['native'],implementation={p.name:pin(p) for p in sorted(HERE.glob('*.py'))})
     if config.get('sampled_window_ref'):identity['sampled_window']=config['sampled_window_ref']
@@ -124,10 +133,11 @@ def draw(config,root,*,fixture=False,persist=True):
         d['query_draw_id']=version+':draw:'+str(d['draw_index'])
         d['group_id']=version+':group:'+str(d['draw_index'])
     plan=dict(schema='selected-fresh-cohort-v1',version=version,screen_ref=config['screen_ref'],
-        full_screen_population=manifest['official_train_count'],sampling=sampling,draws=draws,
+        full_screen_population=manifest['population'] if panel else manifest['official_train_count'],sampling=sampling,draws=draws,
         group_ids=[d['group_id'] for d in draws],statistics=stats,policy=config['policy'],
         training_ready=False,synthetic_fixture=fixture,
         completion_contract='all selected draw groups; no new outcome filtering, ineligible rewriting, replacement or refill')
+    if panel:plan['screen_population_scope']=manifest['population_scope']
     if config.get('sampled_window_ref'):plan['sampled_window_ref']=config['sampled_window_ref']
     if persist:save(Path(root)/'SELECTED.json',plan)
     return plan
@@ -254,6 +264,7 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None,row
         gradient_status=report['gradient_status'],global_episode_denominator=report['global_episode_denominator'],
         files_ref=pin(root/'FILES.json'),consumer_config_ref=consumer_ref,
         native_config_ref=pin(root/'NATIVE.disabled.json'),capture_costs_ref=pin(root/'CAPTURE-COSTS.json'))
+    if 'screen_population_scope' in plan:result['screen_population_scope']=plan['screen_population_scope']
     save(root/'COMPLETE.json',result)
     if accepted_sink is not None:
         require(ready,'only accepted real fields may be reused')

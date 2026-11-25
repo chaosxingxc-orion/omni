@@ -50,11 +50,21 @@ def seal(cfg):
         rid=s['reference_id'];needed(rid not in seen and rows[rid]['split']==s['split']=='selection' and s['component'] not in reserved,
                                     'duplicate selection or independent-check leakage')
         seen.add(rid);draws.append(member(s,found[rid],rows[rid],out))
-    return save(out/'ROSTER.json',dict(schema='frozen-s1-screen-roster-v1',split='TRAIN',node='S1',
+    roster=save(out/'ROSTER.json',dict(schema='frozen-s1-screen-roster-v1',split='TRAIN',node='S1',
         inputs=cfg['static_inputs'],screen=cfg['screen'],system_version=design['system_version'],
         execution_version=design['execution_version'],folds=actual['training_folds'],draws=draws,
         cells=dict(Counter(d['fold']+'/'+d['outcome'] for d in draws)),count=len(draws),
         panel_size=actual['panel_size'],frozen_membership=True,fresh_actions=False))
+
+    pool=dict(schema='node-panel-selection-v1',node='S1',split='TRAIN',sealed=True,synthetic_fixture=False,
+              population_scope='frozen_recording_fold_panel',population=len(split['rows']),inputs_ref=roster,
+              system_version=design['system_version'],execution_version=design['execution_version'],version=roster['sha256'])
+    sampling=dict(schema='recording-fold-sampling-v1',purpose='screen',node='S1',scope='node',split='TRAIN',
+                  seed=design['seed'],replacement='forbid',format='separated-json-v1',sample_count=len(draws),
+                  pool_version=pool['version'],system_version=pool['system_version'])
+    save(out/'SAMPLING.json',sampling)
+    save(out/'NODE-POOL.json',dict(pool,sampling=sampling))
+    return roster
 
 
 if __name__=='__main__':

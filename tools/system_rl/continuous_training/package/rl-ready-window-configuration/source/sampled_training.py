@@ -50,13 +50,14 @@ def prepare(config, state, root):
         source['screen_ref'] = state['screen']['screen_ref']
         source['sampling'].update(pool_version=pool['version'], system_version=state['screen']['system_version'],
                                   sample_count=spec['sample_count'])
-        if pool.get('schema')!='node-screen-selection-v1':source['sampling']['seed']=config['root_seed']
+        scoped=pool.get('schema') in ('node-screen-selection-v1','node-panel-selection-v1')
+        if not scoped:source['sampling']['seed']=config['root_seed']
         source.pop('sampled_window_ref', None)
         # Only the existing sampler runs here, no requests, clock reservations,
         # tensors, optimizer or synthetic actions are constructed.
         from fresh_adapter import scope
         frozen=None
-        if pool.get('schema')=='node-screen-selection-v1':
+        if scoped:
             from node_screen_selection import selection as node_selection
             draws,statistics=node_selection(pool,source['sampling'])
             learning=read(source['learning_config_ref']);clock=read(source['clock_state_ref'])

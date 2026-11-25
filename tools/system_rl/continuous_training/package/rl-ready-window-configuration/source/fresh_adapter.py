@@ -32,15 +32,15 @@ def policy(module, *, allow_candidate_parity=False):
             return historical_scope(config,fixture=fixture)
         sampling=config['sampling'];pool=read(config['screen_ref']);window=read(config['sampled_window_ref'])
         dataset=read(window['dataset_ref'])
-        require(pool['schema']=='node-screen-selection-v1' and pool['sealed'] and
-                sampling['node']==pool['node']=='P' and dataset['screen_ref']==config['screen_ref'] and
+        require((pool['schema'],pool['node']) in (('node-screen-selection-v1','P'),('node-panel-selection-v1','S1')) and pool['sealed'] and
+                sampling['node']==pool['node'] and dataset['screen_ref']==config['screen_ref'] and
                 sampling==dataset['sampling'] and pool['version']==sampling['pool_version'],'node screen identity')
         step=read(config['clock_state_ref'])['successful_optimizer_steps']
         phase=[p for p in read(config['learning_config_ref'])['phases'] if p['start_step']<=step][-1]
         from node_screen_selection import phase_inputs
         require(config.get('rollout_scope',sampling['scope'])=='node' and
                 phase_inputs(config,phase,pool)==dataset.get('phase_frozen_upstream_ref'),
-                'P inputs and active learning phase differ')
+                'node inputs and active learning phase differ')
     module.validate_scope=input_scope
     original=module.validate
     def validate(spec,learning,state,fixture=False):
@@ -178,7 +178,7 @@ def scope():
                 plan['phase_frozen_upstream_ref']=phase_inputs(config,phase,pool)
                 require(phase['target_nodes']==[pool['node']] and
                         all('node_input_ref' in item['record']['online'] for item in plan['draws']),
-                        'missing independently bound P inputs')
+                        'missing independently bound node inputs')
             elif phase['rollout_scope']=='node':
                 release=config['phase_frozen_upstream_ref'];require(pin(release)['sha256']==phase['frozen_upstream_release'],'node packet release drift')
                 frozen=None
