@@ -15,8 +15,16 @@ def stage(spec,source,dest):
     template=read(parent)
     mounts=template['capture_mounts'];old=Path(mounts['root']);snap=read(lockref)
     sha=lambda x:hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    sources={}
-    for name in ('cohort.py','consumer.py'):
+    sources={};extra={};names=['cohort.py','consumer.py']
+    if 'first_wave_forward' in spec:
+        if spec['first_wave_forward']!='overlap_publish_v1' or template['generation']['runtime']['group_preparation']!='shard_by_draw_v1':
+            raise ValueError('unsupported first-wave deployment')
+        from stage_wave_launcher import build
+        launcher=sw.get('launcher_ref',actor['launcher_ref']) if 'predecessor' in spec else actor['launcher_ref']
+        extra=build(source,dest,launcher,snap)
+        names.append('cohort_capture.py')
+        template['generation']['runtime']['first_wave_forward']=spec['first_wave_forward']
+    for name in names:
         src=source/'source'/name;key='rl-ready-window-configuration/source/'+name;rel='fresh-cohort-successor/'+name
         if mounts['overlays'][rel]!=snap['roles']['actor'][key]:raise ValueError('unqualified base overlay')
         data=pin(src);snap['roles']['actor'][key]=mounts['overlays'][rel]=data['sha256']
@@ -32,7 +40,7 @@ def stage(spec,source,dest):
         f.seek(0);subprocess.run(['ssh','-oBatchMode=yes',template['host'],shlex.join(['python3','-B','-c',REMOTE,json.dumps(conf)])],stdin=f,check=True)
     return seal(dest/'READER-RELEASE.json',dict(parent_template=parent,iteration_ref=spec['iteration_ref'],
                 **({'predecessor':spec['predecessor']} if 'predecessor' in spec else {}),
-                stage_template=seal(dest/'STAGE.json',template),source_lock=seal(dest/'SOURCE-LOCK.json',snap)))
+                stage_template=seal(dest/'STAGE.json',template),source_lock=seal(dest/'SOURCE-LOCK.json',snap),**extra))
 
 if __name__=='__main__':
     p=argparse.ArgumentParser()

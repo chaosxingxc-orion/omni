@@ -18,10 +18,18 @@ def prepare(transition,update,transport,out):
     after=out/'transport.py'
     if after.exists() and after.read_bytes()!=transport.read_bytes():raise ValueError('changed candidate')
     if not after.exists():after.write_bytes(transport.read_bytes())
-    revision=dict(schema='controller-training-input-revision-v1',parent_runner=spec['runner_ref'],
+    parent=spec['runner_ref'];prior=None
+    if 'controller_revision' in run:
+        prior=read(run['controller_revision'])
+        if len(prior['changes'])!=1 or prior['changes'][0]['member']!=member or 'timing_schedule_ref' in prior:
+            raise ValueError('cannot replace unrelated controller changes')
+        parent=prior['parent_runner']
+        if read(parent)!={k:v for k,v in run.items() if k!='controller_revision'}:raise ValueError('different parent runner')
+    revision=dict(schema='controller-training-input-revision-v1',parent_runner=parent,
         parent_build=pin(release.parent/'TRAINING-BUILD.json'), deployment=pin(Path(run['deployment'])),
         iteration=spec['iteration_ref'],closed_generation=generation,
         changes=[dict(member=member,before=pin(release/'tree/parents'/member),after=pin(after))])
+    if prior:revision['previous_revision']=run['controller_revision']
     runner=seal(out/'RUNNER.json',dict(run,controller_revision=seal(out/'REVISION.json',revision)))
     candidate=seal(out/'TRANSITION.json',dict(spec,runner_ref=runner))
     return candidate

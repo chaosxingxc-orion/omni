@@ -1152,16 +1152,51 @@ def closed_reader_input(argv, inventory):
     return [*argv[:2], '-c', bootstrap, *argv[2:]], payload
 
 
+def requested_inventory(directory, argv, cache, run, timeout):
+    """Verify only local objects named by the sealed resident command, including its closure."""
+    import shlex
+    from checkpoint_inventory import verified
+    argv=list(argv);root=Path(argv[3])
+    require(argv[:2]==['python3','-B'] and Path(argv[2]).name=='pull_closed.py'
+            and root.is_absolute() and root.resolve()==root and root.parent.name=='results'
+            and root.parent.parent.name=='resident','wrong resident return source')
+    owner=next(v.split('=',1)[1] for v in argv if v.startswith('--owner='))
+    call=read(directory/'RESIDENT-CALL.json');seq=call['sequence']
+    require(root==Path(call['target'])/'hot/resident/results'/format(seq,'06d'),'source is not reserved command')
+    remote="""import hashlib,json,sys
+from pathlib import Path
+p=Path(sys.argv[1]);b=p.read_bytes()
+if len(b)>int(sys.argv[2]):raise ValueError('closure exceeds return budget')
+v=json.loads(b)
+if (v['immutable'] is not True or v['schema']!='formal-resident-command-v1' or v['run_id']!=sys.argv[3] or
+    v['sequence']!=int(sys.argv[4]) or v['source_boot']!=sys.argv[5] or Path('/proc/sys/kernel/random/boot_id').read_text().strip()!=sys.argv[5]):
+ raise ValueError('different resident closure')
+print(json.dumps([*v['projected_members'],v['return_ref'],dict(path=str(p),sha256=hashlib.sha256(b).hexdigest(),bytes=len(b))]))
+"""
+    cmd=['python3','-B','-c',remote,str(root/'CLOSED.json'),argv[4],owner,str(seq),run['source_boot']]
+    refs=json.loads(subprocess.check_output(['ssh','-oBatchMode=yes','-oConnectTimeout=15',run['host'],shlex.join(cmd)],timeout=timeout))
+    wanted={}
+    for ref in refs:
+        p=Path(ref['path']);h=ref['sha256'];n=ref['bytes']
+        require(p.is_relative_to(root) and '..' not in p.parts and type(n) is int and 0<=n<=int(argv[4])
+                and wanted.setdefault(h,n)==n,'wrong member size or location')
+    return {h:n for h,n in wanted.items() if verified(cache,h,n)},len(wanted)
+
+
 def _pull_stream_locked(directory,argv,fd,deadline):
     """SSH stdout goes straight to durable local disk, never capture_output."""
     import os,shlex
     directory=Path(directory);run=read(directory/'REQUEST.json')['run']
     from checkpoint_inventory import inventory
     cache=Path(run.get('checkpoint_cache_root',directory/'checkpoint-inventory'))
-    known=inventory(cache)
+    requested=None;started=time.monotonic()
+    if '--formal-resident' in argv:
+        known,requested=requested_inventory(directory,argv,cache,run,min(run.get('closed_pull_timeout_seconds',3600),max(1,deadline-time.time())))
+    else:known=inventory(cache)
+    elapsed=time.monotonic()-started
     argv,payload=closed_reader_input(argv,known)
     if run.get('source_boot'):argv+=['--expected-boot='+run['source_boot']]
-    write(directory/('PULL-INVENTORY-'+str(time.time_ns())+'.json'),dict(cache_root=str(cache),verified_objects=known,source_boot=run.get('source_boot'),read_only_closed_pull=True))
+    write(directory/('PULL-INVENTORY-'+str(time.time_ns())+'.json'),dict(cache_root=str(cache),verified_objects=known,source_boot=run.get('source_boot'),read_only_closed_pull=True,requested_object_count=requested,inventory_seconds=elapsed))
     command=['ssh','-o','BatchMode=yes','-o','ConnectTimeout=15',run['host'],shlex.join(argv)]
     target=directory/'closed-return.tar';pending=directory/'closed-return.pending'
     io_timeout=run.get('closed_pull_timeout_seconds',3600)
