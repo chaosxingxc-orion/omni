@@ -25,3 +25,7 @@ compile_training_scope.py 配合 scope 模板和 --profile 从同一份 learning
 用 measure_panel_prompts.py 和 MEASURE-S1-PROMPTS.template.json 在同一训练镜像运行原 processor 对全部 480 个请求计数：最短 1,686，中位 2,210，P95 2,509，最长 2,557；加最大输出 256 后最长 2,813。当前 3,072 的 S1 输入限额及 8,192 的上下文均容纳本面板，超限 0。按实际请求内容保存长度，不能据此推断其它录音或 D 的长度。后续仍需独立分支发布和受 guard 的 NPU 同动作验收、冻结策略面板回复和正式池封闭。
 
 checkpoint 选择已独立于训练目标。固定训练镜像 CPU 用同一个 S1 目标分别读取基座 adapter 和一份真实 P step 80 的 adapter，每份都通过训练 actor 初始化、step 0 游标和推理包重定位后的原始 policy reader，权重摘要逐份一致。6 个错误配置（恢复与初始化混用、摘要漂移、作业身份不符）全部拒绝。step 80 是读取器测试输入，没有作为正式 S1 策略部署。当前冻结面板仍为 0/480；未新开 NPU 作业。
+
+候选分母：官方 TRAIN 119,881 条录音，来源 allowed 106,646、pending 966、excluded 12,269；allowed 均有可读标签。当前训练协议再要求真实 P 前动态召回包含金标，两个冻结名单合计 106,018。按录音 ID 取交集后剩 94,533（真实 42,507、合成 52,026），有 12,113 条来源允许的录音仅因不在 P 准入名单而未入此次面板候选。该限制来自当前训练协议，不是 S1 类型预测本身的要求。公开报告不得将这套口径表述为已对 94,533 条运行 S1。
+
+prepare_s1_training_inputs.py 读取 S1-TRAIN-INPUTS.template.json，固定镜像已为全部 480 条准备训练 reader 所需的原始请求音频、官方标签和录音来源，未调用模型。筛样侧 388 条（该 fold 有金标 188、无金标 200），检查侧 92 条（52、40）。seal_s1_training_roster.py 读取 S1-TRAIN-ROSTER.template.json；当前 0/480 明确拒绝封存名单。10 条真实历史回复在同一条记录拼装和 fresh_material.node_screen_packet 路径回放通过，10 个错 fold 拒绝；历史回放不计当前面板结果，不代替正式训练。建议当前冻结策略先对锁定面板每条一个 fold 实测，再按层缺额扩大独立录音的样本。不以 10 个 fold 的笛卡尔积作为首轮采样要求。

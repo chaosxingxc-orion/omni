@@ -1,0 +1,5 @@
+{
+  "schema": "s1-static-training-input-config-v1",
+  "partition": "${S1_PARTITION}",
+  "output": "${S1_TRAIN_INPUT_OUTPUT}"
+}

@@ -1,0 +1,6 @@
+{
+  "schema": "s1-screen-roster-config-v1",
+  "static_inputs": "${S1_PREPARED_INPUTS}",
+  "screen": "${S1_OBSERVED_OUTCOMES}",
+  "output": "${S1_ROSTER_OUTPUT}"
+}
