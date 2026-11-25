@@ -36,7 +36,10 @@ def install(config,spec,base):
             m['logical_roots']['closed_actor_command']=str(area)
             m['formal_input_roles'].append('closed_actor_command')
             restore=write(base/'RESTORE-ACTOR.json',stage)
-            ended=end_original(cfg,guard)
+            # The transport returns the end document on recovery and its pin
+            # on first completion. Use the same immutable receipt in both paths.
+            end_original(cfg,guard)
+            ended=pin(oldclient/'END-COMPLETE.json')
             require(ended and read(ended)['checkpoint_ref']['sha256']==cp['sha256'],'old actor closed another checkpoint')
             write(switch,dict(command=command,checkpoint=cp,restore_template=restore,ended=ended))
         if switch.exists():apply(cfg)
