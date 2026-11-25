@@ -10,9 +10,9 @@ from config_profile import resolve
 HERE = Path(__file__).resolve().parent
 
 
-def prepare(profile_path, output):
+def prepare(profile_path, output, template=None):
     profile = json.loads(profile_path.read_bytes())
-    template = HERE / 'activation.template.json'
+    template = template or HERE / 'activation.template.json'
     config = resolve(json.loads(template.read_bytes()), profile)
     output.mkdir(mode=0o700)
     for source in (template, HERE / 'launch.py', HERE / 'service.py'):
@@ -29,7 +29,8 @@ def prepare(profile_path, output):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', type=Path, required=True)
+    parser.add_argument('--template', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    cfg = prepare(args.profile, args.output)
+    cfg = prepare(args.profile, args.output, args.template)
     print(json.dumps({k: cfg[k] for k in ('name', 'cards', 'port', 'image')}))

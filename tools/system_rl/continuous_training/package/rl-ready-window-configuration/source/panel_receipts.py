@@ -33,7 +33,8 @@ def collection_calls(version, locate=Path):
         _need(isinstance(calls, list), 'historical receipt array required')
         yield from map(_bound, calls)
         return
-    _need(ref['format'] == 'jsonl' and version.get('content_format') == 'collection-content-v1',
+    prepared = version.get('content_format') == 'prepared-panel-refs-v1'
+    _need(ref['format'] == 'jsonl' and (prepared or version.get('content_format') == 'collection-content-v1'),
           'unknown receipt encoding')
     # Use logical roots for relocated files, and verify every object after resolving it.
     root = Path(ref['path']).parent / 'content'
@@ -65,6 +66,15 @@ def collection_calls(version, locate=Path):
         f.seek(0)
         for line in f:
             row=json.loads(line)
+            if prepared:
+                obj=row['packet_ref']
+                raw=Path(locate(obj['path'])).read_bytes()
+                _need(len(raw)==obj['bytes'] and hashlib.sha256(raw).hexdigest()==obj['sha256'],
+                      'changed prepared panel packet')
+                pkt=json.loads(raw)
+                _need(pkt['request_id']==row['request_id'], 'prepared request id differs')
+                yield _bound(dict(row,packet=dict(pkt,provider_request_id=pkt['request_id'])))
+                continue
             for key in ('packet','receipt'):
                 if row[key] is not None:
                     # Engine.seal exports the raw SQLite TEXT columns in each JSONL row.

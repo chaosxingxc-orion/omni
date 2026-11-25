@@ -134,6 +134,8 @@ def request(config,root,sequence,stage,input_ref,policy_ref,witness_ref=None,ext
             resource_owner_config_ref=config['resource_owner_config_ref'],registry=config['registry'],budget=budget,
             usage_before=before,output_root=rollout_output_root(config,sequence,stage),extra=extra or {},
             constraints=dict(model='qwen3-omni-30b-a3b-instruct',thinking=False,unknown='reconcile_never_resend',progress_check_seconds=900))
+        if stage=='screen' and config.get('prepared_screen_request_ref'):
+            value['prepared_screen_request_ref']=pin(config['prepared_screen_request_ref'])
         write(marker,value)
     value=read(marker)
     require(value['policy_ref']==policy_ref and value['input_ref']==input_ref and value['endpoint_witness_ref']==witness_ref,'resume stage inputs drift')
@@ -262,6 +264,10 @@ def inherited_screen(config, state, witness):
     request_ref = pin(answer['request_ref'])
     request = read(request_ref)
     origin = read(request['config_ref'])
+    if 'prepared_screen_request_ref' in request:
+        require(config.get('prepared_screen_request_ref')==request['prepared_screen_request_ref']
+                and origin.get('prepared_screen_request_ref')==request['prepared_screen_request_ref'],
+                'different configured prepared dataset')
     require(answer['status'] == 'complete' and answer['fixture'] is False
             and request['stage'] == 'screen' and request['fixture'] is False
             and request['policy_ref'] == state['policy_ref']

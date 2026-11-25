@@ -30,13 +30,13 @@ def compile_scope(cfg, dest):
     learning['adapter_routing']['frozen_upstream_adapter_vector']=learning['kernel']['behavior_policy_vector'].copy()
     api=upstream();install(api)
     clock=api.create_clock(learning,consumer_config=dict(source_pins=pins))
-    if scope=='node':
+    if not phase['required_validations']:
         assert clock.reserve('cpu-scope-check')['trainable_mask']==phase['trainable_mask']
     else:
         try:clock.reserve('cpu-scope-check')
         except ValueError as e:
             if 'validation gate' not in str(e):raise
-        else:raise ValueError('system accepted a group before DEV promotion')
+        else:raise ValueError('group accepted before configured promotion')
     return save(dest/'SCOPE.json',dict(task=task,inputs={k:cfg[k] for k in ('task','learning','experiment')},
         learning_ref=save(dest/'LEARNING.json',learning),window_capacity=cap,scope=scope,
         trainable_mask=phase['trainable_mask'],pending_validations=phase['required_validations'],recordings_per_step=n,

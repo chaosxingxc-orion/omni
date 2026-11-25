@@ -38,7 +38,7 @@ def select(learning, spec, *, mode):
     else:
         legacy=(spec.get('schema')=='independent-node-training-v1' and
                 set(spec)=={'schema','node','branch_id','initialization'} and spec['initialization']=='frozen_base')
-        scoped=(spec.get('schema')=='independent-node-training-v2' and set(spec)=={'schema','node','branch_id'})
+        scoped=(spec.get('schema')=='independent-node-training-v2' and set(spec) in ({'schema','node','branch_id'},{'schema','node','branch_id','sequential_only_validations'}))
         require((legacy or scoped) and spec['node'] in NODES,'invalid independent node scope')
         node=spec['node']
     require(isinstance(spec['branch_id'],str) and bool(spec['branch_id']),'task identity required')
@@ -52,7 +52,13 @@ def select(learning, spec, *, mode):
     if system:
         require(phase['required_validations'],'system promotion gate required')
     else:
-        phase['required_validations']=[]
+        # A node started independently can drop only named sequential promotion
+        # gates. Preserve unknown/new prerequisites rather than erasing them.
+        drop=spec.get('sequential_only_validations',[])
+        gates=phase['required_validations']
+        require(isinstance(drop,list) and all(isinstance(g,str) for g in drop) and
+                len(set(drop))==len(drop) and set(drop)<=set(gates),'unknown sequential gate exemption')
+        phase['required_validations']=[g for g in gates if g not in drop]
     from dependencies import ROOT,upstream
     from run_package import pin
     pins={n:pin(ROOT/'unified-learning'/n) for n in ('kernel.py','scoring.py','schedule.py','learning.py','dataset.py')}

@@ -171,6 +171,38 @@ def panel_cost(pool,sampling,usage_ref):
     return u['total_tokens']
 
 
+def frozen_dataset_screen(request, version, branch, population):
+    """Authenticate a precomputed dataset, separately from the actor's live witness."""
+    data_ref=version['dataset_request_ref']
+    require(request.get('prepared_screen_request_ref')==data_ref,
+            'training configuration did not select this frozen dataset request')
+    data=read(data_ref);deploy=read(data['configuration']);services=read(data['endpoint_witness_ref'])
+    panel=read(data['panel']);pages=read(panel['sampling']['pages']);inputs=read(version['inputs_ref'])
+    reference=read(branch['reference_ref']);lanes=read(deploy['lanes'])
+    require(data['scope']=='dataset_preparation' and data['stage']=='screen' and data['node']==branch['node']=='S1'
+        and data['count']==deploy['count']==population==inputs['rendered']==len(panel['draws'])
+        and inputs['panel_ref']==data['panel']==deploy['panel'] and
+        data['configuration']['sha256']==version['execution_version'] and deploy['system_ref']==branch['system_ref']
+        and deploy['system_version']==version['system_version']==branch['system_ref']['sha256']
+        and deploy['frozen_upstream_ref']==branch['frozen_upstream_ref']
+        and pages['configuration']['knowledge_release']['sha256']==branch['frozen_upstream_ref']['sha256']
+        and reference['kind']=='base' and reference['frozen'] is True
+        and reference['asset_manifest_ref']==data['base_manifest']==services['base_manifest']==version['base_manifest']==deploy['base_manifest']
+        and data['endpoint_witness_ref']==version['endpoint_witness_ref'] and services['policy']=='frozen_instruct_no_adapter',
+        'different frozen dataset, system, model or knowledge')
+    expected={l['id']:l for l in lanes}
+    require(len(expected)==len(lanes)==len(services['lanes']) and set(expected)=={l['id'] for l in services['lanes']},
+            'dataset service roster differs')
+    for l in services['lanes']:
+        engine=read(l['service_config'])
+        require(engine['host_boot_id']==l['boot'] and engine['model']==l['weight_path'] and
+                engine['served_model_name']==l['model']==deploy['model'] and l['adapter'] is None
+                and engine['name']+'-'+expected[l['id']]['attempt']==expected[l['id']]['container']
+                and engine['client_chat_template_kwargs']=={'enable_thinking':False}
+                and 'policy_overlay' not in engine and '--enable-lora' not in engine['serve_args'],
+                'different frozen dataset lane')
+
+
 def inherited_cost(answer,request_ref,request):
     if answer.get('schema')=='node-panel-data-result-v1':
         pool=read(answer['screen_ref']);sampling=read(answer['sampling_config_ref'])
@@ -192,9 +224,13 @@ def inherited_cost(answer,request_ref,request):
             # Only a dedicated panel collection issued by this DATA request can
             # be charged here. Historical replays lack its endpoint/policy binding.
             require(version['mode']=='live' and version['status']=='SEALED' and version['unresolved_requests']==0
-                and version.get('panel_request_ref')==request_ref and version.get('endpoint_witness_ref')==request['endpoint_witness_ref']
-                and version.get('policy_ref')==request['policy_ref'] and version['system_version']==pool['system_version']
-                and version['execution_version']==pool['execution_version'],'collection lacks the actual DATA/service binding')
+                and not version['synthetic'] and version['system_version']==pool['system_version']
+                and version['execution_version']==pool['execution_version'],'different live collection')
+            if 'dataset_request_ref' in version:
+                frozen_dataset_screen(request,version,branch,pool['population'])
+            else:
+                require(version.get('panel_request_ref')==request_ref and version.get('endpoint_witness_ref')==request['endpoint_witness_ref']
+                        and version.get('policy_ref')==request['policy_ref'],'collection lacks the actual DATA/service binding')
             from panel_receipts import collection_calls
             for call in collection_calls(version,local_path):
                 env=call['receipt']['native_envelope'];rid=env['request_id']

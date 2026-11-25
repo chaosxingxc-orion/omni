@@ -101,8 +101,7 @@ def observed(cfg,split):
     parse=packet_parser(cfg.get('screen_parser_profile'))
     targets={}
     for r in split['rows']:
-        p=read(checked(r['packet']))
-        targets[(p['sample_id'],r['fold'])]=(r,p)
+        targets[(r['reference_id'],r['fold'])]=r
     needed(len(targets)==len(split['rows']), 'ambiguous panel identity')
     found={}; audit=Counter()
     for ref in cfg['collections']:
@@ -117,10 +116,10 @@ def observed(cfg,split):
         for call in collection_calls(v):
             if call['stage']!='S1':continue
             audit['S1_calls']+=1
-            p=call['packet']; target=targets.get((p['sample_id'],p['branch']))
+            p=call['packet']; target=targets.get((p['source_binding']['reference_id'],p['branch']))
             if not target:continue
-            r,expected=target;rid=r['reference_id']; audit['recording_fold_matches']+=1
-            if (p['wire_sha256']!=expected['wire_sha256'] or p['source_binding']!=expected['source_binding']
+            r=target;expected=read(checked(r['packet']));rid=r['reference_id']; audit['recording_fold_matches']+=1
+            if (p['sample_id']!=expected['sample_id'] or p['wire_sha256']!=expected['wire_sha256'] or p['source_binding']!=expected['source_binding']
                 or p['wire']!=expected['wire'] or p['allowed_types']!=expected['allowed_types'] or p['s1_candidate_presentation']!=expected['s1_candidate_presentation']):continue
             needed(call['status']=='known' and rid not in found, 'unresolved or repeated matching observation')
             result,miss,extra=classify(p,r['supervision'],call['receipt'],parse)
