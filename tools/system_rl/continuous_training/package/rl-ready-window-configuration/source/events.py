@@ -8,6 +8,22 @@ import copy
 from dependencies import require
 
 
+def assign_policy_rows(lengths, world, micro, accumulation):
+    """Same deterministic ownership for the CPU producer and the gradient consumer."""
+    require(type(world) is int and world>0 and all(type(n) is int and n>0 for n in lengths),
+            'invalid row geometry')
+    loads = [0]*world; owners = [-1]*len(lengths)
+    if micro is not None:
+        require(type(micro) is int and micro > 0 and type(accumulation) is int and accumulation > 0
+                and len(lengths) <= world*micro*accumulation, 'cohort exceeds configured policy accumulation capacity')
+    counts = [0]*world
+    for row in sorted(range(len(lengths)), key=lambda i: (-lengths[i], i)):
+        rank = min((r for r in range(world) if micro is None or counts[r]<micro*accumulation), key=lambda r: (loads[r], r))
+        counts[rank] += 1
+        owners[row] = rank; loads[rank] += int(lengths[row])
+    return owners,loads
+
+
 def partition(plan, fields, world, micro=None, accumulation=1):
     require(type(world) is int and world > 0, 'positive configured world size')
     plan.assert_intact()
@@ -15,16 +31,9 @@ def partition(plan, fields, world, micro=None, accumulation=1):
     require(set(plan.base.routes) == {'default'}, 'first release supports shared default LoRA only')
     # Greedy deterministic length balancing, with exactly one row owner.
     lengths = fields['tensors']['attention_mask'].sum(-1).tolist()
-    loads = [0]*world; owners = [-1]*plan.base.rows
-    if micro is not None:
-        require(type(micro) is int and micro > 0 and type(accumulation) is int and accumulation > 0
-                and plan.base.rows <= world*micro*accumulation
-                and not any(plan.coefficients.values()), 'cohort exceeds configured policy accumulation capacity')
-    counts = [0]*world
-    for row in sorted(range(plan.base.rows), key=lambda i: (-lengths[i], i)):
-        rank = min((r for r in range(world) if micro is None or counts[r]<micro*accumulation), key=lambda r: (loads[r], r))
-        counts[rank] += 1
-        owners[row] = rank; loads[rank] += int(lengths[row])
+    require(len(lengths)==plan.base.rows and (micro is None or not any(plan.coefficients.values())),
+            'invalid policy row count or auxiliary accumulation')
+    owners,loads=assign_policy_rows(lengths,world,micro,accumulation)
     lanes = {kind: [[] for _ in range(world)] for kind in ('policy', 'nll', 'pair')}
     for row, owner in enumerate(owners):
         lanes['policy'][owner].append(dict(kind='policy', row=row, owned=True))
