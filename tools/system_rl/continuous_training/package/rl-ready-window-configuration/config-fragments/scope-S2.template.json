@@ -1,0 +1,29 @@
+{
+  "task": "${S2_TASK}",
+  "learning": "${LEARNING}",
+  "experiment": "${EXPERIMENT}",
+  "release": "${RELEASE}",
+  "output": "${SCOPE_ROOT}/node-S2",
+  "capacity": {
+    "S2": {
+      "calls_per_episode_upper": 55,
+      "completion_tokens_upper": 512
+    }
+  },
+  "budget": {
+    "prompt_tokens_upper_per_call": 20480,
+    "completion_tokens_upper_per_call": 1024,
+    "prompt_tokens_upper_by_node": {
+      "P": 8192,
+      "S1": 3072,
+      "S2": 1024,
+      "D": 20480
+    },
+    "completion_tokens_upper_by_node": {
+      "P": 128,
+      "S1": 256,
+      "S2": 512,
+      "D": 1024
+    }
+  }
+}

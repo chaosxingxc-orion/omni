@@ -296,12 +296,11 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
     with source_context as (official_sources,_), business_scope():
         from direct_transport import DirectHTTP
         from business import Session
-        screened_p_parser = None
+        screened_parsers = {}
         # Shared asset index remains ORIGINAL. Each episode owns isolated mutable
         # business state; duplicate query draws cannot share request identities.
         boot=read(save(root/'RUN-BOOT.json',dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip())))['boot_id'] if not (root/'RUN-BOOT.json').exists() else read(pin(root/'RUN-BOOT.json'))['boot_id']
         def prepare_draw(d):
-            nonlocal screened_p_parser
             index=d['draw_index']
             if draw_index is not None and index!=draw_index:return
             if lane is not None and assignments[index]!=lane:return
@@ -314,8 +313,8 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                 annotation=prepared_rows[index]
                 save(root/'annotations'/(digest(d['record']['recording_ref_id'])+'.json'),annotation)
             snapshot=clock['groups'][d['group_id']]['snapshot']
-            require((concurrency==1 and not batch_dispatch) or (snapshot['rollout_scope']=='node' and snapshot['target_nodes']==['P']),
-                    'concurrent capture requires a single independent P request per episode')
+            require((concurrency==1 and not batch_dispatch) or (snapshot['rollout_scope']=='node' and (snapshot['target_nodes']==['P'] or (snapshot['target_nodes']==['S1'] and 'node_input_ref' in d['record']['online']))),
+                    'concurrent capture requires one independent node request per episode')
             # One immutable screened wire for this draw. Materialize lazily:
             # a fully reconciled draw does not need its source packet again.
             screened_packet=None
@@ -328,7 +327,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                     save(directory/'GENERATED.json',dict(group_id=d['group_id'],query_draw_id=d['query_draw_id'],
                         episodes=[episodes[i] for i in range(replicates)],policy=config['policy']))
             def prepare_episode(replicate):
-                nonlocal screened_p_parser,screened_packet
+                nonlocal screened_packet
                 started=time.monotonic()
                 ep=directory/('episode-'+str(replicate));ep.mkdir(exist_ok=True)
                 eid=d['group_id']+':e'+str(replicate)
@@ -391,9 +390,15 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                         if screened_packet is None:
                             screened_packet=node_screen_packet(d,snap,annotation,origin)
                         candidates=[screened_packet]
-                        if screened_p_parser is None:
-                            from rails import node_p_parser
-                            screened_p_parser=node_p_parser(c)
+                        node=screened_packet['stage']
+                        if node not in screened_parsers:
+                            if node=='P':
+                                from rails import node_p_parser
+                                screened_parsers[node]=node_p_parser(c)
+                            elif node=='S1':
+                                from s1_reply_parser import make_parser
+                                screened_parsers[node]=make_parser(c['screened_s1_parser_refs'])
+                            else:raise ValueError('unsupported screened node')
                     else:
                         session=session_for(Session,c,ep,identity)
                         candidates=selected_material(d)
@@ -419,8 +424,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                     for packet in targets:
                         p=transform(packet,[])
                         if screened:
-                            require(p['stage']=='P','screened node parser supports only P')
-                            parser=screened_p_parser
+                            parser=screened_parsers[p['stage']]
                         elif p['stage']=='P':
                             from rails import bind_p
                             bind_p(session.collector(p['sample_id']).adapter)
@@ -439,7 +443,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                             session.runtime[p['sample_id']]=runtime
                             parser=lambda q,r:session.parse_d([q],[r])
                         if concurrency>1 or batch_dispatch:
-                            require(len(targets)==1 and p['stage']=='P','expected one P wire')
+                            require(len(targets)==1 and (p['stage']=='P' or (screened and p['stage']=='S1')),'expected one independent wire')
                             admit(p)
                             supply=ep/'SUPPLY.json'
                             if not supply.exists():

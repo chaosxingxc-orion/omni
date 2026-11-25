@@ -1,0 +1,9 @@
+{
+  "runtime_construction": {
+    "node_training_task": {
+      "schema": "system-training-phase-v1",
+      "branch_id": "system",
+      "initialization": "locked_composition"
+    }
+  }
+}

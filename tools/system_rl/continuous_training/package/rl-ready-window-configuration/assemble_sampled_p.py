@@ -160,9 +160,20 @@ def assemble(manifest, output, *, bind_live):
         for key,name in [('command_source_ref','formal_command.py'),('input_projection_source_ref','resident_inputs.py')]:
             require(pin(continuous[key])['sha256']==snap['roles']['controller']['rl-ready-window-configuration/source/'+name],
                     'resident command/input source is not bound by training snapshot')
-        parser=policy['screened_p_parser_member']
-        require(pin(parents/parser['path'])['sha256']==parser['sha256'],'packaged P parser differs from training policy')
-        rollout['screened_p_parser_member']=parser
+        if screen['sampling'].get('node')=='S1':
+            members=policy['screened_s1_parser_members']
+            require(set(members)=={'slot_stage_knowledge.py','slot_stages.py'},'original S1 parser members required')
+            refs={}
+            for name,member in members.items():
+                path=(parents/member['path']).resolve()
+                require(path.is_relative_to(parents.resolve()) and path.name==name,'parser outside release')
+                refs[name]=pin(path)
+                require(refs[name]['sha256']==member['sha256'],'S1 parser differs from training policy')
+            rollout['screened_s1_parser_refs']=refs
+        elif screen['sampling'].get('node')=='P':
+            parser=policy['screened_p_parser_member']
+            require(pin(parents/parser['path'])['sha256']==parser['sha256'],'packaged P parser differs from training policy')
+            rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
         for name in ('row_encoding', 'group_preparation', 'first_wave_forward', 'update_timing'):
@@ -249,9 +260,9 @@ def assemble(manifest, output, *, bind_live):
     require(unit in ('recording','training_batch') and type(rollout['episode_concurrency']) is int and
             1<=rollout['episode_concurrency']<=(replicas*n if unit=='training_batch' else replicas),
             'invalid formal rollout concurrency')
-    calls=n*replicas
-    from prompt_capacity import prompt_bound
-    envelope=calls*(prompt_bound(start['budget'],'P')+rollout['window_capacity']['completion_tokens_upper_per_call'])
+    from prompt_capacity import sampled_envelope
+    scope=screen['sampling']['scope']
+    calls,envelope,_=sampled_envelope(rollout['window_capacity'],start['budget'],n,replicas,scope,screen['sampling'].get('node'))
     base['stage_budgets']['capture']=dict(requests_upper=calls,tokens_upper=3*envelope)
     base['stage_budgets']['update']['tokens_upper']=cfg['actor_update_token_upper']
     require(base['authorization_ref']==data['authorization_ref'] and base['registry']==start['execution_registry']
@@ -306,7 +317,7 @@ def assemble(manifest, output, *, bind_live):
         base['inherited_closed_returns']+=list(map(str,closed))
         base['max_optimizer_updates']=base['unified_workflow']['max_optimizer_updates']=step+(spec['sample_count']+n-1)//n
     specification(base,prior_step=step);actor_settings(base)
-    probe=copy.deepcopy(start);probe.update(sampling=screen['sampling'],rollout_scope='node')
+    probe=copy.deepcopy(start);probe.update(sampling=screen['sampling'],rollout_scope=scope)
     window_capacity(base,probe,n)
     if bind_live:
         from formal_rollout import settings

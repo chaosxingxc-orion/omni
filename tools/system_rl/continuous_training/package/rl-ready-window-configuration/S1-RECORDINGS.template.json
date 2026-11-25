@@ -1,0 +1,10 @@
+{
+  "schema": "s1-recording-pages-v1",
+  "recall": "${RECALL}",
+  "dataset": "${DATASET}",
+  "shards": "${SHARDS}",
+  "knowledge_release": "${KNOWLEDGE_RELEASE}",
+  "output": "${OUTPUT}",
+  "recordings_per_macro": 128,
+  "storage_budget_bytes": 1073741824
+}

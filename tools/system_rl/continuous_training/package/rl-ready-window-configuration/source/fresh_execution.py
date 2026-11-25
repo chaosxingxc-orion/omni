@@ -24,6 +24,10 @@ class CaptureAccounting:
 
     def charge(self, packet):
         maximum=packet['wire']['max_tokens']
+        if 'sampled_request_limits' in self.budget:
+            limits=self.budget['sampled_request_limits']
+            require(packet['stage'] in limits and type(maximum) is int and 0<maximum<=limits[packet['stage']],
+                    'actual request exceeds sampled system completion envelope')
         if 'sampled_request_limit' in self.budget:
             bound=self.budget['sampled_request_limit']
             require(packet['stage']==bound['node'] and type(maximum) is int and 0<maximum<=bound['max_tokens'],

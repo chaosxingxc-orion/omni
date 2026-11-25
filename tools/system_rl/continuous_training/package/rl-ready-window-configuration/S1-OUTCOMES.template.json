@@ -1,0 +1,11 @@
+{
+  "schema": "s1-outcome-config-v1",
+  "partition": "${S1_PARTITION}",
+  "collections": "${S1_CLOSED_COLLECTIONS}",
+  "system_version": "${S1_FROZEN_SYSTEM_VERSION}",
+  "execution_version": "${S1_FROZEN_EXECUTION_VERSION}",
+  "seed": 17,
+  "training_folds": "all",
+  "cap_per_domain_fold_outcome": {"miss": 12, "extra": 12, "mixed": 12, "correct_positive": 2, "correct_empty": 2},
+  "output": "${S1_OUTCOME_OUTPUT}"
+}

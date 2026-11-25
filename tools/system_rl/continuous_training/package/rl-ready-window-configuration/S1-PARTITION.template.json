@@ -1,0 +1,7 @@
+{
+  "schema": "s1-partition-config-v1",
+  "inputs": "${S1_INPUTS}",
+  "seed": 17,
+  "holdout_percent": 20,
+  "output": "${S1_PARTITION_OUTPUT}"
+}

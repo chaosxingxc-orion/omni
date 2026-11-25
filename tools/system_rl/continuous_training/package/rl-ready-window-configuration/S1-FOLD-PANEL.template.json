@@ -1,0 +1,15 @@
+{
+  "schema": "s1-fold-panel-v1",
+  "seed": 17,
+  "per_fold_domain": {
+    "present": 12,
+    "absent": 12
+  },
+  "folds": "all",
+  "pages": "${PAGES}",
+  "admission": "${ADMISSION}",
+  "kb_sha256": "${KB}",
+  "recall_results_sha256": "${RECALL}",
+  "expected_admissions": "${GATE_COUNT}",
+  "output": "${PANEL_OUT}"
+}

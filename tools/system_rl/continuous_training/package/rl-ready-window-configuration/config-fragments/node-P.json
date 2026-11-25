@@ -1,0 +1,19 @@
+{
+  "runtime_construction": {
+    "node_training_task": {
+      "schema": "independent-node-training-v1",
+      "node": "P",
+      "branch_id": "node-P",
+      "initialization": "frozen_base"
+    },
+    "node_difficulty": {
+      "node": "P",
+      "metric": "position_reward_v1",
+      "cache_root": "${LOCAL_TRAIN_REFERENCE_CACHE_ROOT}",
+      "training_builder": {
+        "module_ref": "${TRAIN_NODE_CONTRIBUTION_BUILDER_REF}",
+        "metrics_pin_ref": "${TRAIN_NODE_METRICS_PIN_REF}"
+      }
+    }
+  }
+}
