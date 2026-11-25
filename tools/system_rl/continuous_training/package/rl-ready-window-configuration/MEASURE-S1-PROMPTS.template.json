@@ -1,0 +1,10 @@
+{
+  "release": "${RELEASE}",
+  "execution": "${EXECUTION}",
+  "inputs": "${S1_INPUTS}",
+  "profile": "${SAMPLER}",
+  "scope": "${NODE_SCOPE}",
+  "budget": "${BUDGET}",
+  "context_limit": "${CONTEXT_LIMIT}",
+  "output": "${PROMPT_MEASUREMENTS}"
+}

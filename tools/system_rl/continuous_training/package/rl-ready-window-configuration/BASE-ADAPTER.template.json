@@ -1,0 +1,10 @@
+{
+  "schema": "independent-base-adapter-v1",
+  "scope": "${NODE_SCOPE}",
+  "base_manifest": "${BASE_MANIFEST}",
+  "implementation": "${TRAIN_IMPLEMENTATION}",
+  "output": "${INITIAL_ADAPTER}",
+  "seed": 17,
+  "projection_names": ["q_proj", "k_proj", "v_proj", "o_proj"],
+  "storage_budget_bytes": 1073741824
+}

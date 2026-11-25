@@ -175,6 +175,9 @@ def compile_experiment(template, profile, output):
             policy[name] = exp[name]
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
     policy['acceptance'].update(recordings_per_step=recordings, episodes_per_recording=exp['episodes_per_recording'])
+    target_reader='rl-ready-window-configuration/training_target.py'
+    policy['source_roles']['controller'].append(target_reader)
+    policy['runtime_members']['parents/jev-system-rl/'+target_reader]=target_reader
     historical_graph = policy.pop('decode_graph_profile')
     policy['source_roles']['service'].remove(historical_graph)
     policy['runtime_members'].pop('parents/jev-system-rl/' + historical_graph)

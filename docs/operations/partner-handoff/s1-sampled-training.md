@@ -17,3 +17,9 @@ compile_training_scope.py 配合 scope 模板和 --profile 从同一份 learning
 历史集合 live02 的原始请求账本含 1,890 个 S1 调用（1,810 指另一份轨迹导出中的阶段输出），仍无新面板同录音/fold 的回复。独立历史 live01 的 10 条原始回复与官方 TRAIN 标签回放得到 6 正确空、2 正确非空、2 误报，10 个篡改 fold 的负例全部拒绝。单 fold 消费分支已经接入原并发派发和原解析器；真实 S1 对齐、当前冻结系统的 480 条面板推理、正式池封闭及 actor 消费尚待验收。约束：不可用当前 P adapter 的输出代替冻结 S1，不把 G4 组装或历史解析回放当作 NPU 同动作验收。
 
 进一步用 live02 有已知回执的 1,810 次 S1 调用与官方 TRAIN 标注回放：仅误报 396、仅漏报 13、混合 2、正确非空 157、正确空 1,242。1,810 次改错 fold 的负例全部拒绝。历史语义错例中仅误报占 396/411；这个分布支持将误报和漏报分开采样，不能代替当前 480 条的观测，也不能直接用为总体权重。
+
+正式入口新增 formal-target-start-v1；target、已登记的 baseline、实际 branch/Clock、TRAIN sampling 必须一致，配置传入原编译器。真实 P 站点的 --plan 通过；误选 P baseline 和把 P baseline 改名为 S1 的两个反例都在部署前拒绝。S1/S2/D/system 的实际 Clock 通过阶段匹配检查。站点目前仍只有 P 具备正式登记，不能把其 checkpoint、Adam 或 roster 交给 S1。
+
+独立节点用 BASE-ADAPTER.template.json 和 prepare_base_adapter.py 从原始模型 config、权重索引和训练工程的 PEFT 结构创建初始 LoRA。固定训练镜像、CPU、无 NPU：S1 rank=256、alpha=512、dropout=0.1；48 层、192 个投影、384 个 BF16 张量，原训练 reader 读回与文件逐元素差为零，192 个 B 矩阵全零。未读 P 权重，未加载 30B 底座，未继承优化器。这是权重装载检查，不是同动作训推概率验收。
+
+用 measure_panel_prompts.py 和 MEASURE-S1-PROMPTS.template.json 在同一训练镜像运行原 processor 对全部 480 个请求计数：最短 1,686，中位 2,210，P95 2,509，最长 2,557；加最大输出 256 后最长 2,813。当前 3,072 的 S1 输入限额及 8,192 的上下文均容纳本面板，超限 0。按实际请求内容保存长度，不能据此推断其它录音或 D 的长度。后续仍需独立分支发布和受 guard 的 NPU 同动作验收、冻结策略面板回复和正式池封闭。

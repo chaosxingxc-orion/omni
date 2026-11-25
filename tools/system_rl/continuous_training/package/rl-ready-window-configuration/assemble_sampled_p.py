@@ -78,6 +78,9 @@ def assemble(manifest, output, *, bind_live):
         require(branch['actor_batch']==batch and start['policy']['current_ref']==read(branch['branch_ref'])['policy_ref']
                 and read(branch['branch_ref'])['dataset_ref']==read(read(branch['branch_ref'])['parent_cursor_ref'])['sampled_dataset_ref'],
                 'branch current policy, batch or dataset changed')
+    if 'training_target' in cfg:
+        from training_target import check_target
+        check_target(cfg['training_target'],read(start['learning_config_ref']),read(start['clock_state_ref']),screen['sampling'])
     vals=copy.deepcopy(cfg['values'])
     rollout=copy.deepcopy(cfg['rollout'])
     sealed=read(cfg['screen_result_path']) if bind_live or (cfg.get('sample_size_from_seal')

@@ -53,6 +53,11 @@ def configure(config,output):
     manifest=dict(old,run_id=start['lineage'],branch_input_ref=inputs,branch_actor_source=c['actor_source'],
                   actor_capture_root=c['actor_capture_root'],actor_batch_ref=save(out/'ACTOR-BATCH.json',start['actor_batch']),
                   continuous_deployment_ref=save(out/'DEPLOYMENT.json',dep),release=str(release),live_provider_ready_path=c['providers'])
+    if 'training_target' in c:
+        from training_target import check_target
+        src=checked(inputs);sampling=checked(old['screen_config_ref'])['sampling']
+        check_target(c['training_target'],checked(src['learning_config_ref']),checked(src['clock_state_ref']),sampling)
+        manifest['training_target']=c['training_target']
     if experiment is not None:
         manifest['experiment_ref'] = save(out/'EXPERIMENT.json', experiment)
         manifest['values'] = dict(manifest['values'], TRAIN_MEMORY_GIB=experiment['training_memory_gib'],

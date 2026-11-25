@@ -1,4 +1,4 @@
-"""Start a qualified P experiment from one data-only configuration; the existing controller owns training."""
+"""Start a qualified experiment from one data-only configuration; the existing controller owns training."""
 import argparse
 import fcntl
 import json
@@ -33,12 +33,18 @@ def execute(argv, **kwargs):
 
 def spec(path, site):
     request = read(path)
-    if set(request) != {'schema','run_id','baseline','experiment'} or request['schema'] != 'formal-p-start-v1':
-        raise ValueError('expected run_id, qualified baseline and experiment')
+    scoped=request.get('schema')=='formal-target-start-v1'
+    fields={'schema','run_id','baseline','experiment'}|({'target'} if scoped else set())
+    if set(request)!=fields or request['schema'] not in ('formal-p-start-v1','formal-target-start-v1'):
+        raise ValueError('expected run_id, qualified baseline, experiment and optional versioned target')
+    from training_target import NODES,SYSTEM
+    if scoped and request['target'] not in (*NODES,SYSTEM):raise ValueError('unknown requested target')
     run_id = request['run_id']
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,47}', run_id):
         raise ValueError('invalid run_id')
     baseline = site['baselines'][request['baseline']]
+    if request.get('target','P')!=baseline.get('target','P'):
+        raise ValueError('qualified baseline registered for a different training target')
     # Operators override experiment values; source rosters and macro bindings
     # come from the registered, immutable template.
     template = request['experiment']
@@ -86,10 +92,23 @@ def start(path,site_path,plan=False,rehearse=False):
     impl=release/'tree/parents/jev-system-rl/implementation'
     training=read(checked(b['training']))
     branch=checked(b['branch'])
+    if req['schema']=='formal-target-start-v1':
+        from training_target import check_target
+        reg=read(branch);src=read(training['branch_input'])
+        if (checked(src['branch_initial_ref'])!=branch or reg['learning_ref']!=src['learning_config_ref']
+                or reg['clock_ref']!=src['clock_state_ref'] or reg['policy_ref']!=src['policy']['current_ref']):
+            raise ValueError('branch initialization and registered source differ')
+        manifest=read(training['manifest']);sampling=read(checked(manifest['screen_config_ref']))['sampling']
+        learning=read(checked(src['learning_config_ref']));clock=read(checked(src['clock_state_ref']))
+        target_info=check_target(req['target'],learning,clock,sampling)
+        check_target(req['target'],learning,clock,src['sampling'])
+        training['training_target']=req['target']
+
     diagnostic=checked(b['diagnostic_ready']).parent
     binding=dict(config=pin(path),site=pin(site_path),experiment_sha256=digest(exp))
     info=dict(run_id=run_id,output=str(root),recordings_per_step=rows,training_memory_gib=exp['training_memory_gib'],
               graph=graph(exp),experiment_sha256=digest(exp),controller='run_dedicated_controller.py')
+    if req['schema']=='formal-target-start-v1':info.update(target_info)
     frozen=b.get('dispatch_inputs')
     if frozen is not None:
         if (set(frozen)-{'inbox_wire_format'} not in ({'static','lengths','threads'},{'static','lengths','threads','producer'}) or type(frozen['threads']) is not int
