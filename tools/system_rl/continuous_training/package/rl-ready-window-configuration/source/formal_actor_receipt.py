@@ -57,18 +57,30 @@ def _updated(rows,rank_refs,prior_checkpoint_ref,checkpoint_ref,report_ref,*,pri
     after = read(checkpoint_ref)
     step = after['step']
     clock = after['clock']
-    initial=before.get('schema')=='expanded-policy-branch-v1'
+    configured=before.get('schema')=='base-node-policy-branch-v1'
+    initial=configured or before.get('schema')=='expanded-policy-branch-v1'
     old_clock=(read(before['clock_ref']) if initial else before['clock']) if prior_clock is None else prior_clock
     lineage = after['training_lineage']
     groups = lineage['group_ids']
     attempt = lineage['attempt_id']
     if initial:
-        policy=read(before['policy_ref']);parent=read(read(policy['publication_ref'])['parent_ref'])
+        policy=read(before['policy_ref']);publication=read(policy['publication_ref'])
+        if configured:
+            geometry=read(publication['geometry_ref'])
+            world=geometry['training']['world_size']
+            require(publication['schema']=='configured-node-initial-policy-v1'
+                    and after['contract']['lineage']==publication['lineage']
+                    and after['resident_identity']['base']==geometry['base']
+                    and all(after['contract'][k]==geometry[k] for k in ('image','devices','training'))
+                    and lineage['annealing_snapshot']['target_nodes']==[before['node']]==[publication['node']],
+                    'first update differs from configured target or actor')
+        else:
+            parent=read(publication['parent_ref']);world=parent['world_size']
+            require(after['contract']['lineage']!=parent['contract']['lineage'],'expanded branch reused parent lineage')
         require(before['optimizer_inherited'] is False and step==1 and before['step']==0 and
-                after['contract']['lineage']!=parent['contract']['lineage'] and
                 lineage['current_policy_vector']==lineage['behavior_policy_vector']==dict.fromkeys(('P','S1','S2','D'),policy['version']),
                 'first update did not use initial weights on a new lineage')
-    require((parent if initial else before)['world_size'] == after['world_size'] == 8
+    require((world if initial else before['world_size']) == after['world_size'] == 8
             and old_clock['successful_optimizer_steps'] == before['step'] == step - 1
             and step == clock['successful_optimizer_steps'], 'checkpoint did not advance exactly one step')
     require(after['recoverable'] is True and (initial or after['contract']['lineage'] == before['contract']['lineage']),

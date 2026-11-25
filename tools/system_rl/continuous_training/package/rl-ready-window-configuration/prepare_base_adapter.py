@@ -30,7 +30,7 @@ def prepare(cfg):
     torch.set_num_threads(1)
     scope=read(checked(cfg['scope']))
     task=scope['task']
-    needed(task['schema']=='independent-node-training-v1' and task['initialization']=='frozen_base'
+    needed((task['schema']=='independent-node-training-v2' or (task['schema']=='independent-node-training-v1' and task['initialization']=='frozen_base'))
            and scope['scope']=='node' and scope['trainable_mask']=={n:n==task['node'] for n in ('P','S1','S2','D')},
            'independent frozen-base node required')
     exp=read(checked(scope['inputs']['experiment']));rank=validate(rank_profile(exp))

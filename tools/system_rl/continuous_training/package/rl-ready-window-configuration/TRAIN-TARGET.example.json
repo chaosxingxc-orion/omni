@@ -1,7 +1,9 @@
 {
-  "schema": "formal-target-start-v1",
+  "schema": "formal-target-start-v2",
   "run_id": "s1-from-base-01",
   "baseline": "s1-qualified",
   "target": "S1",
-  "experiment": {}
+  "experiment": {},
+  "initialization": "${INITIALIZATION}",
+  "training_input_ref": "${SEALED_TRAIN_INPUT}"
 }

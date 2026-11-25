@@ -14,8 +14,13 @@ def build(root,policy,locked,precision,base,logical,composer,budget,output):
         rel=Path(target)
         if rel.is_absolute() or '..' in rel.parts or not rel.parts or rel.parts[0]!='parents':
             raise ValueError('invalid release member')
-        src=pin(root/source)
-        if table.get(source)!=src['sha256']:raise ValueError('source outside release snapshot: '+source)
+        if Path(source).is_absolute() or '..' in Path(source).parts or source not in table:
+            raise ValueError('source not named in release snapshot: '+source)
+        path=(root/source).resolve(strict=True)
+        if not path.is_relative_to(root.resolve()) or not path.is_file():
+            raise ValueError('invalid release file: '+source)
+        src=pin(path)
+        if table[source]!=src['sha256']:raise ValueError('source outside release snapshot: '+source)
         original=base/'tree'/rel
         changes.append(dict(target=target,source_ref=src,result_sha256=src['sha256'],
                        **({'base_ref':pin(original)} if original.is_file() else {})))

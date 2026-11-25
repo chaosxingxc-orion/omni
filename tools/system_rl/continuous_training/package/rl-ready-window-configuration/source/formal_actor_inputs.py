@@ -102,8 +102,11 @@ def stage(template, config, directory):
                     collect(document['continuous_activation_ref'])
                 elif 'bounded_tp4_ref' in document:
                     collect(document['bounded_tp4_ref'])
-            elif isinstance(document,dict) and document.get('schema')=='expanded-policy-branch-v1':
+            elif isinstance(document,dict) and document.get('schema') in ('base-node-policy-branch-v1','expanded-policy-branch-v1'):
                 for k in ('policy_ref','clock_ref','learning_ref'):collect(document[k])
+            elif isinstance(document,dict) and document.get('schema')=='configured-node-initial-policy-v1':
+                collect(document['initialization']['source_ref'],False)
+                for k in ('base_manifest_ref','geometry_ref','profile_ref','assets'):collect(document[k],False)
             elif isinstance(document,dict) and document.get('schema')=='expanded-initial-policy-v1':
                 for k in ('origin_ref','parent_ref','profile_ref','assets'):collect(document[k],False)
             elif isinstance(document,dict) and document.get('schema')=='resident-actor-initialization-v1':

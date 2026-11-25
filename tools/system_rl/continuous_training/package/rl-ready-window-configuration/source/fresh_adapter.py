@@ -60,7 +60,8 @@ def policy(module, *, allow_candidate_parity=False):
                     and read(ref['asset_manifest_ref'])['assets']==ref['assets'] and ref['version']=='base-sha256:'+digest(ref['assets'])
                     and kernel['reference_policy_vector']==dict.fromkeys(module.NODES,ref['version'])
                     and kernel['current_policy_vector']==kernel['behavior_policy_vector']==dict.fromkeys(module.NODES,current['version'])
-                    and learning['phases'][0]['target_nodes']==['P'] and learning['phases'][0]['rollout_scope']=='node',
+                    and learning['phases'][0]['target_nodes']==[read(current['publication_ref']).get('node','P')]
+                    and learning['phases'][0]['rollout_scope']=='node',
                     'initial training weights, reference or active Clock differ')
             validate_routes(admission,spec['runtime_evidence_ref'],read(witness['profile_ref']),sampled=True)
             return current,ref
@@ -90,8 +91,15 @@ def policy(module, *, allow_candidate_parity=False):
         result=scoped(spec,learning,state,fixture=fixture)
         if 'bounded_tp4_ref' in pub or 'continuous_activation_ref' in pub:
             phase=[p for p in learning['phases'] if p['start_step']<=state['successful_optimizer_steps']][-1]
-            require(not fixture and phase['rollout_scope']=='node' and phase['target_nodes']==['P'],
-                    'bounded TP4 evidence is only valid for real node-P sampling')
+            target='P'  # historical bounded proof
+            if 'continuous_activation_ref' in pub:
+                activation=read(pub['continuous_activation_ref'])
+                lock=read(activation['precision_lock_ref'])
+                if 'accepted_initial_ref' in lock:
+                    branch=read(read(lock['accepted_initial_ref'])['branch_ref'])
+                    if branch['schema']=='base-node-policy-branch-v1':target=branch['node']
+            require(not fixture and phase['rollout_scope']=='node' and phase['target_nodes']==[target],
+                    'TP4 evidence belongs to a different target')
             from bounded_tp4 import validate_routes
             witness=read(spec['runtime_evidence_ref'])
             validate_routes(pub,spec['runtime_evidence_ref'],read(witness['profile_ref']),

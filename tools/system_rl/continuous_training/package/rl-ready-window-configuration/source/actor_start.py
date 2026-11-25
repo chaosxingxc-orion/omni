@@ -8,6 +8,28 @@ def compile_start(branch_ref,lineage):
     from rank_profile import validate
     from policy_identity import digest
     branch=read(branch_ref)
+    if branch['schema']=='base-node-policy-branch-v1':
+        from initial_policy import validate_initial
+        policy=read(branch['policy_ref']);pub=validate_initial(policy)
+        require(pub['schema']=='configured-node-initial-policy-v1' and pub['lineage']==lineage
+                and pub['node']==branch['node'] and branch['step']==0 and branch['optimizer_inherited'] is False
+                and not set(branch)&{'parent_checkpoint','parent_cursor_ref','dataset_ref'},'unexpected independent ancestry')
+        geometry=read(pub['geometry_ref']);profile=read(pub['profile_ref'])
+        clock=read(branch['clock_ref']);learning=read(branch['learning_ref']);reference=read(branch['reference_ref'])
+        phase,=learning['phases']
+        nodes=('P','S1','S2','D')
+        require(phase['rollout_scope']=='node' and phase['target_nodes']==[branch['node']]
+                and phase['trainable_mask']=={n:n==branch['node'] for n in nodes}
+                and learning['kernel']['current_policy_vector']==learning['kernel']['behavior_policy_vector']==dict.fromkeys(nodes,policy['version'])
+                and reference['kind']=='base' and reference['role']=='reference' and reference['frozen'] is True
+                and reference['asset_manifest_ref']==pub['base_manifest_ref']
+                and reference['version']=='base-sha256:'+digest(geometry['base']['observed_assets'])
+                and learning['kernel']['reference_policy_vector']==dict.fromkeys(nodes,reference['version'])
+                and clock['successful_optimizer_steps']==0 and all(not clock[k] for k in ('groups','attempts','validations'))
+                and clock['config_sha256']==digest(learning),'independent learning or Clock differs')
+        return dict(schema='resident-actor-initialization-v1',branch_ref=pin(branch_ref),version=policy['version'],
+                    clock_ref=branch['clock_ref'],lineage=lineage,actor_batch=profile['actor_batch'],
+                    assets={Path(r['path']).name:r for r in pub['assets']},**{k:geometry[k] for k in ('image','devices','training','base')})
     require(branch['schema']=='expanded-policy-branch-v1' and branch['optimizer_inherited'] is False
             and branch['step']==0,'expected weight-only branch')
     policy=read(branch['policy_ref']);pub=read(policy['publication_ref'])
@@ -57,7 +79,7 @@ def open_start(worker,spec):
             'constructed actor did not load the branch weights and base')
     fresh_optimizer(worker)
     ref=start['branch_ref'];branch=read(ref)
-    require(branch['schema']=='expanded-policy-branch-v1' and branch['step']==0 and not branch['optimizer_inherited']
+    require(branch['schema'] in ('expanded-policy-branch-v1','base-node-policy-branch-v1') and branch['step']==0 and not branch['optimizer_inherited']
             and branch['clock_ref']==start['clock_ref'] and read(branch['policy_ref'])['version']==start['version'],
             'runtime branch differs')
     clock=read(start['clock_ref'])

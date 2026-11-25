@@ -1,10 +1,9 @@
 {
   "runtime_construction": {
     "node_training_task": {
-      "schema": "independent-node-training-v1",
+      "schema": "independent-node-training-v2",
       "node": "P",
-      "branch_id": "node-P",
-      "initialization": "frozen_base"
+      "branch_id": "node-P"
     },
     "node_difficulty": {
       "node": "P",

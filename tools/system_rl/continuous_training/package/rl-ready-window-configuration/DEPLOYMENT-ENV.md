@@ -41,3 +41,7 @@ python3 configure_branch_training.py --config BRANCH-TRAINING.template.json \
 训练发布器可在实验模板设置 `row_encoding: compact_json_v1`，将每批 online/offline/provenance 按行编码到原子提交的 JSON 数组。缺省沿用原发布格式。消费者继续读取该批实际封存文件并验证摘要；编码变化会产生新的文件摘要，不追改历史数据。性能检查用 `check_cohort_encoding.py` 在同一封存批次比较两种编码。
 
 实验模板 v2 用 `group_preparation: shard_by_draw_v1`：冻结 reference 的集体前向结束后，按原 draw 顺序将每条录音交给一个 rank，保留同一录音的全部采样，整窗汇合并按原顺序发布。每组封存一次完全相同的音频特征、掩码和提示字段；读取时核对内容摘要，还原原始逐条字段。不同录音不共享召回，动作及概率一直逐请求保留。训练端继续复用已验收的 batch。`activation_concurrency` 约束并发热切的服务数；服务在同一租约和 marker 下独立执行，全部回执验证后才允许新采样。进程恢复仍重新核对封闭回执。
+
+新节点实验的 `formal-target-start-v2` 配置分别指定 `target`、`initialization` 和封闭的 `training_input_ref`。后两者支持本地宏；模型来源由 `initialization.mode` 和带 path/sha256/bytes 的 `source_ref` 唯一决定。用 `base_adapter` 读 ORIGIN.json，或用 `checkpoint_weights` 读指定的 COMMITTED.json 和 rank 0 的 adapter 文件。两者都从 step 0 开始，使用空 Adam。续训走原游标恢复入口。用 BASE-NODE-BRANCH.template.json 准备分支；要生成 INPUT.json 时，同时在该模板配置 `training_input_template` 为本目标已封闭的 TRAIN 输入引用。部署时训练包、DATA 请求和训推验收须匹配该分支，入口不会寻找 latest 或用其它节点的 roster 补齐。
+
+工程发布按文件清单定点检查。正式发布用策略的 source_roles 和 runtime_members；旧 profile 构建入口需要在 values 中列出 SOURCE_MEMBERS，例如 ["iteration.py","next_input.py"]，相对于 source/，缺项即报错。恢复包只传指定 COMMITTED.json 和各 rank 明列的文件。基线 tree、client 的复制及新发布目录的持久化仍按这两个封闭产物执行；不为发现发布成员遍历工作区或共享盘。可在固定镜像运行 check_release_members.py 复验范围隔离。

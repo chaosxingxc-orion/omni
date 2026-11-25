@@ -23,3 +23,5 @@ compile_training_scope.py 配合 scope 模板和 --profile 从同一份 learning
 独立节点用 BASE-ADAPTER.template.json 和 prepare_base_adapter.py 从原始模型 config、权重索引和训练工程的 PEFT 结构创建初始 LoRA。固定训练镜像、CPU、无 NPU：S1 rank=256、alpha=512、dropout=0.1；48 层、192 个投影、384 个 BF16 张量，原训练 reader 读回与文件逐元素差为零，192 个 B 矩阵全零。未读 P 权重，未加载 30B 底座，未继承优化器。这是权重装载检查，不是同动作训推概率验收。
 
 用 measure_panel_prompts.py 和 MEASURE-S1-PROMPTS.template.json 在同一训练镜像运行原 processor 对全部 480 个请求计数：最短 1,686，中位 2,210，P95 2,509，最长 2,557；加最大输出 256 后最长 2,813。当前 3,072 的 S1 输入限额及 8,192 的上下文均容纳本面板，超限 0。按实际请求内容保存长度，不能据此推断其它录音或 D 的长度。后续仍需独立分支发布和受 guard 的 NPU 同动作验收、冻结策略面板回复和正式池封闭。
+
+checkpoint 选择已独立于训练目标。固定训练镜像 CPU 用同一个 S1 目标分别读取基座 adapter 和一份真实 P step 80 的 adapter，每份都通过训练 actor 初始化、step 0 游标和推理包重定位后的原始 policy reader，权重摘要逐份一致。6 个错误配置（恢复与初始化混用、摘要漂移、作业身份不符）全部拒绝。step 80 是读取器测试输入，没有作为正式 S1 策略部署。当前冻结面板仍为 0/480；未新开 NPU 作业。

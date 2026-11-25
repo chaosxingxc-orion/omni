@@ -9,7 +9,10 @@ from source.release_completion import require_closed_release
 D=Path(__file__).resolve().parent
 
 def pin(p):
- p=Path(p).resolve();b=p.read_bytes();return dict(path=str(p),sha256=hashlib.sha256(b).hexdigest(),bytes=len(b))
+ p=Path(p).resolve();h=hashlib.sha256()
+ with p.open('rb') as f:
+  for buf in iter(lambda:f.read(1048576),b''):h.update(buf)
+ return dict(path=str(p),sha256=h.hexdigest(),bytes=p.stat().st_size)
 def save(p,v):
  p=Path(p);p.parent.mkdir(parents=True,exist_ok=True)
  b=(json.dumps(v,ensure_ascii=False,indent=2)+'\n').encode()
@@ -18,14 +21,37 @@ def save(p,v):
  with t.open('xb') as f:f.write(b);f.flush();os.fsync(f.fileno())
  os.replace(t,p);fd=os.open(p.parent,os.O_DIRECTORY);os.fsync(fd);os.close(fd);return pin(p)
 
+def copy_base(base,out):
+ # The inherited tree and client are the two closed release artifacts. Record
+ # manifest paths during their required copy, with no second discovery walk.
+ from source.release_members import binding_member
+ members=set()
+ def copy(src,dst):
+  rel=Path(src).relative_to(base/'tree')
+  if binding_member(rel):members.add(rel)
+  return shutil.copy2(src,dst)
+ shutil.copytree(base/'tree',out/'tree',copy_function=copy)
+ shutil.copytree(base/'client',out/'client')
+ return members
+
 def close_release(root,composer):
  composer.durable_tree(root)
  save(Path(root)/'BUILD-COMPLETE.json',dict(schema='durable-release-complete-v1',
   build_intent_ref=pin(Path(root)/'BUILD-INTENT.json'),delta_ref=pin(Path(root)/'DELTA.json'),
   assembly_ref=pin(Path(root)/'ASSEMBLY.json')))
 
+def source_members(root, names):
+ if not isinstance(names,list) or not names or any(not isinstance(n,str) or Path(n).name!=n
+       or Path(n).suffix!='.py' or any(c in n for c in '*?[]') for n in names) or len(names)!=len(set(names)):
+  raise ValueError('SOURCE_MEMBERS must name individual Python files under source/')
+ paths=[root/n for n in names]
+ for p in paths:
+  if p.resolve()!=p or not p.is_file():raise ValueError('missing or linked release source: '+str(p))
+ return paths
+
 def build(profile):
  c=json.loads(Path(profile).read_bytes())['values'];base=Path(c['BASE_BUILD']);out=Path(c['BUILD'])
+ members=source_members(D/'source',c.get('SOURCE_MEMBERS'))
  assert not out.exists() and out.is_relative_to(D),'new owned build only'
  st=os.statvfs(out.parent);assert st.f_bavail*st.f_frsize>=max(20*1024**3,.1*st.f_blocks*st.f_frsize)+1024**3 and st.f_favail/st.f_files>=.05
  fs=[]
@@ -35,10 +61,10 @@ def build(profile):
  assert max(fs)[1] in ('ext4','xfs','btrfs')
  require_closed_release(base)
  out.mkdir();save(out/'BUILD-INTENT.json',dict(profile_ref=pin(profile),base=str(base)))
- shutil.copytree(base/'tree',out/'tree');shutil.copytree(base/'client',out/'client')
+ manifests=copy_base(base,out)
  logical=Path(c['WORKSPACE'])/'delivery/system-rl-transition-v1'
  impl=out/'tree/parents/jev-system-rl/implementation';delta=[]
- for src in sorted((D/'source').glob('*.py')):
+ for src in members:
   target=impl/src.name;before=pin(target) if target.exists() else None;compile(src.read_text(),str(src),'exec');shutil.copyfile(src,target)
   if (out/'client'/src.name).exists():shutil.copyfile(src,out/'client'/src.name)
   delta.append(dict(target=str(target.relative_to(out)),base_ref=before,result_ref=pin(target),source_ref=pin(src)))
@@ -51,7 +77,8 @@ def build(profile):
  (impl/'SOURCE-PINS.json').write_text(json.dumps(pins,indent=2)+'\n')
  # Original source-pin rebinder updates only executable manifests in successor.
  spec=importlib.util.spec_from_file_location('accepted_source_composer',c['COMPOSER']);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
- m.rebind_manifests(out/'tree',logical)
+ from source.release_members import rebind_manifests
+ rebind_manifests(out/'tree',logical,members=manifests)
  assembly=json.loads((base/'ASSEMBLY.json').read_bytes());assembly.update(tree=str(out/'tree'),base_assembly_ref=pin(base/'ASSEMBLY.json'))
  for name,check in assembly['final_owner_assertions'].items():
   if name in [r['target'].removeprefix('tree/') for r in delta] or Path(name).name=='SOURCE-PINS.json':
@@ -132,7 +159,7 @@ def build_delta(manifest, output):
   assert hashlib.sha256(data).hexdigest()==row['result_sha256'],'client result differs'
   compile(data,str(rel),'exec');client_edits.append((row,data))
  out.mkdir(parents=True);save(out/'BUILD-INTENT.json',dict(manifest_ref=pin(manifest),base_assembly_ref=c['base_assembly_ref']))
- shutil.copytree(base/'tree',out/'tree');shutil.copytree(base/'client',out/'client')
+ manifests=copy_base(base,out)
  changes=[]
  for row,data in edits:
   target=out/'tree'/row['target'];target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
@@ -157,7 +184,8 @@ def build_delta(manifest, output):
   path=str(logical/Path(*rel.parts[1:]));by_path[path]=dict(pin(out/'tree'/rel),path=path)
  pins['sources']=[by_path[k] for k in sorted(by_path)]
  pins_path.write_text(json.dumps(pins,indent=2)+'\n')
- m.rebind_manifests(out/'tree',logical)
+ from source.release_members import rebind_manifests
+ rebind_manifests(out/'tree',logical,members=manifests|{Path(n) for n in names})
  derived=[]
  # Authenticate every inherited change: edits or deterministic source manifests.
  manifest_names={'SOURCE-PINS.json','SOURCEPINS.json','PARENT-PINS.json','DEPENDENCY-PINS.json','DEPENDENCIES.json','PIN.repair-v2.json','SOURCE-CLOSURE.json','CAPTURE-CLOSURE.json','OVERLAY.json','ASSEMBLED-BINDING.json'}

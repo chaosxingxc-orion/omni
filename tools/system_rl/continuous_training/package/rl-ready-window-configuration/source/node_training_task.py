@@ -36,9 +36,10 @@ def select(learning, spec, *, mode):
                 'system optimization requires a locked composition')
         node=None
     else:
-        require(set(spec)=={'schema','node','branch_id','initialization'} and
-                spec['schema']=='independent-node-training-v1' and spec['node'] in NODES and
-                spec['initialization']=='frozen_base','explicit independent node/base identity required')
+        legacy=(spec.get('schema')=='independent-node-training-v1' and
+                set(spec)=={'schema','node','branch_id','initialization'} and spec['initialization']=='frozen_base')
+        scoped=(spec.get('schema')=='independent-node-training-v2' and set(spec)=={'schema','node','branch_id'})
+        require((legacy or scoped) and spec['node'] in NODES,'invalid independent node scope')
         node=spec['node']
     require(isinstance(spec['branch_id'],str) and bool(spec['branch_id']),'task identity required')
     result=copy.deepcopy(learning)

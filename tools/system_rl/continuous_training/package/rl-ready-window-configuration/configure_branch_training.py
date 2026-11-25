@@ -55,8 +55,8 @@ def configure(config,output):
                   continuous_deployment_ref=save(out/'DEPLOYMENT.json',dep),release=str(release),live_provider_ready_path=c['providers'])
     if 'training_target' in c:
         from training_target import check_target
-        src=checked(inputs);sampling=checked(old['screen_config_ref'])['sampling']
-        check_target(c['training_target'],checked(src['learning_config_ref']),checked(src['clock_state_ref']),sampling)
+        initial_input=checked(inputs);sampling=checked(old['screen_config_ref'])['sampling']
+        check_target(c['training_target'],checked(initial_input['learning_config_ref']),checked(initial_input['clock_state_ref']),sampling)
         manifest['training_target']=c['training_target']
     if experiment is not None:
         manifest['experiment_ref'] = save(out/'EXPERIMENT.json', experiment)
@@ -77,6 +77,10 @@ def configure(config,output):
                   compiler=str(src/'assemble_sampled_p.py'),release=str(release),build_log=str(buildfile))
     # The cursor keeps the writer's logical trajectory path. Only that sealed
     # file is needed to seed this run; the old optimizer shards stay offline.
+    if branch['schema']=='base-node-policy-branch-v1':
+        if c.get('dataset_start_mode')!='new_epoch' or c.get('undispatched_release'):
+            raise ValueError('independent branch requires a fresh sample cursor')
+        return save(out/'RUNNER.json',runner)
     parent=checked(branch['parent_cursor_ref']);trajectory=parent['trajectory_ref']
     logical=trajectory['path'];prior=checked(branch['policy_ref'])
     commit=checked(prior['publication_ref'])['parent_ref']

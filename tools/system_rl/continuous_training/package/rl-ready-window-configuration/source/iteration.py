@@ -213,12 +213,20 @@ def initial_resume(config, initial):
                 'expanded branch cannot restore an optimizer checkpoint')
         branch=read(anchor);clock=read(initial['clock_state_ref']);policy=read(initial['policy']['current_ref'])
         from initial_policy import validate_initial
-        publication=validate_initial(policy)
-        require(branch['schema']=='expanded-policy-branch-v1' and branch['optimizer_inherited'] is False
+        if branch['schema']=='base-node-policy-branch-v1':
+            from actor_start import compile_start
+            require(compile_start(anchor,config['run_id'])['version']==policy['version'] and
+                    initial['policy']['reference_ref']==branch['reference_ref'] and
+                    initial['sampling']['node']==branch['node'] and initial['sampling']['scope']=='node',
+                    'branch source, reference or training target differs')
+        else:
+            publication=validate_initial(policy)
+            require(branch['schema']=='expanded-policy-branch-v1' and
+                    publication['parent_ref']['sha256']==branch['parent_checkpoint']['sha256'],'wrong expanded parent')
+        require(branch['optimizer_inherited'] is False
                 and branch['policy_ref']==initial['policy']['current_ref'] and branch['clock_ref']==initial['clock_state_ref']
                 and branch['learning_ref']==initial['learning_config_ref'] and branch['step']==policy['step']==0
-                and clock['successful_optimizer_steps']==0 and all(not clock[k] for k in ('groups','attempts','validations'))
-                and publication['parent_ref']['sha256']==branch['parent_checkpoint']['sha256'],
+                and clock['successful_optimizer_steps']==0 and all(not clock[k] for k in ('groups','attempts','validations')),
                 'branch initialization does not match the new Clock or weights')
         return dict(step=0,resume_ref=None,cohort_sequence=0,branch_initial_ref=anchor)
     if 'initial_resume_ref' not in config:
@@ -365,12 +373,16 @@ def run(config_path, *, resume_placement=None):
             first_phase='endpoint' if resume['step'] or not finite else 'finite_prepare'
             if strict_actor and config.get('initial_screen_witness_ref'):
                 first_phase='initial_screen'
+            independent=bool(resume.get('branch_initial_ref') and read(resume['branch_initial_ref'])['schema']=='base-node-policy-branch-v1')
+            if independent:
+                require(strict_actor and not finite and config.get('dataset_start_mode')=='new_epoch'
+                        and not config.get('trajectory') and first_phase=='initial_screen','independent run needs its own TRAIN screen')
             state=dict(config_ref=pin(config_path),execution_mode=mode,phase=first_phase,sequence=0,
                 input_ref=initial_ref,policy_ref=initial['policy']['current_ref'],learning_ref=initial['learning_config_ref'],
-                trajectory_ref=pin(config['trajectory']),best=None,stale=0,sampling_round=0,
+                trajectory_ref=None if independent else pin(config['trajectory']),best=None,stale=0,sampling_round=0,
                 screen=None,zero_signal_batches=0,consumed_cohorts=[],program_predecessor_output=config['program_predecessor_output'],
                 charged_tokens_upper=config['budget']['prior_tokens_upper'],reservations={},**resume)
-            if resume.get('branch_initial_ref'):
+            if resume.get('branch_initial_ref') and not independent:
                 branch=read(resume['branch_initial_ref']);parent=read(branch['parent_cursor_ref'])
                 window=read(branch['excluded_window_ref']);dataset=read(branch['dataset_ref'])
                 term=read(parent['capture']['resident_boundary_ref'])['terminal']
@@ -473,7 +485,7 @@ def run(config_path, *, resume_placement=None):
                 # inherited_screen. Fresh capture authenticates its live owner
                 # independently after handoff via the endpoint/lease checks.
                 inherits=config.get('initial_screen_result_path') or config.get('initial_screen_result_ref')
-                require(strict_actor and step==read(config['initial_resume_ref'])['step']
+                require(strict_actor and step==read(state.get('branch_initial_ref') or config['initial_resume_ref'])['step']
                         and provider and (inherits or provider['service_ready']==witness)
                         and read(witness)['schema']=='resident-tp4-startup-observation-v1',
                         'initial screen requires the configured resident startup observation')

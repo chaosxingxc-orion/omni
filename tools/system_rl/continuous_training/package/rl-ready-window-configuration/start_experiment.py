@@ -33,9 +33,10 @@ def execute(argv, **kwargs):
 
 def spec(path, site):
     request = read(path)
-    scoped=request.get('schema')=='formal-target-start-v1'
+    scoped=request.get('schema') in ('formal-target-start-v1','formal-target-start-v2')
     fields={'schema','run_id','baseline','experiment'}|({'target'} if scoped else set())
-    if set(request)!=fields or request['schema'] not in ('formal-p-start-v1','formal-target-start-v1'):
+    if request.get('schema')=='formal-target-start-v2':fields.update(('initialization','training_input_ref'))
+    if set(request)!=fields or request['schema'] not in ('formal-p-start-v1','formal-target-start-v1','formal-target-start-v2'):
         raise ValueError('expected run_id, qualified baseline, experiment and optional versioned target')
     from training_target import NODES,SYSTEM
     if scoped and request['target'] not in (*NODES,SYSTEM):raise ValueError('unknown requested target')
@@ -59,6 +60,8 @@ def spec(path, site):
     profile = read(site['profile'])
     if profile['schema']=='omni-local-profile-v2':
         profile,_ = bind_environment(profile,os.environ)
+    if request['schema']=='formal-target-start-v2':
+        request=dict(request,**{k:resolve(request[k],profile) for k in ('initialization','training_input_ref')})
     effective = resolve(template,profile)
     policy_name=effective.pop('policy_base')
     if Path(policy_name).name!=policy_name: raise ValueError('invalid policy name')
@@ -78,6 +81,27 @@ def spec(path, site):
     return request,baseline,effective,rows
 
 
+def selected_start(req,training):
+    from training_target import check_target
+    init=req['initialization']
+    if set(init)!={'mode','source_ref'} or init['mode'] not in ('base_adapter','checkpoint_weights'):
+        raise ValueError('new experiment needs a weight-only source; resume the original run to restore Adam')
+    checked(init['source_ref'])
+    path=checked(req['training_input_ref']);src=read(path)
+    branch=checked(src['branch_initial_ref']);b=read(branch)
+    policy=read(checked(b['policy_ref']));pub=read(checked(policy['publication_ref']))
+    if (b['schema']!='base-node-policy-branch-v1' or pub['schema']!='configured-node-initial-policy-v1'
+            or pub['initialization']!=init or b['node']!=req['target'] or pub['node']!=b['node']
+            or pub['lineage']!=req['run_id'] or b['optimizer_inherited'] is not False
+            or b['reference_ref']!=src['policy']['reference_ref'] or b['policy_ref']!=src['policy']['current_ref']
+            or b['clock_ref']!=src['clock_state_ref'] or b['learning_ref']!=src['learning_config_ref']
+            or 'continuation' in src or 'restore_checkpoint_ref' in src['native']):
+        raise ValueError('configured source, target, run or sealed training input differs')
+    check_target(req['target'],read(checked(b['learning_ref'])),read(checked(b['clock_ref'])),src['sampling'])
+    training['branch_input']=str(path)
+    return branch
+
+
 def start(path,site_path,plan=False,rehearse=False):
     site=read(site_path)
     if site.get('schema')!='formal-p-site-v1':raise ValueError('unknown site profile')
@@ -91,8 +115,10 @@ def start(path,site_path,plan=False,rehearse=False):
     release=Path(old['release'])
     impl=release/'tree/parents/jev-system-rl/implementation'
     training=read(checked(b['training']))
-    branch=checked(b['branch'])
-    if req['schema']=='formal-target-start-v1':
+    configured=req['schema']=='formal-target-start-v2'
+    branch=selected_start(req,training) if configured else checked(b['branch'])
+    scoped='target' in req
+    if scoped:
         from training_target import check_target
         reg=read(branch);src=read(training['branch_input'])
         if (checked(src['branch_initial_ref'])!=branch or reg['learning_ref']!=src['learning_config_ref']
@@ -108,7 +134,18 @@ def start(path,site_path,plan=False,rehearse=False):
     binding=dict(config=pin(path),site=pin(site_path),experiment_sha256=digest(exp))
     info=dict(run_id=run_id,output=str(root),recordings_per_step=rows,training_memory_gib=exp['training_memory_gib'],
               graph=graph(exp),experiment_sha256=digest(exp),controller='run_dedicated_controller.py')
-    if req['schema']=='formal-target-start-v1':info.update(target_info)
+    if scoped:info.update(target_info)
+    if configured:
+        binding.update(initialization=req['initialization'],training_input_ref=req['training_input_ref'])
+        info.update(initialization=req['initialization'],initial_policy_version=read(checked(reg['policy_ref']))['version'])
+        data=read(checked(manifest['screen_request_ref']))
+        if data['input_ref']!=req['training_input_ref'] or data['policy_ref']!=reg['policy_ref']:
+            raise ValueError('DATA request belongs to another starting policy or roster')
+        verdict=read(checked(b['diagnostic_ready']).parent/'VERDICT.json')
+        if (verdict['policy']!=info['initial_policy_version'] or verdict['tokens']<verdict['rows'] or
+                verdict['rows']<=0 or verdict['nonzero']!=0 or verdict['max_abs']!=0):
+            raise ValueError('same-action evidence belongs to a different policy')
+
     frozen=b.get('dispatch_inputs')
     if frozen is not None:
         if (set(frozen)-{'inbox_wire_format'} not in ({'static','lengths','threads'},{'static','lengths','threads','producer'}) or type(frozen['threads']) is not int
@@ -153,13 +190,14 @@ def start(path,site_path,plan=False,rehearse=False):
                                       '--output',package,'--release',release))
         if read(package/'PACKAGE.json')['experiment_sha256']!=digest(exp):raise ValueError('resolved experiment changed')
         stage('initial_actor',lambda:execute([image,'-c',
-            'import sys;sys.path.insert(0,sys.argv[1]);from actor_start import compile_start;from run_package import write;write(sys.argv[3],compile_start(sys.argv[2],sys.argv[4]))',
-            impl,branch,root/'ACTOR-START.json',run_id]))
+            'import sys;sys.path[:0]=sys.argv[1:4];from source import actor_start,initial_policy;sys.modules["initial_policy"]=initial_policy;from run_package import write;write(sys.argv[5],actor_start.compile_start(sys.argv[4],sys.argv[6]))',
+            source,impl,impl.parents[1]/'policy-iteration-successor',branch,root/'ACTOR-START.json',run_id]))
         # The site owns the predecessor identity. Only this guard-checked pair may be replaced.
         from stage_experiment_lanes import provision
         if rehearse:
             residents=checked(b['client']).parent
-            if read(residents/'READY.json')['experiment_sha256']!=digest(exp):
+            if (read(residents/'READY.json')['experiment_sha256']!=digest(exp) or any(
+                    read(residents/(lane+'-READY.json'))['activation']['version']!=read(root/'ACTOR-START.json')['version'] for lane in exp['lanes'])):
                 raise ValueError('offline rehearsal requires matching archived service receipts')
         else:
             dep=stage('inference',lambda:provision(site,b,root,exp,old['rollout_target'],req['experiment']['reader_sources']))

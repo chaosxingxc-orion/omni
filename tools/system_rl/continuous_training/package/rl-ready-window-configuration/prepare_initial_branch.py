@@ -1,6 +1,92 @@
-"""Compile an expanded-weight start with a fresh learning Clock and the existing dataset."""
+"""Compile explicitly selected weights with a new Clock, or replay a historical expanded branch."""
 import argparse,copy,os,sys
 from pathlib import Path
+
+
+def base_branch(c,out):
+    from run_package import read,pin,write
+    from dependencies import require,ROOT,upstream
+    from paired_experiment import rank_profile,digest
+    from scorer_extension import install
+    from initial_policy import validate_initial
+    require(set(c)-{'training_input_template'}=={'schema','scope','initialization','base_manifest','system','frozen_upstream','geometry_source','lineage'}
+            and isinstance(c['lineage'],str) and c['lineage'],'independent branch config')
+    scope=read(c['scope']);task=scope['task'];node=task['node']
+    init=c['initialization'];mode=init['mode'];base_ref=pin(c['base_manifest']);base=read(base_ref)
+    require(set(init)=={'mode','source_ref'} and mode in ('base_adapter','checkpoint_weights'),
+            'select an explicit base adapter or checkpoint weights; resume uses the original run cursor')
+    require(isinstance(init['source_ref'],dict) and set(init['source_ref'])=={'path','bytes','sha256'},
+            'initialization requires a pinned source manifest')
+    src_ref=pin(init['source_ref'])
+    require(src_ref==init['source_ref'],'source manifest identity changed')
+    origin=read(src_ref)
+    require(scope['scope']=='node' and scope['trainable_mask']=={n:n==node for n in ('P','S1','S2','D')},'wrong branch scope')
+    if mode=='base_adapter':
+        require(origin['schema']=='independent-node-base-adapter-origin-v1'
+                and origin['inputs']['base_manifest']['sha256']==base_ref['sha256'],'wrong base adapter')
+        folder=Path(src_ref['path']).parent
+    else:
+        require(origin.get('recoverable') is True and origin['step']==origin['clock']['successful_optimizer_steps']>0
+                and origin['resident_identity']['base']['asset_manifest_ref']['sha256']==base_ref['sha256']
+                and origin['contract']['lineage']!=c['lineage'],'checkpoint identity or new lineage differs')
+        folder=Path(src_ref['path']).parent/'lora_adapter'
+    exp=read(scope['inputs']['experiment']);measured=read(c['geometry_source'])
+    require(measured['schema']=='resident-actor-initialization-v1' and measured['lineage']!=c['lineage']
+            and measured['devices']==exp['training_devices'] and measured['base']['model_path']==exp['model_path']
+            and measured['base']['observed_assets']==base['assets'] and measured['base']['asset_manifest_ref']['sha256']==base_ref['sha256']
+            and measured['training']['model_path']==exp['model_path'],'actor and independent base differ')
+    profile=rank_profile(exp)
+    geometry={k:measured[k] for k in ('image','devices','base')}
+    geometry.update(schema='base-node-actor-geometry-v1',training=dict(measured['training'],**profile['training']))
+    geometry_ref=write(out/'GEOMETRY.json',geometry)
+    assets=[pin(folder/name) for name in ('adapter_model.safetensors','adapter_config.json')]
+    version='initial-sha256:'+assets[0]['sha256']
+    pub=write(out/'INITIAL.json',dict(schema='configured-node-initial-policy-v1',initialization=dict(mode=mode,source_ref=src_ref),
+              base_manifest_ref=base_ref,geometry_ref=geometry_ref,profile_ref=write(out/'PROFILE.json',profile),
+              assets=assets,node=node,lineage=c['lineage']))
+    policy=dict(schema='fresh-policy-version-v1',kind='branch_initial',step=0,role='current',model=base['model'],
+                thinking=False,version=version,artifact_version=version,assets=assets,publication_ref=pub)
+    validate_initial(policy);policy_ref=write(out/'POLICY.json',policy)
+    ref_version='base-sha256:'+digest(base['assets'])
+    reference=write(out/'REFERENCE.json',dict(schema='fresh-policy-version-v1',kind='base',role='reference',step=0,
+              model=base['model'],thinking=False,version=ref_version,frozen=True,assets=base['assets'],
+              asset_manifest_ref=base_ref,initialization='unmodified_base_no_optimizer_update'))
+    learning=read(scope['learning_ref']);phase,=learning['phases'];nodes=('P','S1','S2','D')
+    require(phase['target_nodes']==[node] and phase['trainable_mask']=={n:n==node for n in nodes},
+            'scope and independent learning target differ')
+    system=pin(c['system']);frozen=pin(c['frozen_upstream'])
+    learning['system_version']=system['sha256'];phase['frozen_upstream_release']=frozen['sha256']
+    learning['version']+='@'+c['lineage']+':'+version
+    for k,v in [('current',version),('behavior',version),('reference',ref_version)]:
+        learning['kernel'][k+'_policy_vector']=dict.fromkeys(nodes,v)
+    learning['adapter_routing']['frozen_upstream_adapter_vector']=dict.fromkeys(nodes,ref_version)
+    pins={n:pin(ROOT/'unified-learning'/n) for n in ('kernel.py','learning.py','scoring.py','schedule.py','dataset.py','fixtures.py')}
+    pins.update({n:pin(ROOT/'system-objective-cpu'/n) for n in ('objective.py','runtime.py')})
+    api=upstream();install(api);clock=api.create_clock(learning,consumer_config=dict(source_pins=pins))
+    require(clock.phase()==phase and clock.state['successful_optimizer_steps']==0 and
+            all(not clock.state[k] for k in ('groups','attempts','validations')),'nonempty initial Clock')
+    anchor=write(out/'BRANCH.json',dict(schema='base-node-policy-branch-v1',step=0,optimizer_inherited=False,node=node,
+        policy_ref=policy_ref,reference_ref=reference,learning_ref=write(out/'LEARNING.json',learning),
+        clock_ref=write(out/'CLOCK.json',clock.state),system_ref=system,frozen_upstream_ref=frozen))
+    if 'training_input_template' not in c:return anchor
+    # Roster and frozen upstream inputs belong to this task, independently
+    # of the checkpoint writer. Never transplant a predecessor's trajectories.
+    source=read(c['training_input_template'])
+    require(source['sampling']['scope']=='node' and source['sampling']['node']==node
+            and source['sampling']['split']=='TRAIN' and source['sampling']['system_version']==system['sha256']
+            and pin(source['phase_frozen_upstream_ref'])==frozen and source['rollout_scope']=='node'
+            and not set(source)&{'continuation','branch_initial_ref','sampled_window_ref','lease_fence'}
+            and not any(k.startswith('restore_') for k in source['native'])
+            and not set(source['capture'])&{'endpoint_policy_ref','lanes','lane_transports'}
+            and not source['policy'].get('runtime_evidence_ref'),'wrong node roster, upstream or inherited run state')
+    branch=read(anchor);consumer=read(source['consumer_config_ref'])
+    consumer.update(learning_config_ref=branch['learning_ref'],clock_state_ref=branch['clock_ref'])
+    source.update(branch_initial_ref=anchor,clock_state_ref=branch['clock_ref'],learning_config_ref=branch['learning_ref'],
+                  consumer_config_ref=write(out/'CONSUMER.json',consumer),
+                  phase_binding=dict(phase_id=phase['id'],entry_step=0,release_ref=frozen))
+    source['policy'].update(current_ref=policy_ref,reference_ref=reference)
+    return write(out/'INPUT.json',source)
+
 
 
 def prepare(config,out):
@@ -9,6 +95,7 @@ def prepare(config,out):
     from initial_policy import validate_initial
     from scorer_extension import install
     c=read(config)
+    if c['schema']=='base-node-branch-inputs-v1':return base_branch(c,out)
     require(c['schema']=='expanded-policy-branch-inputs-v1','unexpected branch config')
     experiment = None
     if 'package' in c:

@@ -18,7 +18,10 @@ def read(path):
 
 
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    h=hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda:stream.read(1048576),b''):h.update(chunk)
+    return h.hexdigest()
 
 
 def save(path, value):
@@ -45,6 +48,37 @@ def predecessor(c,lane):
     if set(c['predecessors'])!=set(c['old_services']):raise ValueError('incomplete lane predecessors')
     entry=c['predecessors'][lane]
     return Path(entry['root']),entry['attempt']
+
+
+def install_configured_policy(src,area,c,ref):
+    """Project pinned manifests into paths visible inside the inference bundle."""
+    files=c['configured_files']
+    folder=src/('configured-'+c['initial_branch_sha256'])
+    names={'source.json','base.json','geometry.json','profile.json','publication.json',
+           'adapter_model.safetensors','adapter_config.json'}
+    if set(files)!=names or any(digest(folder/k)!=files[k] for k in names):
+        raise ValueError('configured weight bundle changed')
+    pub=read(folder/'publication.json');init=pub['initialization']
+    if (pub['schema']!='configured-node-initial-policy-v1' or init['mode'] not in ('base_adapter','checkpoint_weights') or
+            {Path(a['path']).name:a['sha256'] for a in pub['assets']}!={k:files[k] for k in ('adapter_model.safetensors','adapter_config.json')} or
+            init['source_ref']['sha256']!=files['source.json'] or
+            any(pub[key]['sha256']!=files[name] for key,name in (
+                ('geometry_ref','geometry.json'),('profile_ref','profile.json'),('base_manifest_ref','base.json'))) or
+            files['profile.json']!=digest(src/'rank-profile.json')):
+        raise ValueError('service source or geometry differs from actor publication')
+    # Retain the checkpoint manifest bytes, without copying optimizer shards.
+    adapter=area/'lora_adapter';adapter.mkdir(exist_ok=True)
+    source=(adapter/'ORIGIN.json' if init['mode']=='base_adapter' else area/'COMMITTED.json')
+    def install(name,dest):
+        if not dest.exists():shutil.copyfile(folder/name,dest)
+        if digest(dest)!=files[name]:raise ValueError('installed file differs: '+name)
+        return ref(dest)
+    assets=[install(n,adapter/n) for n in ('adapter_model.safetensors','adapter_config.json')]
+    pub=dict(pub,assets=assets,initialization=dict(mode=init['mode'],source_ref=install('source.json',source)))
+    for key,name in [('geometry_ref','geometry.json'),('profile_ref','profile.json'),('base_manifest_ref','base.json')]:
+        pub[key]=install(name,area/name)
+    save(area/'INITIAL.json',pub)
+    return adapter,assets
 
 
 def prepare(root,c):
@@ -83,7 +117,8 @@ def prepare(root,c):
             raise ValueError('rank-aware checkpoint reader missing from deployment overlay')
     if (root/'PREPARED.json').exists():
         receipt=read(root/'PREPARED.json')
-        if receipt.get('experiment_sha256') != binding.get('experiment_sha256'):
+        if (receipt.get('experiment_sha256') != binding.get('experiment_sha256') or
+                receipt.get('initial_branch_sha256')!=c.get('initial_branch_sha256')):
             raise ValueError('prepared deployment has a different experiment identity')
         if receipt['overlays']!=c['overlays'] or any(
                 digest(dest/'parents/jev-system-rl/implementation'/n)!=v for n,v in receipt['overlays'].items()):
@@ -153,18 +188,21 @@ def prepare(root,c):
         sources=dict(precision['sources']);sources.update({k:v['result_ref'] for k,v in changes.items()})
         replace(dest/'PRECISION-SPEC.json',dict(precision,sources=sources,adapter_rank_delta_ref=ref(area/'delta.json')))
         init=area/'lora_adapter'
-        if not init.exists():shutil.copytree(src/'initial-adapter',init)
-        parent=Path(c['parent_commit'])
-        if digest(init/'ORIGIN.json')!=c['origin_sha256']:raise ValueError('wrong initial publication')
-        origin=read(init/'ORIGIN.json')
-        if digest(parent)!=origin['inputs']['parent_sha256'] or digest(src/'rank-profile.json')!=origin['inputs']['profile_sha256']:
-            raise ValueError('initial policy inputs differ')
-        for name,file in [('parent-commit.json',parent),('rank-profile.json',src/'rank-profile.json')]:
-            shutil.copyfile(file,area/name)
-        assets=[ref(init/n) for n in ('adapter_model.safetensors','adapter_config.json')]
-        if {Path(a['path']).name:a['sha256'] for a in assets}!=origin['files']:raise ValueError('wrong adapter assets')
-        save(area/'INITIAL.json',dict(schema='expanded-initial-policy-v1',origin_ref=ref(init/'ORIGIN.json'),
-             parent_ref=ref(area/'parent-commit.json'),profile_ref=ref(area/'rank-profile.json'),assets=assets))
+        if 'configured_files' in c:
+            init,assets=install_configured_policy(src,area,c,ref)
+        else:
+            if not init.exists():shutil.copytree(src/'initial-adapter',init)
+            parent=Path(c['parent_commit'])
+            if digest(init/'ORIGIN.json')!=c['origin_sha256']:raise ValueError('wrong initial publication')
+            origin=read(init/'ORIGIN.json')
+            if digest(parent)!=origin['inputs']['parent_sha256'] or digest(src/'rank-profile.json')!=origin['inputs']['profile_sha256']:
+                raise ValueError('initial policy inputs differ')
+            for name,file in [('parent-commit.json',parent),('rank-profile.json',src/'rank-profile.json')]:
+                shutil.copyfile(file,area/name)
+            assets=[ref(init/n) for n in ('adapter_model.safetensors','adapter_config.json')]
+            if {Path(a['path']).name:a['sha256'] for a in assets}!=origin['files']:raise ValueError('wrong adapter assets')
+            save(area/'INITIAL.json',dict(schema='expanded-initial-policy-v1',origin_ref=ref(init/'ORIGIN.json'),
+                 parent_ref=ref(area/'parent-commit.json'),profile_ref=ref(area/'rank-profile.json'),assets=assets))
         version='initial-sha256:'+assets[0]['sha256']
         if c['version']!=version:raise ValueError('wrong configured branch version')
         policy=read(dest/'checkpoint/candidate/POLICY.json')
@@ -227,7 +265,7 @@ def prepare(root,c):
         replace(dest/f'SERVER-{lane}.json',server);save(code/'config.json',cfg)
         save(code/'PINS.json',{n:digest(code/n) for n in ('config.json','launch.py','service.py')})
     save(root/'PREPARED.json',dict(lanes=list(c['old_services']),policy=server['policy_ref']['sha256'],
-                                    graph=graph,overlays=c['overlays'],**binding))
+                                    graph=graph,overlays=c['overlays'],**({'initial_branch_sha256':c['initial_branch_sha256']} if 'configured_files' in c else {}),**binding))
 
 
 def launch_module(path):

@@ -29,9 +29,17 @@ def provision(site, baseline, root, exp, host, sources):
         fd=os.open(registry.parent,os.O_DIRECTORY)
         try:os.fsync(fd)
         finally:os.close(fd)
+    actor=json.loads((root/'ACTOR-START.json').read_bytes())
+    def pinned(ref):
+        path=Path(ref['path'])
+        if pin(path)!=ref:raise ValueError('initial policy file changed: '+str(path))
+        return path
+    branch=json.loads(pinned(actor['branch_ref']).read_bytes())
+    configured=branch['schema']=='base-node-policy-branch-v1'
     if prep.exists():
         dep=json.loads(prep.read_bytes())
-        if dep['remote_root']!=str(dest) or doc(dest,'CONFIG.json')!=dep['config'] or dep['config']['experiment_sha256']!=digest(exp):
+        if (dep['remote_root']!=str(dest) or doc(dest,'CONFIG.json')!=dep['config'] or dep['config']['experiment_sha256']!=digest(exp)
+                or dep['config']['version']!=actor['version'] or (configured and dep['config'].get('initial_branch_sha256')!=actor['branch_ref']['sha256'])):
             raise ValueError('staged deployment differs')
         if doc(dest,'READY.json').get('experiment_sha256')!=digest(exp):
             raise ValueError('staged pair is not ready for this experiment')
@@ -41,7 +49,22 @@ def provision(site, baseline, root, exp, host, sources):
         raise ValueError('missing independent service namespace')
     seed=Path(baseline['service_seed_root']) if 'service_seed_root' in baseline else prev
     c=doc(seed,'CONFIG.json')
-    if c['version']!=json.loads((root/'ACTOR-START.json').read_bytes())['version']:
+    # The seed supplies the engine and graph. For a configured start only the
+    # actor publication supplies weights; do not choose them from a service seed.
+    weight_files={}
+    if configured:
+        policy=json.loads(pinned(branch['policy_ref']).read_bytes())
+        pub=json.loads(pinned(policy['publication_ref']).read_bytes())
+        if (pub['schema']!='configured-node-initial-policy-v1' or actor['version']!=policy['version'] or
+                actor['assets']!={Path(a['path']).name:a for a in pub['assets']}):
+            raise ValueError('selected actor and service publication differ')
+        weight_files={'source.json':pub['initialization']['source_ref'],'geometry.json':pub['geometry_ref'],
+                      'base.json':pub['base_manifest_ref'],'profile.json':pub['profile_ref'],
+                      'publication.json':policy['publication_ref'],**actor['assets']}
+        c.update(initial_branch_sha256=actor['branch_ref']['sha256'],version=actor['version'],
+                 configured_files={k:v['sha256'] for k,v in weight_files.items()})
+        for key in ('parent_commit','origin_sha256'):c.pop(key,None)
+    elif c['version']!=actor['version'] or 'configured_files' in c:
         raise ValueError('registered service seed and initial actor weights differ')
     prev_attempt=doc(prev,'CONFIG.json')['attempt'];attempt='exp'+digest(dict(run=root.name,experiment=digest(exp)))[:14]
     for k in ('released_session_ref','failed_startup_predecessor','failed_diagnostic_predecessor'):
@@ -73,6 +96,13 @@ def provision(site, baseline, root, exp, host, sources):
     # Exclusive fresh directory. Partial cutovers must be reconciled, never blindly replayed.
     remote('mkdir','-m','700',dest)
     remote('cp','-a','--reflink=auto',seed/'inputs',dest/'inputs')
+    if weight_files:
+        area=dest/'inputs'/('configured-'+actor['branch_ref']['sha256'])
+        remote('mkdir','-m','700',area)
+        for name,ref in weight_files.items():
+            with pinned(ref).open('rb') as stream:
+                subprocess.run(['ssh','-oBatchMode=yes',host,shlex.join(['tee',str(area/name)])],
+                               stdin=stream,stdout=subprocess.DEVNULL,check=True)
     for name,p in staged.items():
         remote('python3','-c','import sys;from pathlib import Path;p=Path(sys.argv[1]);p.write_bytes(sys.stdin.buffer.read())',dest/name,raw=p.read_bytes())
     conf=save(root/'service-config.json',c)

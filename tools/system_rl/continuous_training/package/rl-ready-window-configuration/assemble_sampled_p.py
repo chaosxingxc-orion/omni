@@ -62,10 +62,17 @@ def assemble(manifest, output, *, bind_live):
                 len(devices)==len(set(devices))>0 and type(g) is int and g>0 and len(devices)*micro*acc%g==0,
                 'global actor batch must contain whole rollout groups')
         spec=dict(spec,queries_per_cohort=len(devices)*micro*acc//g)
-    initial=pin(start['native']['restore_checkpoint_ref'])
-    require(initial['sha256']==check['restore_checkpoint_sha256'] and check['prior_step']==read(initial)['step']
-            and check['check_only'] and check['stage_only'] and check['formal_sampled']
-            and read(start['policy']['current_ref'])['step']==check['prior_step']
+    registered=read(cfg['branch_input_ref']) if cfg.get('branch_input_ref') else None
+    independent=bool(registered and read(registered['branch_initial_ref'])['schema']=='base-node-policy-branch-v1')
+    if independent:
+        initial=None
+        require(data['input_ref']==cfg['branch_input_ref'] and 'restore_checkpoint_ref' not in start['native']
+                and cfg.get('training_target')==start['sampling']['node'],'independent run requires its own DATA request')
+    else:
+        initial=pin(start['native']['restore_checkpoint_ref'])
+        require(initial['sha256']==check['restore_checkpoint_sha256'] and check['prior_step']==read(initial)['step']
+                and read(start['policy']['current_ref'])['step']==check['prior_step'],'actor restore identity differs')
+    require(check['check_only'] and check['stage_only'] and check['formal_sampled']
             and start['policy']['current_ref']==data['policy_ref'] and spec['sample_count']==screen['sampling']['sample_count'],
             'the finite actor, DATA request and official sample do not share the initial policy and scope')
     branch=None
@@ -76,7 +83,7 @@ def assemble(manifest, output, *, bind_live):
         start=read(cfg['branch_input_ref'])
         branch=compile_start(start['branch_initial_ref'],cfg['run_id'])
         require(branch['actor_batch']==batch and start['policy']['current_ref']==read(branch['branch_ref'])['policy_ref']
-                and read(branch['branch_ref'])['dataset_ref']==read(read(branch['branch_ref'])['parent_cursor_ref'])['sampled_dataset_ref'],
+                and (independent or read(branch['branch_ref'])['dataset_ref']==read(read(branch['branch_ref'])['parent_cursor_ref'])['sampled_dataset_ref']),
                 'branch current policy, batch or dataset changed')
     if 'training_target' in cfg:
         from training_target import check_target
@@ -112,7 +119,7 @@ def assemble(manifest, output, *, bind_live):
             require(provider['lane']==k and read(provider['service_ready'])['container_id']==ids[k],
                     'different provider handoff')
         require(sealed['request_ref']==pin(cfg['screen_request_ref']) and sealed['complete']
-                and sealed['node']=='P' and sealed['fixture'] is False,'different DATA completion')
+                and sealed['node']==screen['sampling']['node'] and sealed['fixture'] is False,'different DATA completion')
     else:
         roster={k:str(Path(cfg['live_provider_ready_path']).parent/k/'PROVIDER.json') for k in lanes}
     rollout['provider_refs']=roster
@@ -271,7 +278,14 @@ def assemble(manifest, output, *, bind_live):
     require(base['authorization_ref']==data['authorization_ref'] and base['registry']==start['execution_registry']
             and base['system_policy_ref']==data['system_policy_ref'] and base['datasets']['TRAIN']==data['dataset_ref'],
             'DATA accounting or task identity drift')
-    if branch:
+    if independent:
+        require(cfg.get('dataset_start_mode')=='new_epoch' and not cfg.get('closed_undispatched_ref')
+                and not cfg.get('branch_plan_ref') and cfg['training_target']==read(branch['branch_ref'])['node'],
+                'independent run cannot inherit a cursor')
+        base.pop('initial_resume_ref',None)
+        base.update(initial_input=cfg['branch_input_ref']['path'],branch_initial_ref=branch['branch_ref'],
+                    dataset_start_mode='new_epoch',trajectory=None)
+    elif branch:
         b=read(branch['branch_ref']);parent=read(b['parent_cursor_ref'])
         if cfg.get('dataset_start_mode') is not None:
             require(cfg['dataset_start_mode']=='new_epoch' and not cfg.get('closed_undispatched_ref'),

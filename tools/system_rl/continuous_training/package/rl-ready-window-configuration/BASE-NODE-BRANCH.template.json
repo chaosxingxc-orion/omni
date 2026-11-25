@@ -1,0 +1,10 @@
+{
+  "schema": "base-node-branch-inputs-v1",
+  "scope": "${NODE_SCOPE}",
+  "initialization": "${INITIALIZATION}",
+  "base_manifest": "${BASE_MANIFEST}",
+  "system": "${FROZEN_SYSTEM}",
+  "frozen_upstream": "${FROZEN_UPSTREAM}",
+  "geometry_source": "${MEASURED_ACTOR_START}",
+  "lineage": "${LINEAGE}"
+}
