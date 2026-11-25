@@ -1,5 +1,10 @@
 {
   "schema": "dispatch-overlay-bases-v1",
+  "predecessors": {
+    "transition_controller": ["69321fd47e9cb0ea8f1cdfc93475511514d57f092d51d18723621f7e099fbe06"],
+    "capture_stage": ["56e921d0bfa8e45ca7ad06b171c420bdba62cd68fcf8a8c19cdc5cae4fdcbee6"],
+    "formal_rollout": ["830148bc2bac59e41689ab33f9748ada7be87eeeb9d48fd367c496b120c0ebed"]
+  },
   "bases": {
     "capture_stage": "c148b598ddca271c5a1ec1eafb7a35d193af761ca19d7e666b6bbad3e799d48e",
     "formal_rollout": "7b58b67ce28b801f3e70db2ab4cb56af2d59b77d19ced5df4022be06b04730d5"

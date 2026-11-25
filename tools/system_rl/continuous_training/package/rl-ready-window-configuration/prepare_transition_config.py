@@ -16,7 +16,7 @@ def build(runner,iteration,source,lengths,static,output,threads,*,producer=None)
     for name in ('capture_stage','formal_rollout'):
         actual=pin(impl/(name+'.py'))['sha256']
         replacement=pin(source/'source'/(name+'.py'))['sha256']
-        if actual not in (compatibility['bases'][name],replacement):
+        if actual not in (compatibility['bases'][name],replacement,*compatibility.get('predecessors',{}).get(name,[])):
             raise ValueError('unqualified dispatch source: '+name)
     src={}
     for n in ('transition_controller','transition_static_inputs','capture_stage','formal_rollout'):
@@ -30,7 +30,7 @@ def build(runner,iteration,source,lengths,static,output,threads,*,producer=None)
              publication_sha256=pin(impl/'publication.py')['sha256'])
     if producer is not None:
         from prepare_recording_macros import read,build as prepare_macros
-        if set(producer)!={'recordings_per_macro','training_input_layout'} or producer['training_input_layout']!='group_refs_v1':
+        if set(producer)-{'lane_storage'}!={'recordings_per_macro','training_input_layout'} or producer['training_input_layout']!='group_refs_v1':
             raise ValueError('unknown producer/consumer configuration')
         # A new run uses the published build from its very first actor. Never
         # enable a new encoding against a legacy stage template.
@@ -42,9 +42,18 @@ def build(runner,iteration,source,lengths,static,output,threads,*,producer=None)
                 raise ValueError('staged actor does not implement indexed inputs: '+name)
         obj['recording_macros_ref']=prepare_macros(obj['static_supply_ref'],producer['recordings_per_macro'],output.parent/'recording-pages')
         obj['training_input_layout']=producer['training_input_layout']
+        if 'lane_storage' in producer:
+            validate_lane_storage(producer['lane_storage'],impl.parents[1])
+            obj['lane_storage']=producer['lane_storage']
     if output.exists() and json.loads(output.read_bytes())!=obj:raise ValueError('immutable config drift')
     if not output.exists():output.write_text(json.dumps(obj,indent=2)+'\n')
     return obj
+
+
+def validate_lane_storage(profile,parents):
+    validator=parents/'native-recompute-integration/state-repair/acl-runtime-successor/sync_runtime.py'
+    if profile!=dict(mode='live_space_pinned_mount_v1',validator_sha256=pin(validator)['sha256']):
+        raise ValueError('unqualified lane storage profile')
 
 
 if __name__=='__main__':

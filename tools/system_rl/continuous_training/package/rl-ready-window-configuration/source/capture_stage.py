@@ -3,8 +3,52 @@ from pathlib import Path
 import copy
 import sys
 import types
+from contextlib import contextmanager
 from dependencies import ROOT,require,load
 from run_package import read,pin,write
+
+
+@contextmanager
+def lane_capacity(root, runtime, mode):
+    """Reuse the qualified mount identity during this lane; space is always live."""
+    import os
+    import subprocess
+    if mode is None:
+        yield None
+        return
+    require(set(mode)=={'mode','validator_sha256'} and mode['mode']=='live_space_pinned_mount_v1'
+            and pin(runtime.__file__)['sha256']==mode['validator_sha256'],'unqualified lane storage validator')
+    def mount(fd):
+        with open('/proc/self/fdinfo/'+str(fd)) as f:
+            ids=[int(line.split()[1]) for line in f if line.startswith('mnt_id:')]
+        if len(ids)!=1:raise ValueError('cannot identify open mount')
+        return ids[0],os.fstat(fd).st_dev
+    original=runtime.capacity
+    rootfd=os.open(root,os.O_RDONLY|os.O_DIRECTORY)
+    try:
+        key=mount(rootfd)
+        # Keep an fd open until the lane ends, so its mount ID cannot be recycled.
+        mid,kind=subprocess.check_output(['findmnt','-n','-o','ID,FSTYPE','-T',str(root)],text=True).split()
+        require(int(mid)==key[0] and kind in ('ext4','xfs','btrfs'),'capture root is not the expected local mount')
+        stats=dict(mount_probes=1,live_checks=0,other_mount_checks=0)
+        def capacity(path,budget=0):
+            fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY)
+            try:
+                if mount(fd)!=key:
+                    stats['other_mount_checks']+=1
+                    return original(path,budget)
+                v=os.fstatvfs(fd);stats['live_checks']+=1
+                reserve=max(20*1024**3,int(v.f_blocks*v.f_frsize*.1))
+                free=v.f_bavail*v.f_frsize
+                require(free>=reserve+budget and v.f_files and v.f_favail/v.f_files>=.05,
+                        'capacity/inode budget unavailable')
+                return dict(filesystem=kind,free_bytes=free,reserve_bytes=reserve,budget_bytes=budget,
+                            inode_free_fraction=v.f_favail/v.f_files)
+            finally:os.close(fd)
+        runtime.capacity=capacity
+        try:yield stats
+        finally:runtime.capacity=original
+    finally:os.close(rootfd)
 
 
 def generate(request_ref,context):
@@ -150,10 +194,20 @@ def bounded(config_ref, root, operation, draw_index=None, lane=None):
                 # Keep the original numeric lane guard inode for both modes.
                 with (root/f'lane-{lanes.index(lane)}.guard').open('a') as lane_lock:
                     fcntl.flock(lane_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-                    with CaptureLease(config,root) as lease:
-                        check_lane_route(config,lane)
-                        return capture.capture(config,root,execution_enabled=True,lease=lease,
-                                               draw_index=draw_index,lane=lane if formal else None)
+                    from cohort_io import ACL
+                    import time
+                    with imports([ACL]):
+                        import sync_runtime
+                    require(Path(sync_runtime.__file__).resolve()==(ACL/'sync_runtime.py').resolve(),'different capture storage runtime')
+                    with lane_capacity(root,sync_runtime,config['capture'].get('lane_storage')) as stats:
+                        with CaptureLease(config,root) as lease:
+                            check_lane_route(config,lane)
+                            result=capture.capture(config,root,execution_enabled=True,lease=lease,
+                                                   draw_index=draw_index,lane=lane if formal else None)
+                    if stats is not None:
+                        write(root.parent/'lease'/lane/('CAPACITY-'+str(time.time_ns())+'.json'),
+                              dict(stats,config=config_ref,lane=lane,source=pin(__file__)))
+                    return result
             require(operation=='close','unknown bounded capture operation')
             capture.close_generation(root,plan)
             return generation_result(root,config['policy']['runtime_evidence_ref'])

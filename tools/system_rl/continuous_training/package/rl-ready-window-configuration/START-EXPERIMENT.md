@@ -10,3 +10,7 @@
 站点可在已登记 baseline 的 dispatch_inputs 下指定 static、lengths 两个不可变文件引用和 threads。两份索引属于指定数据集、预处理及逐样本召回版本：变更后重新生成。训练控制器从同一配置派发，每步仍用新策略生成真实动作。首次读取新 LoRA 时运行原校验；同一不可变文件可复用结果，完整恢复仍逐分片验证。上线中的实验由 handoff_dispatch_transition.py 在上一批已排空且训练命令已签收的边界接回原控制器；只有首次上线需要切换。生产耗时按 observe_transition_acceptance.py 的 checkpoint 返回至下批首派计量，同时报告首派至末回及相邻首派间隔。
 
 生产者宏批的单位是录音。在已登记的 dispatch_inputs 下可以设置 producer 为 {"recordings_per_macro":128,"training_input_layout":"group_refs_v1"}。静态名单按数据集顺序准备，尾批保留；真实动作按每步策略新采。组文件保留原始动作与不变输入的内容引用，正式发布器和恢复读取器均须在同版本的 actor 构建内。宏批大小独立于训练端每卡 microbatch、累积次数及 rollout 并发。
+
+可在同一 producer 下增加 lane_storage，字段为 mode（live_space_pinned_mount_v1）及 validator_sha256（该发布包原 sync_runtime.py 的已验收摘要）。两条采样通道分别在开始时核对实际目录的挂载 ID 和类型，持有目录句柄至本路结束。每次原有空间核验仍以当前目录句柄读取剩余字节和 inode，不缓存可用容量。不同挂载走原始校验。缺省配置沿用原路径。
+
+check_lane_storage.py 的 prepare 从正在运行的 CPU transition 派生候选，并保留训练客户端与回传版本；replay 在固定控制镜像中读取原批已关闭的 GENERATION-INVENTORY.json，比较落盘字节、容量门限和未知挂载拒绝；live 在真实的下一批排空后核对每路回执、原请求与响应、挂载查询次数及首派时间。仅在回放通过且当前训练命令已签收的边界由原 handoff_dispatch_transition.py 接管。

@@ -66,6 +66,10 @@ def configure(spec):
     static=read(spec['static_supply_ref']); lengths=read(spec['prompt_length_index_ref'])
     require(static['length_index_ref']==spec['prompt_length_index_ref'] and
             static['profile_ref']==lengths['profile_ref'] and static['schema']=='p-static-supply-v1','changed static inputs')
+    if 'lane_storage' in spec:
+        require(spec['lane_storage']==dict(mode='live_space_pinned_mount_v1',validator_sha256=pin(
+            __import__('dependencies').ROOT/'native-recompute-integration/state-repair/acl-runtime-successor/sync_runtime.py')['sha256']),
+            'lane storage validator differs')
     def placement(config):
         require(pin(config['_path'])==spec['iteration_ref'],'different live controller configuration')
         config['formal_rollout'].update({k:spec[k] for k in ('static_supply_ref','prompt_length_index_ref')})
@@ -73,6 +77,8 @@ def configure(spec):
             config['formal_rollout']['recording_macros_ref']=spec['recording_macros_ref']
         if 'training_input_layout' in spec:
             config['formal_rollout']['training_input_layout']=spec['training_input_layout']
+        if 'lane_storage' in spec:
+            config['formal_rollout']['lane_storage']=spec['lane_storage']
         if 'idle_recovery_ref' in spec:
             import recover_idle_actor
             recover_idle_actor.install(config,spec)

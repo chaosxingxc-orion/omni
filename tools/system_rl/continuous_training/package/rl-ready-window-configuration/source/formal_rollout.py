@@ -456,7 +456,7 @@ def capture(config, request_ref, request, root):
     source['native']['attempt_id'] = source['cohort_id']
     if 'official_index_cache_root' in spec:
         source['capture']['official_index_cache_root'] = spec['official_index_cache_root']
-    for k in ('recording_macros_ref','training_input_layout'):
+    for k in ('recording_macros_ref','training_input_layout','lane_storage'):
         if k in spec:source['capture'][k]=spec[k]
     if 'static_supply_ref' in spec:
         source['capture']['static_supply_ref']=spec['static_supply_ref']

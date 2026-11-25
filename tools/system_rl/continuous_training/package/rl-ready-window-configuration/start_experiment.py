@@ -98,9 +98,12 @@ def start(path,site_path,plan=False,rehearse=False):
         checked(frozen['static']);checked(frozen['lengths'])
         if 'producer' in frozen:
             producer=frozen['producer']
-            if (set(producer)!={'recordings_per_macro','training_input_layout'} or type(producer['recordings_per_macro'])!=int
+            if (set(producer)-{'lane_storage'}!={'recordings_per_macro','training_input_layout'} or type(producer['recordings_per_macro'])!=int
                     or producer['recordings_per_macro']<1 or producer['training_input_layout']!='group_refs_v1'):
                 raise ValueError('invalid recording producer settings')
+            if 'lane_storage' in producer:
+                from prepare_transition_config import validate_lane_storage
+                validate_lane_storage(producer['lane_storage'],impl.parents[1])
     if plan: return info
     if root.resolve()!=root:raise ValueError('run root escaped')
     root.mkdir(mode=0o700,parents=True,exist_ok=True)
