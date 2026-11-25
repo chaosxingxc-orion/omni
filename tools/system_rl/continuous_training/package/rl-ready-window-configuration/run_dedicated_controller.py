@@ -139,7 +139,7 @@ if __name__=='__main__':
         directory=root/'dispatch-transition';directory.mkdir(exist_ok=True)
         candidate=directory/'TRANSITION.json'
         build(a.config,config,Path(__file__).parent,frozen['lengths']['path'],frozen['static']['path'],
-              candidate,frozen['threads'])
+              candidate,frozen['threads'],producer=frozen.get('producer'))
         launch(c,[str(directory/'transition_controller.py'),str(candidate)])
     else:
         launch(c,[str(Path(c['logical_root'])/'jev-system-rl/implementation/iteration.py'),'--config',str(config)])

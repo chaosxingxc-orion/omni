@@ -9,7 +9,7 @@ def pin(p):
     return dict(path=str(p),bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
 
 
-def build(runner,iteration,source,lengths,static,output,threads):
+def build(runner,iteration,source,lengths,static,output,threads,*,producer=None):
     old=json.loads(runner.read_bytes());impl=Path(old['release'])/'tree/parents/jev-system-rl/implementation'
     compatibility=json.loads((source/'DISPATCH-COMPATIBILITY.json').read_bytes())
     if compatibility['schema']!='dispatch-overlay-bases-v1':raise ValueError('unknown overlay scope')
@@ -28,6 +28,20 @@ def build(runner,iteration,source,lengths,static,output,threads):
     obj=dict(schema='dispatch-transition-v1',iteration_ref=pin(iteration),runner_ref=pin(runner),sources=src,
              static_supply_ref=pin(static),prompt_length_index_ref=pin(lengths),cpu_threads=threads,
              publication_sha256=pin(impl/'publication.py')['sha256'])
+    if producer is not None:
+        from prepare_recording_macros import read,build as prepare_macros
+        if set(producer)!={'recordings_per_macro','training_input_layout'} or producer['training_input_layout']!='group_refs_v1':
+            raise ValueError('unknown producer/consumer configuration')
+        # A new run uses the published build from its very first actor. Never
+        # enable a new encoding against a legacy stage template.
+        runner_plan=read(obj['iteration_ref']);stage=read(runner_plan['formal_actor']['stage_template_ref'])
+        for name in ('consumer','cohort'):
+            expected=pin(source/'source'/(name+'.py'))['sha256']
+            rel=stage['generation']['runtime']['sources']['consumer_wrapper' if name=='consumer' else 'cohort_source']
+            if stage['capture_mounts']['overlays'][rel]!=expected:
+                raise ValueError('staged actor does not implement indexed inputs: '+name)
+        obj['recording_macros_ref']=prepare_macros(obj['static_supply_ref'],producer['recordings_per_macro'],output.parent/'recording-pages')
+        obj['training_input_layout']=producer['training_input_layout']
     if output.exists() and json.loads(output.read_bytes())!=obj:raise ValueError('immutable config drift')
     if not output.exists():output.write_text(json.dumps(obj,indent=2)+'\n')
     return obj

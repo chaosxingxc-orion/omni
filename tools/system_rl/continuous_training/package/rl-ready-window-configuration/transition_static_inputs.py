@@ -40,15 +40,31 @@ def for_window(cfg,plan):
     from cohort_io import read, digest, require
     ref=cfg['capture'].get('static_supply_ref')
     if not ref:return None
-    index=read(ref)
+    window=read(plan['sampled_window_ref'])
+    macro=cfg['capture'].get('recording_macros_ref')
+    entries=None
+    if macro:
+        pages=read(macro);width=pages['width'];start=window['start'];end=window['end']
+        require(pages['static_supply_ref']==ref and window['dataset_ref']==pages['dataset_ref'] and
+                0<=start<end<=pages['count'] and end-start==len(plan['draws']),'macro/window mismatch')
+        entries=[]
+        for i in range(start//width,(end-1)//width+1):
+            page=read(pages['pages'][i]);offset=i*width
+            require(page['start']==offset,'wrong static page')
+            entries.extend(page['rows'][max(0,start-offset):min(width,end-offset)])
+        require(len(entries)==len(plan['draws']),'short static page')
+    index=read(ref) if entries is None else pages['header']
     require(index['schema']=='p-static-supply-v1' and plan['sampling']['node']=='P' and
             read(plan['sampled_window_ref'])['dataset_ref']==index['dataset_ref'] and
             cfg['capture']['official_source_config_ref']['sha256']==index['source_sha256'] and
             cfg['capture']['profile_ref']==index['profile_ref'] and
             cfg['capture']['prompt_length_index_ref']==index['length_index_ref'],'static supply version differs')
     rows=[]
-    for draw in plan['draws']:
-        r=draw['record'];entry=index['rows'][r['recording_ref_id']]
+    for i,draw in enumerate(plan['draws']):
+        r=draw['record']
+        if entries is not None:
+            require(draw['dataset_draw_index']==window['start']+i and entries[i]['id']==r['recording_ref_id'],'macro recording order changed')
+        entry=index['rows'][r['recording_ref_id']] if entries is None else entries[i]['entry']
         require(entry['record']==digest(r) and entry['packet_ref']==r['online']['node_input_ref']
                 and entry['origin']==digest(read(draw['recording_origin_ref'])),'changed rollout material')
         rows.append(entry)

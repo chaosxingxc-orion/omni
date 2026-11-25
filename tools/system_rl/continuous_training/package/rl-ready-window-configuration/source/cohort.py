@@ -202,11 +202,16 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None,row
     consumer=load(HERE/'consumer.py','fresh_release_consumer')
     build,restore=consumer.build,consumer.restore
     root=Path(root);plan=read(pin(root/'SELECTED.json'));consumer_ref=consumer_ref or pin(root/'CONSUMER.json');cfg=read(consumer_ref)
+    indexed=config['capture'].get('training_input_layout')=='group_refs_v1'
+    if indexed:require(accepted_sink is not None and not fixture,'indexed groups require accepted live actor')
+    group_refs=[]
     online=[];offline=[];provenance=[];costs=[];task_records=[]
     for d in plan['draws']:
         path=root/'groups'/str(d['draw_index'])/'GROUP.json'
         require(path.is_file(),'incomplete selected cohort: keep partial groups and reconcile; no refill')
-        captured=group_storage(read(pin(path)), expand=True)
+        group_ref=pin(path)
+        if indexed:group_refs.append(group_ref)
+        captured=group_storage(read(group_ref), expand=True)
         require(captured['group_id']==d['group_id'] and captured['query_draw_id']==d['query_draw_id'],'capture/draw binding')
         require(captured['policy']==plan['policy'],'capture policy versions changed')
         require(captured['synthetic'] is fixture,'fixture provenance mismatch')
@@ -216,10 +221,15 @@ def publish(config,root,*,fixture=False,consumer_ref=None,accepted_sink=None,row
         p={k:v for k,v in d.items() if k!='record'}
         p.update({k:d['record'][k] for k in ('sample_id','recording_ref_id','source_id','source','domain','outcome')})
         provenance.append(p);costs.append(captured['costs']);task_records.extend(captured.get('task_records',[]))
-    refs={n:save_training_rows(root/(n+'.json'),v,row_encoding) for n,v in dict(online=online,offline=offline,provenance=provenance).items()}
+    rows=dict(online=online,offline=offline,provenance=provenance)
+    refs={n:save_training_rows(root/(n+'.json'),v,row_encoding) for n,v in rows.items() if not indexed or n!='online'}
+    if indexed:
+        refs['online']=save(root/'online.json',dict(schema='group-online-index-v1',
+            selected_ref=cfg['selected_cohort_ref'],groups=group_refs))
     files=dict(count=len(online),refs=refs,**{n:r['path'] for n,r in refs.items()})
     if accepted_sink is not None:
-        fields,report,bundle=consumer.build_with_bundle(files,cfg)
+        if indexed:files['layout']='group_refs_v1'
+        fields,report,bundle=consumer.build_with_bundle(files,cfg,**({'publisher_groups':(group_refs,online)} if indexed else {}))
     else:
         fields,report=build(files,cfg)
         bundle,_=restore(files,cfg)

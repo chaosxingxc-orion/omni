@@ -67,6 +67,10 @@ def restore(files,config,session=None):
     return namespace['restore'](files,config,session)
 
 def build(files,config,session=None):
+    if files.get('layout')=='group_refs_v1':
+        require(session is None,'use a fresh indexed acceptance session')
+        fields,report,_=build_with_bundle(files,config)
+        return fields,report
     return bind_function(legacy.build,restore=restore,unified=unified)(files,config,session)
 
 def retained_shape(value):
@@ -84,7 +88,7 @@ def retained_shape(value):
     require(all(retained_shape(child)==dims for child in value[1:]),'ragged retained tensor')
     return [len(value),*dims]
 
-def build_with_bundle(files,config):
+def build_with_bundle(files,config,*,publisher_groups=None):
     """One consumer acceptance: validate selected draws on its freshly read rows.
 
     Build and publication share the same restored bundle only for this call.
@@ -111,7 +115,53 @@ def build_with_bundle(files,config):
         src=src.replace(clone,"b = online.pop('behavior_bundle')")
         # The validator compared every actual shape with its declaration above.
         src=src.replace(bins,"specs['audio_features']['shape'][1]")
-        ns=dict(legacy.__dict__,validate_draw_binding=validate_draw_binding)
+        def decode(name,raw):
+            import json
+            value=json.loads(raw)
+            if name!='online' or files.get('layout')!='group_refs_v1':return value
+            plan=read(config['selected_cohort_ref'])
+            require(value['schema']=='group-online-index-v1' and value['selected_ref']==config['selected_cohort_ref']
+                    and len(value['groups'])==len(plan['draws'])==files['count'],'different group index')
+            if publisher_groups is not None:
+                refs,rows=publisher_groups
+                require(refs==value['groups'] and len(rows)==len(refs),'publisher group roster changed')
+                return rows
+            from cohort import group_storage
+            from pathlib import Path
+            out=[]
+            for d,ref in zip(plan['draws'],value['groups'],strict=True):
+                require(Path(ref['path'])==Path(files['online']).parent/'groups'/str(d['draw_index'])/'GROUP.json','wrong group path')
+                group=group_storage(read(ref),expand=True)
+                require(group['policy']==plan['policy'] and group['group_id']==d['group_id'] and
+                        group['query_draw_id']==d['query_draw_id'] and group['synthetic'] is False,'different captured group')
+                out.append(dict(group['online'],draw_index=d['draw_index'],sample_id=d['record']['sample_id']))
+            return out
+        marker="rows[name] = json.loads(session.read(ref))"
+        require(src.count(marker)==1,'consumer row reader changed')
+        src=src.replace(marker,"rows[name] = decode(name,session.read(ref))")
+        ns=dict(legacy.__dict__,validate_draw_binding=validate_draw_binding,decode=decode)
+        if files.get('layout')=='group_refs_v1':
+            # group_storage interns these JSON subtrees. They are private to this
+            # restore and read-only throughout validate_fields. Preserve the exact
+            # legacy sorted-key JSON bytes of the *entire* per-call binding.
+            import hashlib,json
+            memo={}
+            def fields_digest(fields):
+                chunks=[]
+                for name in sorted(fields):
+                    value=fields[name]
+                    if name=='capture_binding':continue
+                    cached=memo.get(id(value)) if name=='audio_features' else None
+                    if cached is None:
+                        data=json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+                        if name=='audio_features':memo[id(value)]=(value,data)
+                    else:data=cached[1]
+                    chunks.append(json.dumps(name).encode()+b':'+data)
+                return hashlib.sha256(b'{'+b','.join(chunks)+b'}').hexdigest()
+            key="digest({k:v for k,v in f.items() if k != 'capture_binding'})"
+            require(src.count(key)==1,'retained per-call field binding changed')
+            src=src.replace(key,'fields_digest(f)');ns['fields_digest']=fields_digest
+
         exec(compile(src,str(BASE/'training-consumer-successor/adapter.py')+':selected-once','exec'),ns)
         # restore() privately deserializes the rows before joining supervision.
         # They have no other consumer once draw binding has passed.
