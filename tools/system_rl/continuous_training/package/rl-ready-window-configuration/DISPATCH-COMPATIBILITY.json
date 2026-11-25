@@ -1,5 +1,7 @@
 {
   "schema": "dispatch-overlay-bases-v1",
+  "inbox_publisher": "52c69136154116d85271545b9d0a474386bc7227c5eb78c2a508251ed42501e1",
+  "inbox_transition": "da3036ed001fdf32a0b2a3ffa8ea99046ae99fc37129e4f38fc09daa90f6550b",
   "predecessors": {
     "transition_controller": ["69321fd47e9cb0ea8f1cdfc93475511514d57f092d51d18723621f7e099fbe06"],
     "capture_stage": ["56e921d0bfa8e45ca7ad06b171c420bdba62cd68fcf8a8c19cdc5cae4fdcbee6"],

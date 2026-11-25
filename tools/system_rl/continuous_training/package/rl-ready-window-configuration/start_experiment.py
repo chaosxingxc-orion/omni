@@ -92,7 +92,8 @@ def start(path,site_path,plan=False,rehearse=False):
               graph=graph(exp),experiment_sha256=digest(exp),controller='run_dedicated_controller.py')
     frozen=b.get('dispatch_inputs')
     if frozen is not None:
-        if (set(frozen) not in ({'static','lengths','threads'},{'static','lengths','threads','producer'}) or type(frozen['threads']) is not int
+        if (set(frozen)-{'inbox_wire_format'} not in ({'static','lengths','threads'},{'static','lengths','threads','producer'}) or type(frozen['threads']) is not int
+                or ('inbox_wire_format' in frozen and frozen['inbox_wire_format']!='raw_members_v1')
                 or not 1<=frozen['threads']<=32):
             raise ValueError('invalid registered dispatch inputs')
         checked(frozen['static']);checked(frozen['lengths'])
@@ -174,7 +175,7 @@ def start(path,site_path,plan=False,rehearse=False):
                 from prepare_transition_config import build as build_transition
                 folder=root/'dispatch-transition';folder.mkdir(exist_ok=True);candidate=folder/'TRANSITION.json'
                 build_transition(runner,root/'preview/PREVIEW-NOT-FOR-LAUNCH.json',HERE,frozen['lengths']['path'],
-                                 frozen['static']['path'],candidate,frozen['threads'],producer=frozen.get('producer'))
+                                 frozen['static']['path'],candidate,frozen['threads'],producer=frozen.get('producer'),inbox_wire_format=frozen.get('inbox_wire_format'))
                 stage('dispatch_preview',lambda:execute([sys.executable,'-B',HERE/'run_dedicated_controller.py',
                       runner,folder/'transition_controller.py',candidate,'--check']))
                 preview['dispatch']=pin(candidate)

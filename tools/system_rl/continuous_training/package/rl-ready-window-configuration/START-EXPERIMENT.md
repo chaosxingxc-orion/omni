@@ -14,3 +14,5 @@
 可在同一 producer 下增加 lane_storage，字段为 mode（live_space_pinned_mount_v1）及 validator_sha256（该发布包原 sync_runtime.py 的已验收摘要）。两条采样通道分别在开始时核对实际目录的挂载 ID 和类型，持有目录句柄至本路结束。每次原有空间核验仍以当前目录句柄读取剩余字节和 inode，不缓存可用容量。不同挂载走原始校验。缺省配置沿用原路径。
 
 check_lane_storage.py 的 prepare 从正在运行的 CPU transition 派生候选，并保留训练客户端与回传版本；replay 在固定控制镜像中读取原批已关闭的 GENERATION-INVENTORY.json，比较落盘字节、容量门限和未知挂载拒绝；live 在真实的下一批排空后核对每路回执、原请求与响应、挂载查询次数及首派时间。仅在回放通过且当前训练命令已签收的边界由原 handoff_dispatch_transition.py 接管。
+
+在 baseline.dispatch_inputs 中设置 inbox_wire_format 为 raw_members_v1，控制器就按文件清单和原始字节发送每步 LoRA，不再将权重编码为 Base64。两端保留原摘要、容量、租约、原子发布和最后写入 marker 的顺序。缺省沿用旧格式。check_policy_wire.py prepare 保留上一版 transition 的采样和训练配置；replay 在真实服务 inbox 之外用同一封闭 checkpoint 对照字节、摘要及坏包拒绝；live --config TRANSITION.json --cohort <已排空采样目录>/cohort --out <报告> 核对远端文件、两路设备回读、缓存切换及实际请求回执。report_service_publication_cpu.py 在相同服务镜像的独立 CPU 进程内按同一 marker 回放四次校验；--reuse 为只用于测量的按内容复用对照，不改变服务或训练精度配置。

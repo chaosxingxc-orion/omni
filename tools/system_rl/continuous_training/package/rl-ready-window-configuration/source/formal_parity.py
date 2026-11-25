@@ -94,15 +94,23 @@ def previous_capture(state, *, session_ref=None):
     return capture
 
 
-def publish_inbox(remote, service, checkout, target, previous, successor, step, *, session=None):
+def publish_inbox(remote, service, checkout, target, previous, successor, step, *, session=None, wire_format='json_base64'):
     """Install exact bytes under the existing guard and publish the marker last."""
     from formal_rollout import provider_modules
     import base64
-    files = {}
+    require(wire_format in ('json_base64','raw_members_v1'),'unknown inbox wire format')
+    binary=wire_format=='raw_members_v1'
+    started=time.monotonic();files = {}; blocks=[]
     for path in sorted(checkout.rglob('*')):
         if path.is_file():
-            files[str(path.relative_to(checkout))] = dict(
-                sha256=pin(path)['sha256'], data=base64.b64encode(path.read_bytes()).decode())
+            if binary:
+                import hashlib
+                body=path.read_bytes()
+                files[str(path.relative_to(checkout))]=dict(sha256=hashlib.sha256(body).hexdigest(),size=len(body))
+                blocks.append(body)
+            else:
+                files[str(path.relative_to(checkout))] = dict(
+                    sha256=pin(path)['sha256'], data=base64.b64encode(path.read_bytes()).decode())
     # Send the large adapter via stdin; no command-line payload or shared write.
     with provider_modules() as (lease, _, _, _):
         if session:
@@ -114,14 +122,25 @@ def publish_inbox(remote, service, checkout, target, previous, successor, step, 
         program = r"""
 import base64, hashlib, json, os, sys, tempfile
 from pathlib import Path
-v = json.load(sys.stdin)
+binary=sys.argv[1]=='raw_members_v1'
+v = json.loads(sys.stdin.buffer.readline()) if binary else json.load(sys.stdin)
 assert Path('/proc/sys/kernel/random/boot_id').read_text().strip() == v['boot']
 inbox, target = Path(v['inbox']), Path(v['target'])
 assert inbox.resolve() == inbox and inbox.is_dir() and target.parent == inbox
 sys.path.insert(0, v['storage_module'])
 from local_runtime_storage import check_paths
-data = {name: base64.b64decode(row['data'], validate=True) for name,row in v['files'].items()}
-check_paths({'inbox':inbox}, min_free_bytes=(20<<30)+sum(map(len,data.values())))
+if binary:
+    if not all(type(r['size']) is int and r['size']>=0 for r in v['files'].values()):raise ValueError('invalid member size')
+    check_paths({'inbox':inbox}, min_free_bytes=(20<<30)+sum(r['size'] for r in v['files'].values()))
+    data={}
+    for name,row in v['files'].items():
+        body=sys.stdin.buffer.read(row['size'])
+        if len(body)!=row['size'] or hashlib.sha256(body).hexdigest()!=row['sha256']:raise ValueError('bad wire member')
+        data[name]=body
+    if sys.stdin.buffer.read(1):raise ValueError('unexpected trailing data')
+else:
+    data = {name: base64.b64decode(row['data'], validate=True) for name,row in v['files'].items()}
+    check_paths({'inbox':inbox}, min_free_bytes=(20<<30)+sum(map(len,data.values())))
 def sync(path):
     fd = os.open(path, os.O_DIRECTORY)
     try: os.fsync(fd)
@@ -136,7 +155,7 @@ def publish(path, body):
 for name, body in data.items():
     path = target/name
     assert path.resolve() == path and path.is_relative_to(target) and path != target
-    assert hashlib.sha256(body).hexdigest() == v['files'][name]['sha256']
+    if not binary:assert hashlib.sha256(body).hexdigest() == v['files'][name]['sha256']
     path.parent.mkdir(parents=True, exist_ok=True)
     publish(path, body)
     for parent in path.parents:
@@ -150,8 +169,16 @@ print(json.dumps({'marker':str(marker),'installed':len(data)}))
         payload = dict(boot=held['boot'], storage_module=updater,
                        inbox=service['policy_overlay']['update_mount'], target=str(target),
                        files=files, step=step, change=dict(previous=previous,successor=successor))
-        response=lease.command(remote,['python3','-B','-c',program],input=json.dumps(payload),
-                               capture_output=True,text=True)
+        command=['python3','-B','-c',program,wire_format]
+        if binary:
+            wire=b''.join([(json.dumps(payload,separators=(',',':'))+'\n').encode(),*blocks])
+            blocks.clear()
+            sent=time.monotonic()
+            response=lease.command(remote,command,input=wire,capture_output=True)
+            return dict(json.loads(response.stdout),wire_format=wire_format,wire_bytes=len(wire),
+                        prepare_seconds=sent-started,transfer_and_commit_seconds=time.monotonic()-sent)
+        else:
+            response=lease.command(remote,command,input=json.dumps(payload),capture_output=True,text=True)
     return json.loads(response.stdout)
 
 

@@ -63,6 +63,12 @@ def configure(spec):
     import publication
     require(pin(publication.__file__)['sha256']==spec['publication_sha256'],'changed checkpoint reader')
     install_checkpoint_cache(publication)
+    if 'inbox_wire_format' in spec:
+        import formal_parity
+        from functools import partial
+        require(spec['inbox_wire_format']=='raw_members_v1' and
+                pin(formal_parity.__file__)==spec['sources']['formal_parity'],'unexpected policy publisher')
+        formal_parity.publish_inbox=partial(formal_parity.publish_inbox,wire_format=spec['inbox_wire_format'])
     static=read(spec['static_supply_ref']); lengths=read(spec['prompt_length_index_ref'])
     require(static['length_index_ref']==spec['prompt_length_index_ref'] and
             static['profile_ref']==lengths['profile_ref'] and static['schema']=='p-static-supply-v1','changed static inputs')
@@ -105,7 +111,7 @@ def main():
     for name in ('OMP_NUM_THREADS','MKL_NUM_THREADS'):os.environ[name]=str(spec['cpu_threads'])
     from importlib.util import spec_from_file_location,module_from_spec
     for name,ref in spec['sources'].items():
-        if name not in ('transition_static_inputs','capture_stage','formal_rollout','transition_controller','install_indexed_actor','recover_idle_actor'):
+        if name not in ('transition_static_inputs','capture_stage','formal_rollout','transition_controller','install_indexed_actor','recover_idle_actor','formal_parity'):
             raise ValueError('unexpected transition module')
         raw=read_source(ref)
         if name=='transition_controller':

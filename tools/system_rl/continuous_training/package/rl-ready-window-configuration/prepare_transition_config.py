@@ -9,7 +9,7 @@ def pin(p):
     return dict(path=str(p),bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
 
 
-def build(runner,iteration,source,lengths,static,output,threads,*,producer=None):
+def build(runner,iteration,source,lengths,static,output,threads,*,producer=None,inbox_wire_format=None):
     old=json.loads(runner.read_bytes());impl=Path(old['release'])/'tree/parents/jev-system-rl/implementation'
     compatibility=json.loads((source/'DISPATCH-COMPATIBILITY.json').read_bytes())
     if compatibility['schema']!='dispatch-overlay-bases-v1':raise ValueError('unknown overlay scope')
@@ -28,6 +28,8 @@ def build(runner,iteration,source,lengths,static,output,threads,*,producer=None)
     obj=dict(schema='dispatch-transition-v1',iteration_ref=pin(iteration),runner_ref=pin(runner),sources=src,
              static_supply_ref=pin(static),prompt_length_index_ref=pin(lengths),cpu_threads=threads,
              publication_sha256=pin(impl/'publication.py')['sha256'])
+    if inbox_wire_format is not None:
+        bind_inbox(obj,source,output.parent,impl,inbox_wire_format)
     if producer is not None:
         from prepare_recording_macros import read,build as prepare_macros
         if set(producer)-{'lane_storage'}!={'recordings_per_macro','training_input_layout'} or producer['training_input_layout']!='group_refs_v1':
@@ -54,6 +56,18 @@ def validate_lane_storage(profile,parents):
     validator=parents/'native-recompute-integration/state-repair/acl-runtime-successor/sync_runtime.py'
     if profile!=dict(mode='live_space_pinned_mount_v1',validator_sha256=pin(validator)['sha256']):
         raise ValueError('unqualified lane storage profile')
+
+
+def bind_inbox(spec,source,folder,impl,mode):
+    approved=json.loads((source/'DISPATCH-COMPATIBILITY.json').read_bytes())['inbox_publisher']
+    base=pin(impl/'formal_parity.py')['sha256']
+    candidate=source/'source/formal_parity.py'
+    if mode!='raw_members_v1' or base not in (approved,pin(candidate)['sha256']):
+        raise ValueError('unqualified policy publisher')
+    dest=folder/'formal_parity.py'
+    if dest.exists() and dest.read_bytes()!=candidate.read_bytes():raise ValueError('publisher drift')
+    if not dest.exists():copyfile(candidate,dest)
+    spec['sources']['formal_parity']=pin(dest);spec['inbox_wire_format']=mode
 
 
 if __name__=='__main__':
