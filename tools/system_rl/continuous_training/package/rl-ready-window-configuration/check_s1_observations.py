@@ -12,7 +12,7 @@ def check(seal_path,dataset_path,out):
     needed(seal['immutable'] and v['mode']=='live' and not v['synthetic'] and dataset['split']=='TRAIN','real TRAIN required')
     domains={d['domain']:[json.loads(line) for line in checked(d['metadata']).open()] for d in dataset['domains']}
     parse=packet_parser();counts=Counter();negatives=0
-    for row in read(checked(v['receipts'])):
+    for row in collection_calls(v):
         if row['stage']!='S1' or row['status']!='known':continue
         p=row['packet'];reply=row['receipt'];b=p['source_binding'];domain,line,i=b['reference_id'].split(':')
         raw=domains[domain][int(line)-1];rec=Path(raw['recordings'][int(i)]['file'])

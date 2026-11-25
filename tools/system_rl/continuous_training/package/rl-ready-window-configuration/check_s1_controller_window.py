@@ -1,6 +1,7 @@
 """Replay a closed collection through the same S1 seal, dataset and window readers, on CPU."""
 import argparse,base64,collections,json,sys,tempfile
 from pathlib import Path
+from source.panel_receipts import collection_calls
 from build import pin,save
 from prepare_s1_recordings import read,checked,needed
 from prepare_s1_training_inputs import pcm
@@ -34,7 +35,7 @@ def check(history,release,output,branch_ref=None):
     # new sample, a formal experiment input, or an estimate of population rates.
     with tempfile.TemporaryDirectory(dir=output.parent) as temp:
         tmp=Path(temp)
-        for call in read(checked(ver['receipts'])):
+        for call in collection_calls(ver):
             if call['stage']!='S1' or call['status']!='known':continue
             p=call['packet'];b=p['source_binding'];comp=b['source_component']
             if comp in components:continue

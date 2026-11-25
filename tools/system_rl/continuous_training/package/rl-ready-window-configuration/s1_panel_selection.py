@@ -11,6 +11,7 @@ import random
 from build import pin, save
 from prepare_s1_recordings import checked, needed, read
 from source.config_profile import bind_environment, stage_config
+from source.panel_receipts import collection_calls
 
 
 def digest(value):
@@ -46,13 +47,19 @@ def partition(cfg):
                 holdout_percent=n, counts=dict(Counter(r['split'] for r in rows)), rows=rows)
 
 
-def packet_parser():
+def packet_parser(profile=None):
     from source.s1_reply_parser import make_parser
     root=Path(__file__).resolve().parent.parents[1]
     cfg=read(root/'full-train-source-bridge/CONFIG.json')
     names={'slot_stages.py','slot_stage_knowledge.py'}
     refs={Path(r['path']).name:dict(r,path=str(root.parents[1]/r['path']))
           for r in cfg['code_pins'] if Path(r['path']).name in names}
+    if profile is not None:
+        needed(isinstance(profile,str) and Path(profile).name==profile and profile.endswith('.json'),
+               'invalid S1 parser profile')
+        members=read(Path(__file__).resolve().parent/profile)
+        needed(members.keys()==refs.keys() and all(members[k]['sha256']==r['sha256'] for k,r in refs.items()),
+               'screen and rollout parser versions differ')
     return make_parser(refs)
 
 
@@ -91,7 +98,7 @@ def classify(packet, supervision, receipt, parse):
 
 
 def observed(cfg,split):
-    parse=packet_parser()
+    parse=packet_parser(cfg.get('screen_parser_profile'))
     targets={}
     for r in split['rows']:
         p=read(checked(r['packet']))
@@ -107,7 +114,7 @@ def observed(cfg,split):
         needed(all(isinstance(cfg[k],str) and len(cfg[k])==64 for k in ('system_version','execution_version'))
                and v['system_version']==cfg['system_version'] and v.get('execution_version')==cfg['execution_version'],
                'different frozen system or execution')
-        for call in read(checked(v['receipts'])):
+        for call in collection_calls(v):
             if call['stage']!='S1':continue
             audit['S1_calls']+=1
             p=call['packet']; target=targets.get((p['sample_id'],p['branch']))

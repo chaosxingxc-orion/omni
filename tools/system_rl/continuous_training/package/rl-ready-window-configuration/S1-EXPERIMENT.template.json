@@ -1,6 +1,7 @@
 {
   "schema": "recording-screen-experiment-v1",
   "parameters": {
+    "SCREEN_PARSER_PROFILE": "S1-SCREEN-PARSERS.json",
     "RECORDINGS_PER_MACRO": 128,
     "STORAGE_BUDGET_BYTES": 1073741824,
     "MAX_RANKED_NEIGHBORS": 32,
@@ -54,6 +55,7 @@
     "s1-outcome-config-v1": {
       "schema": "s1-outcome-config-v1",
       "partition": "${S1_PARTITION}",
+      "screen_parser_profile": "${SCREEN_PARSER_PROFILE}",
       "collections": "${S1_CLOSED_COLLECTIONS}",
       "system_version": "${S1_FROZEN_SYSTEM_VERSION}",
       "execution_version": "${S1_FROZEN_EXECUTION_VERSION}",
@@ -84,6 +86,7 @@
       },
       "training_input_ref": "${TRAINING_INPUT_REF}",
       "experiment": {
+        "screen_parser_profile": "${SCREEN_PARSER_PROFILE}",
         "same_action_max_abs": 1e-08,
         "actor_batch": {
           "microbatch_per_card": 8,

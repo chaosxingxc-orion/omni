@@ -1,6 +1,7 @@
 {
   "schema": "s1-outcome-config-v1",
   "partition": "${S1_PARTITION}",
+  "screen_parser_profile": "S1-SCREEN-PARSERS.json",
   "collections": "${S1_CLOSED_COLLECTIONS}",
   "system_version": "${S1_FROZEN_SYSTEM_VERSION}",
   "execution_version": "${S1_FROZEN_EXECUTION_VERSION}",

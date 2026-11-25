@@ -199,7 +199,7 @@ def compile_experiment(template, profile, output):
     policy['runtime_members']['parents/jev-system-rl/'+target_reader]=target_reader
     # Register the actual readers/overlays: editing only the source checkout does
     # not replace the inherited modules installed in the training package.
-    for name in ('next_input','node_screen_selection','sampled_training','recording_inputs','fresh_material','cohort_capture'):
+    for name in ('next_input','node_screen_selection','panel_receipts','sampled_training','recording_inputs','fresh_material','cohort_capture'):
         member='rl-ready-window-configuration/source/'+name+'.py'
         dest=('parents/fresh-cohort-successor/'+({'fresh_material':'material'}.get(name,name))+'.py'
               if name in ('fresh_material','cohort_capture') else 'parents/jev-system-rl/implementation/'+name+'.py')

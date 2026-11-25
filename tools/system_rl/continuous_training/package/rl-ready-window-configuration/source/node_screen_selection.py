@@ -195,7 +195,8 @@ def inherited_cost(answer,request_ref,request):
                 and version.get('panel_request_ref')==request_ref and version.get('endpoint_witness_ref')==request['endpoint_witness_ref']
                 and version.get('policy_ref')==request['policy_ref'] and version['system_version']==pool['system_version']
                 and version['execution_version']==pool['execution_version'],'collection lacks the actual DATA/service binding')
-            for call in read(version['receipts']):
+            from panel_receipts import collection_calls
+            for call in collection_calls(version,local_path):
                 env=call['receipt']['native_envelope'];rid=env['request_id']
                 require(call['stage']=='S1' and call['status']=='known' and call['submits']==1 and rid in calls and rid not in billed
                     and calls[rid]['response_ref']==env['response_ref'],'unbilled or unresolved DATA call')

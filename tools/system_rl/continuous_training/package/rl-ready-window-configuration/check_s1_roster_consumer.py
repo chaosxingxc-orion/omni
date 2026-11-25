@@ -1,6 +1,7 @@
 """Read real historical S1 receipts through the roster join and fresh-capture packet reader."""
 import argparse,base64,json,sys
 from pathlib import Path
+from source.panel_receipts import collection_calls
 from build import save,pin
 from prepare_s1_recordings import checked,needed,read
 from prepare_s1_training_inputs import pcm
@@ -20,7 +21,7 @@ def check(history,release,output):
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(dir=output.parent) as tmp:
         tmp=Path(tmp)
-        for row in read(checked(v['receipts'])):
+        for row in collection_calls(v):
             if row['stage']!='S1' or row['status']!='known':continue
             p=row['packet'];b=p['source_binding'];rid=b['reference_id'];dom,line,i=rid.split(':')
             path,rows=meta[dom];raw=rows[int(line)-1];sha=digest(raw)
