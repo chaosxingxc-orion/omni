@@ -52,6 +52,9 @@ def validate(exp):
     need(total % g == 0 and concurrency <= total and concurrency <= widths[-1], 'actor groups or inference capacity differ')
     need(exp.get('row_encoding','original') in ('original','compact_json_v1'), 'unsupported training row encoding')
     need(exp.get('group_preparation','replicated') in ('replicated','shard_by_draw_v1'), 'unsupported group preparation')
+    if 'first_wave_forward' in exp:
+        need(exp['first_wave_forward']=='overlap_publish_v1' and exp.get('group_preparation')=='shard_by_draw_v1',
+             'overlapped first wave requires sharded recording groups')
     need(exp.get('transfer_policy','legacy') in ('legacy','batch_receipt_v1'), 'unknown transfer policy')
     if 'capacity_interval_bytes' in exp:
         need(type(exp['capacity_interval_bytes']) is int and exp['capacity_interval_bytes'] > 0,
@@ -97,7 +100,7 @@ def check_actor(exp, start, policy):
     need(policy['experiment_sha256'] == digest(exp) and policy['dev_cadence'] == exp['dev_cadence']
          and policy['rollout_dispatch']['episode_concurrency'] == exp['episode_concurrency']
          and all(policy.get(key) == exp.get(key) for key in
-                 ('row_encoding', 'group_preparation', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'))
+                 ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'))
          and policy['acceptance']['episodes_per_recording'] == exp['episodes_per_recording']
          and policy['acceptance']['recordings_per_step'] == validate(exp), 'controller differs from experiment')
 
@@ -167,7 +170,7 @@ def compile_experiment(template, profile, output):
     snapshot = save(output / 'EXPERIMENT.json', exp)
     rank = save(output / 'rank-profile.json', rank_profile(exp))
     policy.update(version=exp['version'], experiment_sha256=digest(exp), dev_cadence=exp['dev_cadence'])
-    for name in ('row_encoding', 'group_preparation', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'):
+    for name in ('row_encoding', 'group_preparation', 'first_wave_forward', 'activation_concurrency', 'capacity_interval_bytes', 'transfer_policy'):
         if name in exp:
             policy[name] = exp[name]
     policy['rollout_dispatch']['episode_concurrency'] = exp['episode_concurrency']
@@ -183,6 +186,11 @@ def compile_experiment(template, profile, output):
         source = 'rl-ready-window-configuration/retire_input_transfer.py'
         policy['source_roles']['controller'].append(source)
         policy['runtime_members']['parents/jev-system-rl/implementation/retire_input_transfer.py'] = source
+    if exp.get('first_wave_forward'):
+        for filename in ('first_wave_forward.py','microbatch_producer.py','microbatch_fields.py','microbatch_roster.py','policy_row_assignment.py'):
+            member='rl-ready-window-configuration/source/'+filename
+            if member not in policy['source_roles']['actor']:policy['source_roles']['actor'].append(member)
+            policy['runtime_members']['parents/jev-system-rl/'+member]=member
     scoring = 'implementation/scorer_extension.py'
     policy['source_roles']['shared'].append(scoring)
     policy['runtime_members']['parents/jev-system-rl/' + scoring] = scoring

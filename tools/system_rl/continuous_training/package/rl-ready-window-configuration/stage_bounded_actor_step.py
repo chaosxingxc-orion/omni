@@ -201,7 +201,10 @@ def stage_continuation(c, d, dest, remote, *, snapshots=None, timings):
         s['generation']=c['generation']
         s['capture_mounts']=c['capture_mounts']
         from capture_runtime import capture_runtime
-        capture_runtime(s)
+        runtime=capture_runtime(s)
+        if runtime.get('first_wave_forward'):
+            for name in ('first_wave_forward.py','microbatch_producer.py','microbatch_fields.py','microbatch_roster.py','policy_row_assignment.py'):
+                overlay[name]=d/'source'/name
         overlay.update({name:d/name for name in ('pack_actor_fields.py','retained_hf_fsdp_control.py',
                                                 'capture_runtime.py')})
         s['source_pins']=dict(old['source_pins'])

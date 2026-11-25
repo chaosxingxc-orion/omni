@@ -235,6 +235,26 @@ def admitted_routes(current, endpoint, profile, sampled):
     return validate_routes(pub,endpoint,profile,sampled=sampled)
 
 
+def prepared_annotations(root, config, plan):
+    # Older controllers validated labels without returning a batch receipt.
+    marker=root.parent/'PREPARED.json'
+    if not plan.get('sampled_window_ref') or not marker.is_file():
+        return None
+    prepared=read(pin(marker))
+    if 'annotation_batch_ref' not in prepared:
+        return None
+    ref=prepared['annotation_batch_ref']
+    require(Path(ref['path'])==root/'ANNOTATION-BATCH.json','annotation batch outside selected cohort')
+    batch=read(ref)
+    require(batch['selected_ref']==prepared['selected']==pin(root/'SELECTED.json') and
+            batch['source_ref']==config['capture']['official_source_config_ref'] and
+            prepared['input']==pin(root/'INPUT.json'),'annotation source or window differs')
+    records=[draw['record']['recording_ref_id'] for draw in plan['draws']]
+    require([item['recording_ref_id'] for item in batch['rows']]==records,
+            'annotation recording or order differs')
+    return batch['rows']
+
+
 def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lane=None):
     """Real generation via the existing DirectHTTP protocol; actor capture later."""
     root=Path(root);require(execution_enabled is True,'capture disabled')
@@ -270,7 +290,10 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
     batch_dispatch=c.get('dispatch_unit','recording')=='training_batch'
     if batch_dispatch:require(plan.get('sampled_window_ref') and lane is not None,'batch dispatch requires a sampled lane')
     from official import sources
-    with sources(config) as (official_sources,_), business_scope():
+    from contextlib import nullcontext
+    prepared_rows=prepared_annotations(root,config,plan)
+    source_context=sources(config) if prepared_rows is None else nullcontext((None,None))
+    with source_context as (official_sources,_), business_scope():
         from direct_transport import DirectHTTP
         from business import Session
         screened_p_parser = None
@@ -285,11 +308,17 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
             directory=root/'groups'/str(d['draw_index']);directory.mkdir(parents=True,exist_ok=True)
             if (directory/'GENERATED.json').exists():return
             origin=origins[d['record']['recording_ref_id']]
-            assets=[origin['audio_ref']]+origin.get('context_audio_refs',[])
-            annotation=selected_annotation(d,c,root,official_sources)
+            if prepared_rows is None:
+                annotation=selected_annotation(d,c,root,official_sources)
+            else:
+                annotation=prepared_rows[index]
+                save(root/'annotations'/(digest(d['record']['recording_ref_id'])+'.json'),annotation)
             snapshot=clock['groups'][d['group_id']]['snapshot']
             require((concurrency==1 and not batch_dispatch) or (snapshot['rollout_scope']=='node' and snapshot['target_nodes']==['P']),
                     'concurrent capture requires a single independent P request per episode')
+            # One immutable screened wire for this draw. Materialize lazily:
+            # a fully reconciled draw does not need its source packet again.
+            screened_packet=None
             episodes={}
             def remember(k,episode):
                 require(k not in episodes and episode['replicate']==k and
@@ -299,7 +328,7 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                     save(directory/'GENERATED.json',dict(group_id=d['group_id'],query_draw_id=d['query_draw_id'],
                         episodes=[episodes[i] for i in range(replicates)],policy=config['policy']))
             def prepare_episode(replicate):
-                nonlocal screened_p_parser
+                nonlocal screened_p_parser,screened_packet
                 started=time.monotonic()
                 ep=directory/('episode-'+str(replicate));ep.mkdir(exist_ok=True)
                 eid=d['group_id']+':e'+str(replicate)
@@ -359,7 +388,9 @@ def capture(config,root,*,execution_enabled=False,lease=None,draw_index=None,lan
                     screened = 'node_input_ref' in d['record']['online']
                     if screened:
                         from material import node_screen_packet
-                        candidates=[node_screen_packet(d,snap,annotation,origin)]
+                        if screened_packet is None:
+                            screened_packet=node_screen_packet(d,snap,annotation,origin)
+                        candidates=[screened_packet]
                         if screened_p_parser is None:
                             from rails import node_p_parser
                             screened_p_parser=node_p_parser(c)
@@ -753,7 +784,11 @@ def finalize_on_worker(worker,adapted,native_config,root,rank,*,directory=None,
         generated_native.update(cost_receipt if cost_receipt is not None else cost_plan(config,directory,worker.tokenizer))
         generated_native.pop('pending_capture_ref',None)
         save(directory/'NATIVE.accepted.json',generated_native)
-    if accepted_sink is not None:
+    if hasattr(accepted_sink,'overlap'):
+        require(sharded and parity_first is None and batched_reference is not None,'unsupported overlapped publication')
+        accepted_sink.overlap(directory,config,consumer_config,plan,clock,learning,origins,labels_for,
+                              cost_receipt,consumer_ref,native_config.get('row_encoding','original'))
+    elif accepted_sink is not None:
         from resident import collectively
         collectively(close_on_publisher)
     else:

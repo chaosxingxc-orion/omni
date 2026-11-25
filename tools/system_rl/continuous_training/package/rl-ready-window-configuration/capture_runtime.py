@@ -65,6 +65,10 @@ def capture_runtime(spec):
     if layout not in ('replicated','shard_by_draw_v1') or (layout == 'shard_by_draw_v1' and
             (not spec.get('formal_sampled') or not config.get('reference_batch') or actor_fields != 'reuse_accepted_v1')):
         raise ValueError('sharded capture requires formal batch reference and accepted actor fields')
+    pipeline=config.get('first_wave_forward')
+    if pipeline is not None and (pipeline!='overlap_publish_v1' or layout!='shard_by_draw_v1' or
+            not spec.get('continuous_actor') or config.get('update_timing') or spec.get('trace_update')):
+        raise ValueError('first-wave forward requires a resident sharded policy update')
     batch=config.get('reference_batch')
     if batch is not None and (not isinstance(batch,dict) or set(batch)!={'rows_per_rank','padded_tokens_per_rank'}
             or any(type(v) is not int or v<1 for v in batch.values())):
@@ -77,5 +81,6 @@ def capture_runtime(spec):
     return dict(cohort_dir=str(relative_path(config['cohort_dir'])),
                 prepared_cache_bytes=cache_bytes, reuse_group_current_scores=reuse_scores,actor_fields=actor_fields,row_encoding=encoding,group_preparation=layout,
                 **({'reference_batch':batch} if batch is not None else {}),
+                **({'first_wave_forward':pipeline} if pipeline else {}),
                 targets=targets, index_root=str(targets['index']),
                 **{name: str(targets['overlays']/path) for name, path in sources.items()})

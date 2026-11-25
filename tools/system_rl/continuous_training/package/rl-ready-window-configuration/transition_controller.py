@@ -73,7 +73,10 @@ def configure(spec):
             config['formal_rollout']['recording_macros_ref']=spec['recording_macros_ref']
         if 'training_input_layout' in spec:
             config['formal_rollout']['training_input_layout']=spec['training_input_layout']
-        if 'actor_reader_release_ref' in spec:
+        if 'idle_recovery_ref' in spec:
+            import recover_idle_actor
+            recover_idle_actor.install(config,spec)
+        elif 'actor_reader_release_ref' in spec:
             import install_indexed_actor
             install_indexed_actor.install(config,spec,Path(spec['sources']['transition_controller']['path']).parent)
         return config
@@ -96,7 +99,7 @@ def main():
     for name in ('OMP_NUM_THREADS','MKL_NUM_THREADS'):os.environ[name]=str(spec['cpu_threads'])
     from importlib.util import spec_from_file_location,module_from_spec
     for name,ref in spec['sources'].items():
-        if name not in ('transition_static_inputs','capture_stage','formal_rollout','transition_controller','install_indexed_actor'):
+        if name not in ('transition_static_inputs','capture_stage','formal_rollout','transition_controller','install_indexed_actor','recover_idle_actor'):
             raise ValueError('unexpected transition module')
         raw=read_source(ref)
         if name=='transition_controller':

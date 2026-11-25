@@ -1,5 +1,5 @@
 """Derive policy microbatch rows from a sealed rollout, before reference scoring."""
-from events import assign_policy_rows
+from policy_row_assignment import assign_policy_rows
 from dependencies import require
 
 

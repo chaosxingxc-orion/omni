@@ -165,7 +165,7 @@ def assemble(manifest, output, *, bind_live):
         rollout['screened_p_parser_member']=parser
         rollout.update(policy['rollout_dispatch'])
         rt=train['generation']['runtime'];rt['reference_batch']=policy['reference_batch'];rt['actor_fields']=policy['actor_fields']
-        for name in ('row_encoding', 'group_preparation', 'update_timing'):
+        for name in ('row_encoding', 'group_preparation', 'first_wave_forward', 'update_timing'):
             if name in policy:
                 rt[name] = policy[name]
         rt['sources']['reference_batch_source']=deployment['reference_batch_member']

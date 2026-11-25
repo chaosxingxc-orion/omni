@@ -7,8 +7,13 @@ from stage_sampled_actor_release import REMOTE
 
 
 def stage(spec,source,dest):
-    it=read(spec['iteration_ref']);actor=it['formal_actor'];template=read(actor['stage_template_ref'])
-    mounts=template['capture_mounts'];old=Path(mounts['root']);snap=read(actor['continuous_actor']['source_lock_ref'])
+    it=read(spec['iteration_ref']);actor=it['formal_actor'];parent=actor['stage_template_ref'];lockref=actor['continuous_actor']['source_lock_ref']
+    if 'predecessor' in spec:
+        from install_indexed_actor import predecessor
+        _,sw,lockref=predecessor(spec['predecessor'],spec['iteration_ref'],actor,read=read,pin=pin)
+        parent=sw['restore_template']
+    template=read(parent)
+    mounts=template['capture_mounts'];old=Path(mounts['root']);snap=read(lockref)
     sha=lambda x:hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     sources={}
     for name in ('cohort.py','consumer.py'):
@@ -25,7 +30,8 @@ def stage(spec,source,dest):
         with tarfile.open(fileobj=f,mode='w') as tar:
             for k,v in sources.items():tar.add(v,arcname=k,recursive=False)
         f.seek(0);subprocess.run(['ssh','-oBatchMode=yes',template['host'],shlex.join(['python3','-B','-c',REMOTE,json.dumps(conf)])],stdin=f,check=True)
-    return seal(dest/'READER-RELEASE.json',dict(parent_template=actor['stage_template_ref'],iteration_ref=spec['iteration_ref'],
+    return seal(dest/'READER-RELEASE.json',dict(parent_template=parent,iteration_ref=spec['iteration_ref'],
+                **({'predecessor':spec['predecessor']} if 'predecessor' in spec else {}),
                 stage_template=seal(dest/'STAGE.json',template),source_lock=seal(dest/'SOURCE-LOCK.json',snap)))
 
 if __name__=='__main__':

@@ -1134,6 +1134,24 @@ def pull_stream(directory,argv,fd,deadline):
         _release_pull(directory);guard.close();raise
 
 
+def closed_reader_input(argv, inventory):
+    """Keep the verified inventory off both SSH and remote exec argument lists."""
+    if list(argv[:2]) != ['python3', '-B']:
+        raise ValueError('unexpected closed reader interpreter')
+    payload = json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()
+    # The deployed reader keeps its existing CLI. Populate its argument inside
+    # Python, after exec, so a large inventory never crosses an OS argv boundary.
+    prefix = "import sys;sys.argv.append('--inventory-json='+sys.stdin.buffer.read().decode('ascii'));"
+    if argv[2] == '-c':
+        return [*argv[:3], prefix + '\n' + argv[3], *argv[4:]], payload
+    if Path(argv[2]).name != 'pull_closed.py' or not Path(argv[2]).is_absolute():
+        raise ValueError('unexpected closed reader path')
+    bootstrap = (prefix + "import runpy;sys.argv=sys.argv[1:];"
+                 "sys.path[0]=__import__('os').path.dirname(sys.argv[0]);"
+                 "runpy.run_path(sys.argv[0],run_name='__main__')")
+    return [*argv[:2], '-c', bootstrap, *argv[2:]], payload
+
+
 def _pull_stream_locked(directory,argv,fd,deadline):
     """SSH stdout goes straight to durable local disk, never capture_output."""
     import os,shlex
@@ -1141,7 +1159,7 @@ def _pull_stream_locked(directory,argv,fd,deadline):
     from checkpoint_inventory import inventory
     cache=Path(run.get('checkpoint_cache_root',directory/'checkpoint-inventory'))
     known=inventory(cache)
-    argv=list(argv)+['--inventory-json='+json.dumps(known,sort_keys=True,separators=(',',':'))]
+    argv,payload=closed_reader_input(argv,known)
     if run.get('source_boot'):argv+=['--expected-boot='+run['source_boot']]
     write(directory/('PULL-INVENTORY-'+str(time.time_ns())+'.json'),dict(cache_root=str(cache),verified_objects=known,source_boot=run.get('source_boot'),read_only_closed_pull=True))
     command=['ssh','-o','BatchMode=yes','-o','ConnectTimeout=15',run['host'],shlex.join(argv)]
@@ -1149,7 +1167,7 @@ def _pull_stream_locked(directory,argv,fd,deadline):
     io_timeout=run.get('closed_pull_timeout_seconds',3600)
     require(type(io_timeout) in (int,float) and 0<io_timeout<=86400,'closed pull timeout must be 0..86400 seconds')
     with pending.open('wb') as output,(directory/'pull.stderr').open('wb') as errors:
-        result=subprocess.run(command,stdout=output,stderr=errors,pass_fds=(fd,),timeout=min(io_timeout,max(1,deadline-time.time())))
+        result=subprocess.run(command,input=payload,stdout=output,stderr=errors,pass_fds=(fd,),timeout=min(io_timeout,max(1,deadline-time.time())))
         output.flush();os.fsync(output.fileno())
     if result.returncode==0:
         os.replace(pending,target);parent=os.open(directory,os.O_DIRECTORY);os.fsync(parent);os.close(parent)

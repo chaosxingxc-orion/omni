@@ -422,40 +422,58 @@ def finalize_and_run(worker,adapted,spec,out,rank,world,sealed,*,live=None):
         require(ref['sha256']==anchor['sha256'],'wrong live actor predecessor')
         verify_continuation(spec,prior)
     require(prior['step']==spec['continuation']['prior_step'],'scoring checkpoint step differs')
-    started=time.monotonic()
-    with generation_sources(spec) as runtime:
-        from finalize_capture import restored_worker as finalize
-        from fresh_adapter import scope
-        root=out/runtime['cohort_dir']
-        if runtime.get('actor_fields')=='reuse_accepted_v1':
-            from pack_actor_fields import seal_packet,load_packet
-            require(live is not None and spec.get('formal_sampled'),'reuse requires a resident sampled actor')
-            inventory=config['generation_inventory_ref']
-            finalize(worker,adapted,config,out,rank,sources=runtime,
-                     accepted_sink=lambda folder,fields,report:seal_packet(folder,fields,report,inventory))
-            from resident import collectively
-            packet=collectively(lambda:load_packet(root,inventory))
-        else:
-            finalize(worker,adapted,config,out,rank,sources=runtime)
-            with scope():
-                packet=build_packet(root)
-    # Canonical consumer receipt plus exact sealed rollout bytes identify the
-    # in-memory handoff; there is no second deserialization or model restore.
-    spec=dict(spec,dataset_sha256=packet['dataset']['sha256'],
-              accepted_fields='finalized_generation',files=dict(spec['files']))
-    spec['files']['finalized_generation']=pin(config['generation_inventory_ref'])['sha256']
-    verify_continuation(spec,prior,packet)
-    batch=prepare(spec,sealed,world,packet)
-    commit(out/f'rank-{rank}/ACCEPTED-COHORT.json',dict(
-        checkpoint=ref,dataset=packet['dataset'],group_ids=packet['selected_groups'],
-        episodes=packet['report']['global_episode_denominator'],action_tokens=packet['report']['action_tokens'],
-        finalize_seconds=time.monotonic()-started))
-    dist.barrier()
-    with actor_batch_geometry(adapted,spec.get('actor_batch',{}).get('arithmetic')):
-        return run(worker,spec,out,rank,world,batch,restored=(ref,prior))
+    from contextlib import ExitStack
+    with ExitStack() as lifetime:
+        early=None;opened=False
+        def open_geometry():
+            nonlocal opened
+            require(not opened,'actor batch geometry opened twice')
+            lifetime.enter_context(actor_batch_geometry(adapted,spec.get('actor_batch',{}).get('arithmetic')))
+            opened=True
+        started=time.monotonic()
+        with generation_sources(spec) as runtime:
+            from finalize_capture import restored_worker as finalize
+            from fresh_adapter import scope
+            root=out/runtime['cohort_dir']
+            if runtime.get('actor_fields')=='reuse_accepted_v1':
+                from pack_actor_fields import seal_packet,load_packet
+                require(live is not None and spec.get('formal_sampled'),'reuse requires a resident sampled actor')
+                inventory=config['generation_inventory_ref']
+                sink=lambda folder,fields,report:seal_packet(folder,fields,report,inventory)
+                if runtime.get('first_wave_forward'):
+                    import importlib
+                    for name in ('first_wave_forward','microbatch_producer','microbatch_fields','microbatch_roster','policy_row_assignment'):
+                        path=sealed(name+'.py')
+                        require(Path(importlib.import_module(name).__file__).resolve()==path.resolve(),
+                                'unexpected first wave source: '+name)
+                    from first_wave_forward import FirstWave
+                    early=FirstWave(spec,runtime,rank,world,worker,open_geometry)
+                    sink=early
+                finalize(worker,adapted,config,out,rank,sources=runtime,accepted_sink=sink)
+                from resident import collectively
+                packet=collectively(lambda:load_packet(root,inventory))
+            else:
+                finalize(worker,adapted,config,out,rank,sources=runtime)
+                with scope():
+                    packet=build_packet(root)
+        # Canonical consumer receipt plus exact sealed rollout bytes identify the
+        # in-memory handoff; there is no second deserialization or model restore.
+        spec=dict(spec,dataset_sha256=packet['dataset']['sha256'],
+                  accepted_fields='finalized_generation',files=dict(spec['files']))
+        spec['files']['finalized_generation']=pin(config['generation_inventory_ref'])['sha256']
+        verify_continuation(spec,prior,packet)
+        batch=prepare(spec,sealed,world,packet)
+        commit(out/f'rank-{rank}/ACCEPTED-COHORT.json',dict(
+            checkpoint=ref,dataset=packet['dataset'],group_ids=packet['selected_groups'],
+            episodes=packet['report']['global_episode_denominator'],action_tokens=packet['report']['action_tokens'],
+            finalize_seconds=time.monotonic()-started))
+        dist.barrier()
+        if early is not None:early.bind(packet,batch[1],batch[2])
+        if not opened:open_geometry()
+        return run(worker,spec,out,rank,world,batch,restored=(ref,prior),early=early)
 
 
-def run(worker,spec,out,rank,world,batch,*,restored=None):
+def run(worker,spec,out,rank,world,batch,*,restored=None,early=None):
     from dependencies import require
     from storage import commit,check_running
     from events import run_existing_actor
@@ -498,7 +516,7 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
         marks.append((name,time.monotonic_ns(),event))
     def evaluate(inputs):
         if timing_mode:mark('forward_start')
-        scores=compact_scores(worker.actor,inputs)
+        scores=early.consume(inputs) if early is not None and early.scores is not None else compact_scores(worker.actor,inputs)
         if timing_mode:
             import torch
             mark('forward_enqueued')
@@ -557,6 +575,8 @@ def run(worker,spec,out,rank,world,batch,*,restored=None):
             **({'micro_batch':spec['actor_batch']['microbatch_per_card'],
                 'accumulation':spec['actor_batch'].get('gradient_accumulation_steps',1)} if 'actor_batch' in spec else {}))
         if timing_mode:mark('native_result')
+    if early is not None:
+        result['first_wave_host_monotonic_ns']=early.stamps
     if result.get('status')=='no_gradient' and spec.get('formal_sampled'):
         from policy_identity import digest
         from run_package import read
